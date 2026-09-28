@@ -1,0 +1,20 @@
+{
+  "name": "atlas-marketplace",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @atlas/web",
+    "dev:web": "npm run dev --workspace @atlas/web",
+    "dev:api": "npm run dev --workspace @atlas/api",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
