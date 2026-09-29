@@ -1,6 +1,7 @@
 import type {
   CreateListingInput,
   Listing,
+  ListingQuery,
   UpdateListingInput,
 } from "@atlas/types";
 import type { ListingRepository } from "./listing-repository.js";
@@ -33,8 +34,46 @@ export class InMemoryListingRepository implements ListingRepository {
     this.nextId = this.listings.length + 1;
   }
 
-  async list(): Promise<Listing[]> {
-    return this.listings.map((listing) => ({ ...listing }));
+  async list(query: ListingQuery = {}): Promise<Listing[]> {
+    const search = query.search?.toLocaleLowerCase();
+    const filteredListings = this.listings.filter((listing) => {
+      const matchesSearch =
+        !search ||
+        listing.title.toLocaleLowerCase().includes(search) ||
+        listing.description.toLocaleLowerCase().includes(search);
+      const matchesCategory =
+        !query.category || listing.category === query.category;
+      const matchesMinPrice =
+        query.minPrice === undefined || listing.price >= query.minPrice;
+      const matchesMaxPrice =
+        query.maxPrice === undefined || listing.price <= query.maxPrice;
+
+      return (
+        matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice
+      );
+    });
+
+    return filteredListings
+      .map((listing) => ({ ...listing }))
+      .sort((left, right) => {
+        if (query.sort === "price_asc") {
+          return left.price - right.price || left.id.localeCompare(right.id);
+        }
+        if (query.sort === "price_desc") {
+          return right.price - left.price || left.id.localeCompare(right.id);
+        }
+        if (query.sort === "oldest") {
+          return (
+            left.updatedAt.localeCompare(right.updatedAt) ||
+            left.id.localeCompare(right.id)
+          );
+        }
+
+        return (
+          right.updatedAt.localeCompare(left.updatedAt) ||
+          left.id.localeCompare(right.id)
+        );
+      });
   }
 
   async findById(id: string): Promise<Listing | undefined> {

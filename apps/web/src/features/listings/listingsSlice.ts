@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type {
   CreateListingInput,
   Listing,
+  ListingQuery,
   UpdateListingInput,
 } from "@atlas/types";
 import { ApiError } from "../../api/client";
@@ -42,11 +43,11 @@ const initialState: ListingsState = {
 
 export const fetchListings = createAsyncThunk<
   Listing[],
-  void,
+  ListingQuery | undefined,
   { rejectValue: string }
->("listings/fetchListings", async (_, { rejectWithValue }) => {
+>("listings/fetchListings", async (query, { rejectWithValue }) => {
   try {
-    return await getListings();
+    return await getListings(query);
   } catch {
     return rejectWithValue("Unable to load listings.");
   }

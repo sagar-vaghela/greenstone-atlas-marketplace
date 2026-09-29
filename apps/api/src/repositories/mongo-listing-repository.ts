@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type {
   CreateListingInput,
   Listing,
+  ListingQuery,
   UpdateListingInput,
 } from "@atlas/types";
 import type { Collection, ObjectId } from "mongodb";
@@ -19,10 +20,34 @@ const toListing = (document: ListingDocument): Listing => {
 export class MongoListingRepository implements ListingRepository {
   constructor(private readonly collection: Collection<ListingDocument>) {}
 
-  async list(): Promise<Listing[]> {
+  async list(query: ListingQuery = {}): Promise<Listing[]> {
+    const filter: Record<string, unknown> = {};
+    if (query.search) {
+      const escapedSearch = query.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const searchPattern = new RegExp(escapedSearch, "i");
+      filter.$or = [{ title: searchPattern }, { description: searchPattern }];
+    }
+    if (query.category) {
+      filter.category = query.category;
+    }
+    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+      filter.price = {
+        ...(query.minPrice === undefined ? {} : { $gte: query.minPrice }),
+        ...(query.maxPrice === undefined ? {} : { $lte: query.maxPrice }),
+      };
+    }
+
+    const sort: Record<string, 1 | -1> =
+      query.sort === "price_asc"
+        ? { price: 1, id: 1 }
+        : query.sort === "price_desc"
+          ? { price: -1, id: 1 }
+          : query.sort === "oldest"
+            ? { updatedAt: 1, id: 1 }
+            : { updatedAt: -1, id: 1 };
     const documents = await this.collection
-      .find({}, { projection: { _id: 0 } })
-      .sort({ createdAt: -1 })
+      .find(filter, { projection: { _id: 0 } })
+      .sort(sort)
       .toArray();
 
     return documents.map(toListing);

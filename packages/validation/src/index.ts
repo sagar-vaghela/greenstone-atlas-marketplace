@@ -1,12 +1,49 @@
 import type {
   CreateListingInput,
   Listing,
+  ListingQuery,
+  ListingSort,
   ListingStatus,
   UpdateListingInput,
-} from '@atlas/types';
-import { z } from 'zod';
+} from "@atlas/types";
+import { z } from "zod";
 
-const listingStatusSchema = z.enum(['draft', 'active', 'sold']);
+const listingStatusSchema = z.enum(["draft", "active", "sold"]);
+const listingSortSchema: z.ZodType<ListingSort> = z.enum([
+  "newest",
+  "oldest",
+  "price_asc",
+  "price_desc",
+]);
+
+const queryNumberSchema = z.preprocess((value) => {
+  if (value === "") {
+    return undefined;
+  }
+  if (typeof value === "string") {
+    return Number(value);
+  }
+  return value;
+}, z.number().finite().nonnegative());
+
+export const listingQuerySchema = z
+  .object({
+    search: z.string().trim().min(1).optional(),
+    category: z.string().trim().min(1).optional(),
+    minPrice: queryNumberSchema.optional(),
+    maxPrice: queryNumberSchema.optional(),
+    sort: listingSortSchema.optional(),
+  })
+  .refine(
+    (value) =>
+      value.minPrice === undefined ||
+      value.maxPrice === undefined ||
+      value.minPrice <= value.maxPrice,
+    {
+      message: "minPrice must be less than or equal to maxPrice",
+      path: ["minPrice"],
+    },
+  );
 
 export const createListingSchema: z.ZodType<CreateListingInput> = z.object({
   title: z.string().trim().min(1),
@@ -26,7 +63,7 @@ export const updateListingSchema: z.ZodType<UpdateListingInput> = z
     status: listingStatusSchema.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
-    message: 'At least one field must be provided',
+    message: "At least one field must be provided",
   });
 
 export const listingSchema: z.ZodType<Listing> = z.object({
@@ -41,4 +78,11 @@ export const listingSchema: z.ZodType<Listing> = z.object({
   updatedAt: z.string().datetime(),
 });
 
-export type { CreateListingInput, Listing, ListingStatus, UpdateListingInput };
+export type {
+  CreateListingInput,
+  Listing,
+  ListingQuery,
+  ListingSort,
+  ListingStatus,
+  UpdateListingInput,
+};

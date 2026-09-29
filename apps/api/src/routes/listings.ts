@@ -1,5 +1,9 @@
 import type { CreateListingInput, UpdateListingInput } from "@atlas/types";
-import { createListingSchema, updateListingSchema } from "@atlas/validation";
+import {
+  createListingSchema,
+  listingQuerySchema,
+  updateListingSchema,
+} from "@atlas/validation";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ListingRepository } from "../repositories/listing-repository.js";
 
@@ -9,6 +13,10 @@ interface ListingRouteOptions {
 
 interface ListingIdParams {
   id: string;
+}
+
+interface ListingQuerystring {
+  [key: string]: unknown;
 }
 
 interface CreateListingRequest extends FastifyRequest<{ Body: unknown }> {
@@ -26,9 +34,26 @@ export const registerListingRoutes = async (
   app: FastifyInstance,
   options: ListingRouteOptions,
 ): Promise<void> => {
-  app.get("/listings", async () => ({
-    items: await options.repository.list(),
-  }));
+  app.get<{ Querystring: ListingQuerystring }>(
+    "/listings",
+    async (request, reply) => {
+      const result = listingQuerySchema.safeParse(request.query);
+      if (!result.success) {
+        return reply.status(400).send({
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid request query",
+            details: result.error.issues.map((issue) => ({
+              path: issue.path,
+              message: issue.message,
+            })),
+          },
+        });
+      }
+
+      return { items: await options.repository.list(result.data) };
+    },
+  );
 
   app.get<{ Params: ListingIdParams }>(
     "/listings/:id",

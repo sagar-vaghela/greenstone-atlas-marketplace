@@ -14,7 +14,11 @@ export const connectMongoDB = async (
   try {
     await client.connect();
     const db = client.db(databaseName);
-    await db.collection("listings").createIndex({ id: 1 }, { unique: true });
+    const listings = db.collection("listings");
+    await listings.createIndex({ id: 1 }, { unique: true });
+    await listings.createIndex({ category: 1 });
+    await listings.createIndex({ price: 1 });
+    await listings.createIndex({ updatedAt: -1 });
 
     return {
       db,
