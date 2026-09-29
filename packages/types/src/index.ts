@@ -1,5 +1,7 @@
 export type ListingStatus = "draft" | "active" | "sold";
 
+export type OfferStatus = "pending" | "countered" | "accepted" | "rejected" | "withdrawn" | "expired";
+
 export type ListingSort = "newest" | "oldest" | "price_asc" | "price_desc";
 
 export interface ListingImage {
@@ -17,6 +19,7 @@ export interface ListingQuery {
 
 export interface Listing {
   id: string;
+  sellerId: string;
   title: string;
   description: string;
   price: number;
@@ -26,6 +29,28 @@ export interface Listing {
   status: ListingStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Offer {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  amount: number;
+  currency: string;
+  status: OfferStatus;
+  parentOfferId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOfferInput {
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  amount: number;
+  currency: string;
+  parentOfferId?: string;
 }
 
 export interface CreateListingInput {

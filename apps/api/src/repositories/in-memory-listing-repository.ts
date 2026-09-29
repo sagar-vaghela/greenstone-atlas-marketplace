@@ -7,22 +7,23 @@ import type {
 } from "@atlas/types";
 import { assertValidListingStatusTransition } from "../domain/listing-status.js";
 import type { ListingRepository } from "./listing-repository.js";
+import { getCurrentUser } from "../auth/demo-user.js";
 
 const seedListings: CreateListingInput[] = [
   {
-    title: "Demo Mechanical Keyboard",
-    description: "Development listing for a compact mechanical keyboard.",
-    price: 4999,
+    title: "Rolex Submariner Date 126610LN",
+    description: "Pre-owned luxury watch in excellent condition, with box and papers.",
+    price: 1250000,
     currency: "INR",
-    category: "electronics",
+    category: "luxury-watches",
     images: [],
   },
   {
-    title: "Demo Reading Chair",
-    description: "Development listing for a comfortable reading chair.",
-    price: 8500,
+    title: "Omega Speedmaster Professional Moonwatch",
+    description: "Pre-owned chronograph offered by a verified-demo seller.",
+    price: 620000,
     currency: "INR",
-    category: "furniture",
+    category: "luxury-watches",
     images: [],
   },
 ];
@@ -52,9 +53,7 @@ export class InMemoryListingRepository implements ListingRepository {
       const matchesMaxPrice =
         query.maxPrice === undefined || listing.price <= query.maxPrice;
 
-      return (
-        matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice
-      );
+      return matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice;
     });
 
     return filteredListings
@@ -137,6 +136,7 @@ export class InMemoryListingRepository implements ListingRepository {
     return {
       ...input,
       images: [...(input.images ?? [])],
+      sellerId: getCurrentUser("seller").id,
       id,
       status: "active",
       createdAt: timestamp,

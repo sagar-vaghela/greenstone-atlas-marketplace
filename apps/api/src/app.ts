@@ -5,9 +5,13 @@ import { InMemoryListingRepository } from "./repositories/in-memory-listing-repo
 import type { ListingRepository } from "./repositories/listing-repository.js";
 import { registerHealthRoute } from "./routes/health.js";
 import { registerListingRoutes } from "./routes/listings.js";
+import { InMemoryOfferRepository } from "./repositories/in-memory-offer-repository.js";
+import type { OfferRepository } from "./repositories/offer-repository.js";
+import { registerOfferRoutes } from "./routes/offers.js";
 
 interface BuildAppOptions {
   repository?: ListingRepository;
+  offerRepository?: OfferRepository;
 }
 
 export const buildApp = (options: BuildAppOptions = {}) => {
@@ -72,6 +76,7 @@ export const buildApp = (options: BuildAppOptions = {}) => {
 
   app.register(registerHealthRoute);
   app.register(registerListingRoutes, { repository: listingRepository });
+  app.register(registerOfferRoutes, { listingRepository, offerRepository: options.offerRepository ?? new InMemoryOfferRepository() });
 
   return app;
 };

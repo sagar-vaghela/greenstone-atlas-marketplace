@@ -3,6 +3,7 @@ import { config } from "./config/index.js";
 import { connectMongoDB, type MongoConnection } from "./db/mongodb.js";
 import { InMemoryListingRepository } from "./repositories/in-memory-listing-repository.js";
 import { MongoListingRepository } from "./repositories/mongo-listing-repository.js";
+import { MongoOfferRepository } from "./repositories/mongo-offer-repository.js";
 
 let app: ReturnType<typeof buildApp> | undefined;
 let mongoConnection: MongoConnection | undefined;
@@ -10,20 +11,21 @@ let shutdownPromise: Promise<void> | undefined;
 
 const start = async (): Promise<void> => {
   try {
-    const repository = config.mongodbUri
+    const repositories = config.mongodbUri
       ? (() => {
           return connectMongoDB(config.mongodbUri, config.mongodbDbName).then(
             (connection) => {
               mongoConnection = connection;
-              return new MongoListingRepository(
-                connection.db.collection("listings"),
-              );
+              return {
+                listingRepository: new MongoListingRepository(connection.db.collection("listings")),
+                offerRepository: new MongoOfferRepository(connection.db.collection("offers")),
+              };
             },
           );
         })()
-      : Promise.resolve(new InMemoryListingRepository());
+      : Promise.resolve({ listingRepository: new InMemoryListingRepository(), offerRepository: undefined });
 
-    app = buildApp({ repository: await repository });
+    app = buildApp(await repositories.then(({ listingRepository, offerRepository }) => ({ repository: listingRepository, offerRepository })));
     await app.listen({ host: config.host, port: config.port });
   } catch (error) {
     app?.log.error(error);

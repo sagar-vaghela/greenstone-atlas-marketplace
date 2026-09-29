@@ -5,6 +5,9 @@ import type {
   ListingImage,
   ListingSort,
   ListingStatus,
+  CreateOfferInput,
+  Offer,
+  OfferStatus,
   UpdateListingInput,
 } from "@atlas/types";
 import { z } from "zod";
@@ -94,6 +97,7 @@ export const updateListingStatusSchema = z.object({
 
 export const listingSchema: z.ZodType<Listing> = z.object({
   id: z.string().trim().min(1),
+  sellerId: z.string().trim().min(1),
   title: z.string().trim().min(1),
   description: z.string().trim().min(1),
   price: z.number().finite().nonnegative(),
@@ -105,6 +109,21 @@ export const listingSchema: z.ZodType<Listing> = z.object({
   updatedAt: z.string().datetime(),
 });
 
+export const offerStatusSchema: z.ZodType<OfferStatus> = z.enum(["pending", "countered", "accepted", "rejected", "withdrawn", "expired"]);
+const moneySchema = z.number().finite().positive().refine((value) => Number.isInteger(Math.round(value * 100)), "Amount must use at most two decimal places");
+const currencySchema = z.string().trim().length(3).transform((value) => value.toUpperCase());
+export const createOfferSchema: z.ZodType<CreateOfferInput> = z.object({
+  listingId: z.string().trim().min(1), buyerId: z.string().trim().min(1), sellerId: z.string().trim().min(1), amount: moneySchema, currency: currencySchema, parentOfferId: z.string().trim().min(1).optional(),
+});
+export const createOfferRequestSchema = z.object({
+  buyerId: z.string().trim().min(1),
+  amount: moneySchema,
+  currency: currencySchema,
+  parentOfferId: z.string().trim().min(1).optional(),
+});
+export const counterOfferRequestSchema = z.object({ amount: moneySchema, currency: currencySchema });
+export const updateOfferStatusSchema = z.object({ status: z.enum(["accepted", "rejected", "withdrawn"]) });
+
 export type {
   CreateListingInput,
   Listing,
@@ -112,4 +131,7 @@ export type {
   ListingSort,
   ListingStatus,
   UpdateListingInput,
+  CreateOfferInput,
+  Offer,
+  OfferStatus,
 };

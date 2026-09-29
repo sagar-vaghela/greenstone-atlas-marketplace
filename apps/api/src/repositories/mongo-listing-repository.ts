@@ -9,6 +9,7 @@ import type {
 import type { Collection, ObjectId } from "mongodb";
 import { assertValidListingStatusTransition } from "../domain/listing-status.js";
 import type { ListingRepository } from "./listing-repository.js";
+import { getCurrentUser } from "../auth/demo-user.js";
 
 interface ListingDocument extends Listing {
   _id?: ObjectId;
@@ -16,7 +17,7 @@ interface ListingDocument extends Listing {
 
 const toListing = (document: ListingDocument): Listing => {
   const { _id: _ignoredId, ...listing } = document;
-  return { ...listing, images: listing.images ?? [] };
+  return { ...listing, sellerId: listing.sellerId ?? getCurrentUser("seller").id, images: listing.images ?? [] };
 };
 
 export class MongoListingRepository implements ListingRepository {
@@ -67,6 +68,7 @@ export class MongoListingRepository implements ListingRepository {
     const timestamp = new Date().toISOString();
     const listing: ListingDocument = {
       ...input,
+      sellerId: getCurrentUser("seller").id,
       id: `listing-${randomUUID()}`,
       status: "active",
       createdAt: timestamp,

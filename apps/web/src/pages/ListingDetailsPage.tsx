@@ -18,6 +18,7 @@ import {
 import type { ListingStatus } from "@atlas/types";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
+import { OfferPanel } from "../components/listings/OfferPanel";
 import {
   fetchListingById,
   selectStatusUpdateError,
@@ -154,6 +155,7 @@ export function ListingDetailsPage() {
           />
         </Box>
       </Stack>
+      <OfferPanel listing={listing} onAccepted={() => void dispatch(fetchListingById(listing.id))} />
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
         <Button
           component={RouterLink}

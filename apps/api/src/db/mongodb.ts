@@ -15,10 +15,15 @@ export const connectMongoDB = async (
     await client.connect();
     const db = client.db(databaseName);
     const listings = db.collection("listings");
+    const offers = db.collection("offers");
     await listings.createIndex({ id: 1 }, { unique: true });
     await listings.createIndex({ category: 1 });
     await listings.createIndex({ price: 1 });
     await listings.createIndex({ updatedAt: -1 });
+    await offers.createIndex({ id: 1 }, { unique: true });
+    await offers.createIndex({ listingId: 1, createdAt: 1 });
+    await offers.createIndex({ buyerId: 1 });
+    await offers.createIndex({ sellerId: 1, status: 1 });
 
     return {
       db,
