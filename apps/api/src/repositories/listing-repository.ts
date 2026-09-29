@@ -2,11 +2,11 @@ import type {
   CreateListingInput,
   Listing,
   UpdateListingInput,
-} from '@atlas/types';
+} from "@atlas/types";
 
 export interface ListingRepository {
-  list(): Listing[];
-  findById(id: string): Listing | undefined;
-  create(input: CreateListingInput): Listing;
-  update(id: string, input: UpdateListingInput): Listing | undefined;
+  list(): Promise<Listing[]>;
+  findById(id: string): Promise<Listing | undefined>;
+  create(input: CreateListingInput): Promise<Listing>;
+  update(id: string, input: UpdateListingInput): Promise<Listing | undefined>;
 }

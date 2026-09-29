@@ -26,6 +26,11 @@ Install dependencies from the repository root:
 npm install
 ```
 
+The API uses MongoDB when `MONGODB_URI` is configured. Copy `.env.example` to
+`.env` for local development and start MongoDB locally before starting the API.
+Without `MONGODB_URI`, the API uses its in-memory repository for lightweight
+local development and tests.
+
 Start the frontend:
 
 ```bash

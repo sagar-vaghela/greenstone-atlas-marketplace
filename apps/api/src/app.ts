@@ -2,10 +2,15 @@ import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { config } from "./config/index.js";
 import { InMemoryListingRepository } from "./repositories/in-memory-listing-repository.js";
+import type { ListingRepository } from "./repositories/listing-repository.js";
 import { registerHealthRoute } from "./routes/health.js";
 import { registerListingRoutes } from "./routes/listings.js";
 
-export const buildApp = () => {
+interface BuildAppOptions {
+  repository?: ListingRepository;
+}
+
+export const buildApp = (options: BuildAppOptions = {}) => {
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL ?? "info",
@@ -62,7 +67,8 @@ export const buildApp = () => {
     });
   });
 
-  const listingRepository = new InMemoryListingRepository();
+  const listingRepository =
+    options.repository ?? new InMemoryListingRepository();
 
   app.register(registerHealthRoute);
   app.register(registerListingRoutes, { repository: listingRepository });

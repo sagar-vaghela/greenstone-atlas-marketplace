@@ -2,23 +2,23 @@ import type {
   CreateListingInput,
   Listing,
   UpdateListingInput,
-} from '@atlas/types';
-import type { ListingRepository } from './listing-repository.js';
+} from "@atlas/types";
+import type { ListingRepository } from "./listing-repository.js";
 
 const seedListings: CreateListingInput[] = [
   {
-    title: 'Demo Mechanical Keyboard',
-    description: 'Development listing for a compact mechanical keyboard.',
+    title: "Demo Mechanical Keyboard",
+    description: "Development listing for a compact mechanical keyboard.",
     price: 4999,
-    currency: 'INR',
-    category: 'electronics',
+    currency: "INR",
+    category: "electronics",
   },
   {
-    title: 'Demo Reading Chair',
-    description: 'Development listing for a comfortable reading chair.',
+    title: "Demo Reading Chair",
+    description: "Development listing for a comfortable reading chair.",
     price: 8500,
-    currency: 'INR',
-    category: 'furniture',
+    currency: "INR",
+    category: "furniture",
   },
 ];
 
@@ -33,23 +33,26 @@ export class InMemoryListingRepository implements ListingRepository {
     this.nextId = this.listings.length + 1;
   }
 
-  list(): Listing[] {
+  async list(): Promise<Listing[]> {
     return this.listings.map((listing) => ({ ...listing }));
   }
 
-  findById(id: string): Listing | undefined {
+  async findById(id: string): Promise<Listing | undefined> {
     const listing = this.listings.find((item) => item.id === id);
     return listing ? { ...listing } : undefined;
   }
 
-  create(input: CreateListingInput): Listing {
+  async create(input: CreateListingInput): Promise<Listing> {
     const listing = this.createListing(`listing-${this.nextId}`, input);
     this.nextId += 1;
     this.listings.push(listing);
     return { ...listing };
   }
 
-  update(id: string, input: UpdateListingInput): Listing | undefined {
+  async update(
+    id: string,
+    input: UpdateListingInput,
+  ): Promise<Listing | undefined> {
     const index = this.listings.findIndex((listing) => listing.id === id);
     if (index === -1) {
       return undefined;
@@ -69,7 +72,7 @@ export class InMemoryListingRepository implements ListingRepository {
     return {
       ...input,
       id,
-      status: 'active',
+      status: "active",
       createdAt: timestamp,
       updatedAt: timestamp,
     };

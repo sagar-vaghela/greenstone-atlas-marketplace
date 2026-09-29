@@ -27,13 +27,13 @@ export const registerListingRoutes = async (
   options: ListingRouteOptions,
 ): Promise<void> => {
   app.get("/listings", async () => ({
-    items: options.repository.list(),
+    items: await options.repository.list(),
   }));
 
   app.get<{ Params: ListingIdParams }>(
     "/listings/:id",
     async (request, reply) => {
-      const listing = options.repository.findById(request.params.id);
+      const listing = await options.repository.findById(request.params.id);
       if (!listing) {
         return reply.status(404).send({
           error: {
@@ -62,7 +62,7 @@ export const registerListingRoutes = async (
       });
     }
 
-    const listing = options.repository.create(
+    const listing = await options.repository.create(
       result.data satisfies CreateListingInput,
     );
     return reply.status(201).send(listing);
@@ -85,7 +85,7 @@ export const registerListingRoutes = async (
         });
       }
 
-      const listing = options.repository.update(
+      const listing = await options.repository.update(
         request.params.id,
         result.data satisfies UpdateListingInput,
       );
