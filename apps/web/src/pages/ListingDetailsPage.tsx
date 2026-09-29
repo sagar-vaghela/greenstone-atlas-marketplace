@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   Button,
+  CardMedia,
   CircularProgress,
   Divider,
   Dialog,
@@ -48,12 +49,27 @@ export function ListingDetailsPage() {
   const statusUpdateStatus = useAppSelector(selectStatusUpdateStatus);
   const statusUpdateError = useAppSelector(selectStatusUpdateError);
   const [isSoldDialogOpen, setIsSoldDialogOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (id) {
       void dispatch(fetchListingById(id));
     }
   }, [dispatch, id]);
+
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsLightboxOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [isLightboxOpen]);
 
   if (
     detailStatus === "idle" ||
@@ -111,9 +127,16 @@ export function ListingDetailsPage() {
   }
 
   const nextStatus = listing.status === "draft" ? "active" : "sold";
-  const actionLabel = listing.status === "draft" ? "Activate listing" : "Mark as sold";
+  const actionLabel =
+    listing.status === "draft" ? "Activate listing" : "Mark as sold";
   const handleStatusUpdate = () => {
     void dispatch(updateListingStatus({ id: listing.id, status: nextStatus }));
+  };
+  const images = listing.images ?? [];
+  const selectedImage = images[selectedImageIndex];
+  const imageAlt = selectedImage?.alt || listing.title;
+  const markImageFailed = (url: string) => {
+    setFailedImages((current) => new Set(current).add(url));
   };
 
   return (
@@ -152,7 +175,9 @@ export function ListingDetailsPage() {
             }}
             disabled={statusUpdateStatus === "loading"}
             startIcon={
-              statusUpdateStatus === "loading" ? <CircularProgress size={18} /> : undefined
+              statusUpdateStatus === "loading" ? (
+                <CircularProgress size={18} />
+              ) : undefined
             }
           >
             {statusUpdateStatus === "loading" ? "Updating..." : actionLabel}
@@ -161,13 +186,100 @@ export function ListingDetailsPage() {
       </Stack>
       {statusUpdateStatus === "succeeded" && (
         <Alert severity="success">
-          Listing status updated to {statusLabels[listing.status].toLowerCase()}.
+          Listing status updated to {statusLabels[listing.status].toLowerCase()}
+          .
         </Alert>
       )}
       {statusUpdateStatus === "failed" && statusUpdateError && (
         <Alert severity="error">{statusUpdateError}</Alert>
       )}
       <Divider />
+      {images.length === 0 ? (
+        <Box
+          sx={{
+            aspectRatio: { xs: "4 / 3", sm: "16 / 9" },
+            display: "grid",
+            placeItems: "center",
+            bgcolor: "action.hover",
+            color: "text.secondary",
+          }}
+        >
+          <Typography>No images available for this listing.</Typography>
+        </Box>
+      ) : (
+        <Stack spacing={2}>
+          <Button
+            onClick={() => setIsLightboxOpen(true)}
+            aria-label={`Open ${imageAlt} in full screen`}
+            sx={{ p: 0, display: "block", textTransform: "none" }}
+          >
+            {failedImages.has(selectedImage.url) ? (
+              <Box
+                sx={{
+                  aspectRatio: { xs: "4 / 3", sm: "16 / 9" },
+                  display: "grid",
+                  placeItems: "center",
+                  bgcolor: "action.hover",
+                  color: "text.secondary",
+                }}
+              >
+                <Typography>Image preview unavailable</Typography>
+              </Box>
+            ) : (
+              <CardMedia
+                component="img"
+                image={selectedImage.url}
+                alt={imageAlt}
+                onError={() => markImageFailed(selectedImage.url)}
+                sx={{
+                  aspectRatio: { xs: "4 / 3", sm: "16 / 9" },
+                  objectFit: "contain",
+                  bgcolor: "action.hover",
+                }}
+              />
+            )}
+          </Button>
+          <Stack direction="row" spacing={1} sx={{ overflowX: "auto", pb: 1 }}>
+            {images.map((image, index) => (
+              <Button
+                key={image.url}
+                onClick={() => setSelectedImageIndex(index)}
+                aria-label={`Show ${image.alt || `${listing.title} image ${index + 1}`}`}
+                aria-current={index === selectedImageIndex ? "true" : undefined}
+                sx={{
+                  minWidth: 88,
+                  width: 88,
+                  p: 0.5,
+                  border: 2,
+                  borderColor:
+                    index === selectedImageIndex ? "primary.main" : "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
+                {failedImages.has(image.url) ? (
+                  <Box
+                    sx={{
+                      aspectRatio: "1",
+                      display: "grid",
+                      placeItems: "center",
+                    }}
+                  >
+                    <Typography variant="caption">Unavailable</Typography>
+                  </Box>
+                ) : (
+                  <CardMedia
+                    component="img"
+                    image={image.url}
+                    alt={image.alt || `${listing.title} thumbnail ${index + 1}`}
+                    onError={() => markImageFailed(image.url)}
+                    sx={{ aspectRatio: "1", objectFit: "cover" }}
+                  />
+                )}
+              </Button>
+            ))}
+          </Stack>
+        </Stack>
+      )}
       <Typography>{listing.description}</Typography>
       <Stack spacing={1}>
         <Typography variant="h4">
@@ -184,6 +296,28 @@ export function ListingDetailsPage() {
           <strong>Status:</strong> {statusLabels[listing.status]}
         </Typography>
       </Stack>
+      <Dialog
+        open={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>{imageAlt}</DialogTitle>
+        <DialogContent>
+          {selectedImage && !failedImages.has(selectedImage.url) && (
+            <CardMedia
+              component="img"
+              image={selectedImage.url}
+              alt={imageAlt}
+              onError={() => markImageFailed(selectedImage.url)}
+              sx={{ maxHeight: "70vh", objectFit: "contain" }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsLightboxOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
       <Dialog
         open={isSoldDialogOpen}
         onClose={() => setIsSoldDialogOpen(false)}

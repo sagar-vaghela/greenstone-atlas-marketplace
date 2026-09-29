@@ -6,6 +6,7 @@ import {
   Card,
   CardActionArea,
   CardContent,
+  CardMedia,
   Chip,
   CircularProgress,
   FormControl,
@@ -52,6 +53,7 @@ export function MarketplacePage() {
   const listStatus = useAppSelector(selectListStatus);
   const error = useAppSelector(selectListingsError);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   const query = useMemo<ListingQuery>(() => {
     const minPriceValue = searchParams.get("minPrice");
@@ -246,6 +248,32 @@ export function MarketplacePage() {
                 component={RouterLink}
                 to={`/listings/${listing.id}`}
               >
+                {listing.images?.[0] &&
+                !failedImages.has(listing.images[0].url) ? (
+                  <CardMedia
+                    component="img"
+                    image={listing.images[0].url}
+                    alt={listing.images[0].alt || listing.title}
+                    onError={() =>
+                      setFailedImages((current) =>
+                        new Set(current).add(listing.images[0].url),
+                      )
+                    }
+                    sx={{ aspectRatio: "16 / 9", objectFit: "cover" }}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      aspectRatio: "16 / 9",
+                      display: "grid",
+                      placeItems: "center",
+                      bgcolor: "action.hover",
+                      color: "text.secondary",
+                    }}
+                  >
+                    <Typography variant="body2">No image available</Typography>
+                  </Box>
+                )}
                 <CardContent>
                   <Stack
                     direction="row"
@@ -258,7 +286,9 @@ export function MarketplacePage() {
                     <Chip
                       label={statusLabels[listing.status]}
                       size="small"
-                      color={listing.status === "active" ? "success" : "default"}
+                      color={
+                        listing.status === "active" ? "success" : "default"
+                      }
                     />
                   </Stack>
                   <Typography variant="h6" sx={{ mt: 1 }}>

@@ -91,6 +91,7 @@ export function EditListingPage() {
     price: String(listing.price),
     currency: listing.currency,
     category: listing.category,
+    images: listing.images ?? [],
   };
 
   const validate = (values: ListingFormValues) => {

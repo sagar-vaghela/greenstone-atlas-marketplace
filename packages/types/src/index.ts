@@ -2,6 +2,11 @@ export type ListingStatus = "draft" | "active" | "sold";
 
 export type ListingSort = "newest" | "oldest" | "price_asc" | "price_desc";
 
+export interface ListingImage {
+  url: string;
+  alt?: string;
+}
+
 export interface ListingQuery {
   search?: string;
   category?: string;
@@ -17,6 +22,7 @@ export interface Listing {
   price: number;
   currency: string;
   category: string;
+  images: ListingImage[];
   status: ListingStatus;
   createdAt: string;
   updatedAt: string;
@@ -28,6 +34,7 @@ export interface CreateListingInput {
   price: number;
   currency: string;
   category: string;
+  images: ListingImage[];
 }
 
 export interface UpdateListingInput {
@@ -36,4 +43,5 @@ export interface UpdateListingInput {
   price?: number;
   currency?: string;
   category?: string;
+  images?: ListingImage[];
 }

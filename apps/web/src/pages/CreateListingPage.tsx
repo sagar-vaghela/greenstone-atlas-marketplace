@@ -22,6 +22,7 @@ const initialValues: ListingFormValues = {
   price: "",
   currency: "INR",
   category: "",
+  images: [],
 };
 
 export function CreateListingPage() {

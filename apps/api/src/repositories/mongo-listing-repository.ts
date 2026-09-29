@@ -16,7 +16,7 @@ interface ListingDocument extends Listing {
 
 const toListing = (document: ListingDocument): Listing => {
   const { _id: _ignoredId, ...listing } = document;
-  return listing;
+  return { ...listing, images: listing.images ?? [] };
 };
 
 export class MongoListingRepository implements ListingRepository {

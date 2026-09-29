@@ -2,6 +2,7 @@ import type {
   CreateListingInput,
   Listing,
   ListingQuery,
+  ListingImage,
   ListingSort,
   ListingStatus,
   UpdateListingInput,
@@ -30,6 +31,22 @@ const queryNumberSchema = z.preprocess((value) => {
   return value;
 }, z.number().finite().nonnegative());
 
+export const listingImageSchema: z.ZodType<ListingImage> = z.object({
+  url: z
+    .string()
+    .trim()
+    .min(1)
+    .max(2048)
+    .url()
+    .refine((value) => {
+      const protocol = new URL(value).protocol;
+      return protocol === "http:" || protocol === "https:";
+    }, "Image URL must use HTTP or HTTPS"),
+  alt: z.string().trim().max(2048).optional(),
+});
+
+const listingImagesSchema = z.array(listingImageSchema).max(8);
+
 export const listingQuerySchema = z
   .object({
     search: z.string().trim().min(1).optional(),
@@ -55,6 +72,7 @@ export const createListingSchema: z.ZodType<CreateListingInput> = z.object({
   price: z.number().finite().nonnegative(),
   currency: z.string().trim().min(1),
   category: z.string().trim().min(1),
+  images: listingImagesSchema.default([]),
 });
 
 export const updateListingSchema: z.ZodType<UpdateListingInput> = z
@@ -64,6 +82,7 @@ export const updateListingSchema: z.ZodType<UpdateListingInput> = z
     price: z.number().finite().nonnegative().optional(),
     currency: z.string().trim().min(1).optional(),
     category: z.string().trim().min(1).optional(),
+    images: listingImagesSchema.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",
@@ -80,6 +99,7 @@ export const listingSchema: z.ZodType<Listing> = z.object({
   price: z.number().finite().nonnegative(),
   currency: z.string().trim().min(1),
   category: z.string().trim().min(1),
+  images: listingImagesSchema.default([]),
   status: listingStatusSchema,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

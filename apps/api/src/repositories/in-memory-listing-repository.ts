@@ -15,6 +15,7 @@ const seedListings: CreateListingInput[] = [
     price: 4999,
     currency: "INR",
     category: "electronics",
+    images: [],
   },
   {
     title: "Demo Reading Chair",
@@ -22,6 +23,7 @@ const seedListings: CreateListingInput[] = [
     price: 8500,
     currency: "INR",
     category: "furniture",
+    images: [],
   },
 ];
 
@@ -80,14 +82,16 @@ export class InMemoryListingRepository implements ListingRepository {
 
   async findById(id: string): Promise<Listing | undefined> {
     const listing = this.listings.find((item) => item.id === id);
-    return listing ? { ...listing } : undefined;
+    return listing
+      ? { ...listing, images: [...(listing.images ?? [])] }
+      : undefined;
   }
 
   async create(input: CreateListingInput): Promise<Listing> {
     const listing = this.createListing(`listing-${this.nextId}`, input);
     this.nextId += 1;
     this.listings.push(listing);
-    return { ...listing };
+    return { ...listing, images: [...listing.images] };
   }
 
   async update(
@@ -105,7 +109,7 @@ export class InMemoryListingRepository implements ListingRepository {
       updatedAt: new Date().toISOString(),
     };
     this.listings[index] = updatedListing;
-    return { ...updatedListing };
+    return { ...updatedListing, images: [...updatedListing.images] };
   }
 
   async updateStatus(
@@ -125,13 +129,14 @@ export class InMemoryListingRepository implements ListingRepository {
       updatedAt: new Date().toISOString(),
     };
     this.listings[index] = updatedListing;
-    return { ...updatedListing };
+    return { ...updatedListing, images: [...updatedListing.images] };
   }
 
   private createListing(id: string, input: CreateListingInput): Listing {
     const timestamp = new Date().toISOString();
     return {
       ...input,
+      images: [...(input.images ?? [])],
       id,
       status: "active",
       createdAt: timestamp,

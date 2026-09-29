@@ -1,11 +1,21 @@
 import { useState } from "react";
 import { Alert, Button, Paper, Stack, TextField } from "@mui/material";
-import type { CreateListingInput, UpdateListingInput } from "@atlas/types";
+import type {
+  CreateListingInput,
+  ListingImage,
+  UpdateListingInput,
+} from "@atlas/types";
 import { Link as RouterLink } from "react-router-dom";
+import { ListingImageManager } from "./ListingImageManager";
 
-export type ListingFormValues = Record<keyof CreateListingInput, string>;
+export type ListingFormValues = Omit<
+  Record<keyof CreateListingInput, string>,
+  "images"
+> & {
+  images: ListingImage[];
+};
 export type ListingFormFieldErrors = Partial<
-  Record<keyof CreateListingInput, string>
+  Record<keyof ListingFormValues, string>
 >;
 export type ListingFormData = CreateListingInput | UpdateListingInput;
 
@@ -117,6 +127,15 @@ export function ListingForm<T extends ListingFormData>({
           helperText={fieldErrors.category}
           required
           fullWidth
+        />
+        <ListingImageManager
+          images={values.images}
+          onChange={(images) => {
+            setValues((current) => ({ ...current, images }));
+            setFieldErrors((current) => ({ ...current, images: undefined }));
+          }}
+          error={fieldErrors.images}
+          disabled={isSubmitting}
         />
         <Stack direction="row" spacing={2} sx={{ justifyContent: "flex-end" }}>
           <Button component={RouterLink} to={cancelTo} disabled={isSubmitting}>
