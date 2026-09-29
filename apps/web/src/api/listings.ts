@@ -1,4 +1,8 @@
-import type { CreateListingInput, Listing } from "@atlas/types";
+import type {
+  CreateListingInput,
+  Listing,
+  UpdateListingInput,
+} from "@atlas/types";
 import { request } from "./client";
 
 interface ListingsResponse {
@@ -18,6 +22,17 @@ export function getListingById(id: string): Promise<Listing> {
 export function createListing(input: CreateListingInput): Promise<Listing> {
   return request<Listing>("/listings", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateListing(
+  id: string,
+  input: UpdateListingInput,
+): Promise<Listing> {
+  return request<Listing>(`/listings/${encodeURIComponent(id)}`, {
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });

@@ -1,10 +1,15 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import type { CreateListingInput, Listing } from "@atlas/types";
+import type {
+  CreateListingInput,
+  Listing,
+  UpdateListingInput,
+} from "@atlas/types";
 import { ApiError } from "../../api/client";
 import {
   createListing as createListingRequest,
   getListingById,
   getListings,
+  updateListing as updateListingRequest,
 } from "../../api/listings";
 
 export type RequestStatus = "idle" | "loading" | "succeeded" | "failed";
@@ -15,8 +20,10 @@ interface ListingsState {
   listStatus: RequestStatus;
   detailStatus: RequestStatus;
   createStatus: RequestStatus;
+  updateStatus: RequestStatus;
   error: string | null;
   createError: string | null;
+  updateError: string | null;
   detailRequestId: string | null;
 }
 
@@ -26,8 +33,10 @@ const initialState: ListingsState = {
   listStatus: "idle",
   detailStatus: "idle",
   createStatus: "idle",
+  updateStatus: "idle",
   error: null,
   createError: null,
+  updateError: null,
   detailRequestId: null,
 };
 
@@ -75,6 +84,25 @@ export const createListing = createAsyncThunk<
   }
 });
 
+export const updateListing = createAsyncThunk<
+  Listing,
+  { id: string; input: UpdateListingInput },
+  { rejectValue: string }
+>("listings/updateListing", async ({ id, input }, { rejectWithValue }) => {
+  try {
+    return await updateListingRequest(id, input);
+  } catch (error: unknown) {
+    if (error instanceof ApiError && error.status === 400) {
+      return rejectWithValue("Please check the listing details and try again.");
+    }
+    if (error instanceof ApiError && error.status === 404) {
+      return rejectWithValue("Listing not found");
+    }
+
+    return rejectWithValue("Unable to update this listing. Please try again.");
+  }
+});
+
 const listingsSlice = createSlice({
   name: "listings",
   initialState,
@@ -82,6 +110,10 @@ const listingsSlice = createSlice({
     resetCreateState: (state) => {
       state.createStatus = "idle";
       state.createError = null;
+    },
+    resetUpdateState: (state) => {
+      state.updateStatus = "idle";
+      state.updateError = null;
     },
   },
   extraReducers: (builder) => {
@@ -136,11 +168,33 @@ const listingsSlice = createSlice({
         state.createStatus = "failed";
         state.createError =
           action.payload ?? "Unable to create this listing. Please try again.";
+      })
+      .addCase(updateListing.pending, (state) => {
+        state.updateStatus = "loading";
+        state.updateError = null;
+      })
+      .addCase(updateListing.fulfilled, (state, action) => {
+        state.updateStatus = "succeeded";
+        state.updateError = null;
+        const index = state.items.findIndex(
+          (listing) => listing.id === action.payload.id,
+        );
+        if (index !== -1) {
+          state.items[index] = action.payload;
+        }
+        if (state.selectedListing?.id === action.payload.id) {
+          state.selectedListing = action.payload;
+        }
+      })
+      .addCase(updateListing.rejected, (state, action) => {
+        state.updateStatus = "failed";
+        state.updateError =
+          action.payload ?? "Unable to update this listing. Please try again.";
       });
   },
 });
 
-export const { resetCreateState } = listingsSlice.actions;
+export const { resetCreateState, resetUpdateState } = listingsSlice.actions;
 
 export const selectListings = (state: { listings: ListingsState }) =>
   state.listings.items;
@@ -156,5 +210,9 @@ export const selectCreateStatus = (state: { listings: ListingsState }) =>
   state.listings.createStatus;
 export const selectCreateError = (state: { listings: ListingsState }) =>
   state.listings.createError;
+export const selectUpdateStatus = (state: { listings: ListingsState }) =>
+  state.listings.updateStatus;
+export const selectUpdateError = (state: { listings: ListingsState }) =>
+  state.listings.updateError;
 
 export default listingsSlice.reducer;

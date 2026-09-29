@@ -1,26 +1,27 @@
-import cors from '@fastify/cors';
-import Fastify from 'fastify';
-import { config } from './config/index.js';
-import { InMemoryListingRepository } from './repositories/in-memory-listing-repository.js';
-import { registerHealthRoute } from './routes/health.js';
-import { registerListingRoutes } from './routes/listings.js';
+import cors from "@fastify/cors";
+import Fastify from "fastify";
+import { config } from "./config/index.js";
+import { InMemoryListingRepository } from "./repositories/in-memory-listing-repository.js";
+import { registerHealthRoute } from "./routes/health.js";
+import { registerListingRoutes } from "./routes/listings.js";
 
 export const buildApp = () => {
   const app = Fastify({
     logger: {
-      level: process.env.LOG_LEVEL ?? 'info',
+      level: process.env.LOG_LEVEL ?? "info",
     },
   });
 
   app.register(cors, {
     origin: config.corsOrigin,
+    methods: ["GET", "POST", "PATCH", "OPTIONS"],
   });
 
   app.setNotFoundHandler((_request, reply) => {
     return reply.status(404).send({
       error: {
-        code: 'NOT_FOUND',
-        message: 'Route not found',
+        code: "NOT_FOUND",
+        message: "Route not found",
       },
     });
   });
@@ -29,34 +30,34 @@ export const buildApp = () => {
     app.log.error(error);
 
     const statusCode =
-      typeof error === 'object' &&
+      typeof error === "object" &&
       error !== null &&
-      'statusCode' in error &&
-      typeof error.statusCode === 'number'
+      "statusCode" in error &&
+      typeof error.statusCode === "number"
         ? error.statusCode
         : 500;
     const message =
-      typeof error === 'object' &&
+      typeof error === "object" &&
       error !== null &&
-      'message' in error &&
-      typeof error.message === 'string'
+      "message" in error &&
+      typeof error.message === "string"
         ? error.message
-        : 'Internal server error';
+        : "Internal server error";
 
     return reply.status(statusCode).send({
       error: {
         code:
           statusCode === 400
-            ? 'VALIDATION_ERROR'
+            ? "VALIDATION_ERROR"
             : statusCode === 404
-              ? 'NOT_FOUND'
-              : 'INTERNAL_SERVER_ERROR',
+              ? "NOT_FOUND"
+              : "INTERNAL_SERVER_ERROR",
         message:
           statusCode === 400
-            ? 'Invalid request'
+            ? "Invalid request"
             : statusCode < 500
               ? message
-              : 'Internal server error',
+              : "Internal server error",
       },
     });
   });

@@ -94,6 +94,14 @@ export function ListingDetailsPage() {
         <Typography variant="h1">{listing.title}</Typography>
         <Typography color="text.secondary">{listing.category}</Typography>
       </Stack>
+      <Button
+        component={RouterLink}
+        to={`/listings/${listing.id}/edit`}
+        variant="contained"
+        sx={{ alignSelf: "flex-start" }}
+      >
+        Edit listing
+      </Button>
       <Divider />
       <Typography>{listing.description}</Typography>
       <Stack spacing={1}>
