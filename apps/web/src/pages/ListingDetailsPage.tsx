@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Alert,
   Box,
@@ -8,65 +8,77 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import type { Listing } from "@atlas/types";
 import { Link as RouterLink, useParams } from "react-router-dom";
-import { ApiError } from "../api/client";
-import { getListingById } from "../api/listings";
+import { useAppDispatch, useAppSelector } from "../app/hooks";
+import {
+  fetchListingById,
+  selectDetailStatus,
+  selectListingsError,
+  selectSelectedListing,
+} from "../features/listings/listingsSlice";
 
 export function ListingDetailsPage() {
   const { id } = useParams();
-  const [listing, setListing] = useState<Listing>();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isNotFound, setIsNotFound] = useState(false);
-  const [hasError, setHasError] = useState(false);
+  const dispatch = useAppDispatch();
+  const listing = useAppSelector(selectSelectedListing);
+  const detailStatus = useAppSelector(selectDetailStatus);
+  const error = useAppSelector(selectListingsError);
 
   useEffect(() => {
-    if (!id) {
-      setIsLoading(false);
-      setIsNotFound(true);
-      return;
+    if (id) {
+      void dispatch(fetchListingById(id));
     }
+  }, [dispatch, id]);
 
-    setIsLoading(true);
-    setIsNotFound(false);
-    setHasError(false);
-    getListingById(id)
-      .then(setListing)
-      .catch((error: unknown) => {
-        if (error instanceof ApiError && error.status === 404) {
-          setIsNotFound(true);
-        } else {
-          setHasError(true);
-        }
-      })
-      .finally(() => setIsLoading(false));
-  }, [id]);
-
-  if (isLoading) {
+  if (
+    detailStatus === "idle" ||
+    detailStatus === "loading" ||
+    listing?.id !== id
+  ) {
     return (
-      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, py: 6 }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 2,
+          py: 6,
+        }}
+      >
         <CircularProgress aria-label="Loading listing" />
         <Typography color="text.secondary">Loading listing...</Typography>
       </Box>
     );
   }
 
-  if (isNotFound) {
+  if (detailStatus === "failed" && error === "Listing not found") {
     return (
       <Stack spacing={2}>
         <Typography variant="h1">Listing not found</Typography>
-        <Button component={RouterLink} to="/" variant="outlined" sx={{ alignSelf: "flex-start" }}>
+        <Button
+          component={RouterLink}
+          to="/"
+          variant="outlined"
+          sx={{ alignSelf: "flex-start" }}
+        >
           Back to marketplace
         </Button>
       </Stack>
     );
   }
 
-  if (hasError || !listing) {
+  if (detailStatus === "failed" || !listing) {
     return (
       <Stack spacing={2}>
-        <Alert severity="error">Unable to load this listing. Please try again.</Alert>
-        <Button component={RouterLink} to="/" variant="outlined" sx={{ alignSelf: "flex-start" }}>
+        <Alert severity="error">
+          Unable to load this listing. Please try again.
+        </Alert>
+        <Button
+          component={RouterLink}
+          to="/"
+          variant="outlined"
+          sx={{ alignSelf: "flex-start" }}
+        >
           Back to marketplace
         </Button>
       </Stack>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Alert,
   Box,
@@ -12,7 +12,13 @@ import {
 } from "@mui/material";
 import type { Listing } from "@atlas/types";
 import { Link as RouterLink } from "react-router-dom";
-import { getListings } from "../api/listings";
+import { useAppDispatch, useAppSelector } from "../app/hooks";
+import {
+  fetchListings,
+  selectListings,
+  selectListingsError,
+  selectListStatus,
+} from "../features/listings/listingsSlice";
 
 const formatPrice = (listing: Listing) =>
   new Intl.NumberFormat("en-IN", {
@@ -22,22 +28,18 @@ const formatPrice = (listing: Listing) =>
   }).format(listing.price);
 
 export function MarketplacePage() {
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const dispatch = useAppDispatch();
+  const listings = useAppSelector(selectListings);
+  const listStatus = useAppSelector(selectListStatus);
+  const error = useAppSelector(selectListingsError);
 
-  const loadListings = () => {
-    setIsLoading(true);
-    setHasError(false);
-    getListings()
-      .then(setListings)
-      .catch(() => setHasError(true))
-      .finally(() => setIsLoading(false));
-  };
+  const loadListings = () => dispatch(fetchListings());
 
   useEffect(() => {
-    loadListings();
-  }, []);
+    if (listStatus === "idle") {
+      void dispatch(fetchListings());
+    }
+  }, [dispatch, listStatus]);
 
   return (
     <Stack spacing={4}>
@@ -48,27 +50,38 @@ export function MarketplacePage() {
         </Typography>
       </Stack>
 
-      {isLoading && (
-        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, py: 6 }}>
+      {listStatus === "loading" && (
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            py: 6,
+          }}
+        >
           <CircularProgress aria-label="Loading listings" />
           <Typography color="text.secondary">Loading listings...</Typography>
         </Box>
       )}
 
-      {hasError && (
+      {listStatus === "failed" && (
         <Alert
           severity="error"
           action={<Button onClick={loadListings}>Try again</Button>}
         >
-          Unable to load listings. Please try again.
+          {error ?? "Unable to load listings."} Please try again.
         </Alert>
       )}
 
-      {!isLoading && !hasError && (
+      {listStatus === "succeeded" && (
         <Stack spacing={2}>
           {listings.map((listing) => (
             <Card key={listing.id} variant="outlined">
-              <CardActionArea component={RouterLink} to={`/listings/${listing.id}`}>
+              <CardActionArea
+                component={RouterLink}
+                to={`/listings/${listing.id}`}
+              >
                 <CardContent>
                   <Typography variant="h5" component="h2">
                     {listing.title}
