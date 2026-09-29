@@ -16,6 +16,10 @@ export interface UserRepository {
   findById(id: string): Promise<UserRecord | undefined>;
   findByEmail(email: string): Promise<UserRecord | undefined>;
   create(input: CreateUserInput): Promise<UserRecord>;
+  updateDisplayName(
+    id: string,
+    displayName: string,
+  ): Promise<UserRecord | undefined>;
 }
 
 export const normalizeEmail = (email: string): string =>

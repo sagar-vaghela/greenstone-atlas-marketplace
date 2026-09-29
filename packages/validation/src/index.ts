@@ -10,6 +10,7 @@ import type {
   OfferStatus,
   UpdateListingInput,
   User,
+  UpdateSellerProfileInput,
 } from "@atlas/types";
 import { z } from "zod";
 
@@ -89,6 +90,16 @@ export const loginSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(1),
 });
+
+export const updateSellerProfileSchema: z.ZodType<UpdateSellerProfileInput> = z
+  .object({
+    displayName: z.string().trim().min(1).max(120).optional(),
+    bio: z.string().trim().max(500).optional(),
+    location: z.string().trim().max(120).optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one profile field must be provided",
+  });
 
 export const updateListingSchema: z.ZodType<UpdateListingInput> = z
   .object({
@@ -174,4 +185,5 @@ export type {
   Offer,
   OfferStatus,
   User,
+  UpdateSellerProfileInput,
 };

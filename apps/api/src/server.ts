@@ -7,6 +7,8 @@ import { MongoOfferRepository } from "./repositories/mongo-offer-repository.js";
 import { MongoUserRepository } from "./repositories/mongo-user-repository.js";
 import { MongoSessionRepository } from "./repositories/mongo-session-repository.js";
 import { hashPassword } from "./auth/password.js";
+import { InMemorySellerProfileRepository } from "./repositories/in-memory-seller-profile-repository.js";
+import { MongoSellerProfileRepository } from "./repositories/mongo-seller-profile-repository.js";
 
 let app: ReturnType<typeof buildApp> | undefined;
 let mongoConnection: MongoConnection | undefined;
@@ -31,6 +33,13 @@ const start = async (): Promise<void> => {
                   role: "seller" as const,
                 },
                 {
+                  id: "demo-seller-2",
+                  email: "seller2@example.com",
+                  displayName: "Daniel Shah",
+                  password: "seller123",
+                  role: "seller" as const,
+                },
+                {
                   id: "demo-buyer",
                   email: "buyer@example.com",
                   displayName: "Buyer A",
@@ -51,6 +60,29 @@ const start = async (): Promise<void> => {
                     passwordHash: hashPassword(seed.password),
                   });
               }
+              const sellerProfileRepository = new MongoSellerProfileRepository(
+                connection.db.collection("sellerProfiles"),
+              );
+              for (const profile of [
+                {
+                  userId: "demo-seller",
+                  memberSince: "2025-01-01T00:00:00.000Z",
+                  verificationStatus: "verified" as const,
+                  responseRate: 92,
+                },
+                {
+                  userId: "demo-seller-2",
+                  memberSince: "2026-01-15T00:00:00.000Z",
+                  verificationStatus: "pending" as const,
+                  responseRate: 78,
+                },
+              ]) {
+                if (
+                  !(await sellerProfileRepository.findByUserId(profile.userId))
+                ) {
+                  await sellerProfileRepository.create(profile);
+                }
+              }
               return {
                 listingRepository: new MongoListingRepository(
                   connection.db.collection("listings"),
@@ -62,6 +94,7 @@ const start = async (): Promise<void> => {
                 sessionRepository: new MongoSessionRepository(
                   connection.db.collection("sessions"),
                 ),
+                sellerProfileRepository,
               };
             },
           );
@@ -71,25 +104,20 @@ const start = async (): Promise<void> => {
           offerRepository: undefined,
           userRepository: undefined,
           sessionRepository: undefined,
+          sellerProfileRepository: new InMemorySellerProfileRepository(),
         });
 
-    app = buildApp(
-      await repositories.then(
-        ({
-          listingRepository,
-          offerRepository,
-          userRepository,
-          sessionRepository,
-        }) => ({
-          repository: listingRepository,
-          offerRepository,
-          userRepository,
-          sessionRepository,
-          secureCookies: config.secureCookies,
-          sessionTtlMs: config.sessionTtlMs,
-        }),
-      ),
-    );
+    const resolvedRepositories = await repositories;
+    app = buildApp({
+      repository: resolvedRepositories.listingRepository,
+      offerRepository: resolvedRepositories.offerRepository,
+      userRepository: resolvedRepositories.userRepository,
+      sessionRepository: resolvedRepositories.sessionRepository,
+      secureCookies: config.secureCookies,
+      sessionTtlMs: config.sessionTtlMs,
+      sellerProfileRepository: resolvedRepositories.sellerProfileRepository,
+    });
+    await resolvedRepositories.sellerProfileRepository.ensureIndexes();
     await app.listen({ host: config.host, port: config.port });
   } catch (error) {
     app?.log.error(error);

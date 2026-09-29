@@ -14,6 +14,9 @@ import type { UserRepository } from "./repositories/user-repository.js";
 import type { SessionRepository } from "./repositories/session-repository.js";
 import { registerAuthentication } from "./auth/middleware.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { InMemorySellerProfileRepository } from "./repositories/in-memory-seller-profile-repository.js";
+import type { SellerProfileRepository } from "./repositories/seller-profile-repository.js";
+import { registerSellerRoutes } from "./routes/sellers.js";
 
 interface BuildAppOptions {
   repository?: ListingRepository;
@@ -22,6 +25,7 @@ interface BuildAppOptions {
   sessionRepository?: SessionRepository;
   secureCookies?: boolean;
   sessionTtlMs?: number;
+  sellerProfileRepository?: SellerProfileRepository;
 }
 
 export const buildApp = (options: BuildAppOptions = {}) => {
@@ -102,6 +106,12 @@ export const buildApp = (options: BuildAppOptions = {}) => {
   app.register(registerOfferRoutes, {
     listingRepository,
     offerRepository: options.offerRepository ?? new InMemoryOfferRepository(),
+  });
+  app.register(registerSellerRoutes, {
+    users: userRepository,
+    listings: listingRepository,
+    profiles:
+      options.sellerProfileRepository ?? new InMemorySellerProfileRepository(),
   });
 
   return app;

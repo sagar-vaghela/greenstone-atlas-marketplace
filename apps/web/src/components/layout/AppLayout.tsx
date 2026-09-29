@@ -39,6 +39,9 @@ export function AppLayout() {
               >
                 {user.displayName}
               </Typography>
+              <Button component={RouterLink} to="/profile" color="inherit">
+                Profile
+              </Button>
               <Button color="inherit" onClick={() => void dispatch(logout())}>
                 Logout
               </Button>

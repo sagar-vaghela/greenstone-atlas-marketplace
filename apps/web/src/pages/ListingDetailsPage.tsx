@@ -20,6 +20,7 @@ import { Link as RouterLink, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { OfferPanel } from "../components/listings/OfferPanel";
+import { SellerCard } from "../components/listings/SellerCard";
 import {
   fetchListingById,
   selectStatusUpdateError,
@@ -157,6 +158,7 @@ export function ListingDetailsPage() {
           />
         </Box>
       </Stack>
+      <SellerCard sellerId={listing.sellerId} />
       {currentUser ? (
         <OfferPanel
           listing={listing}

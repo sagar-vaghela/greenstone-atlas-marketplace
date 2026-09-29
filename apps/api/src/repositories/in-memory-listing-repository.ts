@@ -29,6 +29,16 @@ const seedListings: CreateListingRepositoryInput[] = [
     images: [],
     sellerId: "demo-seller",
   },
+  {
+    title: "Cartier Santos Medium WSSA0029",
+    description:
+      "Pre-owned classic with a clean bracelet and broad wrist appeal.",
+    price: 710000,
+    currency: "INR",
+    category: "luxury-watches",
+    images: [],
+    sellerId: "demo-seller-2",
+  },
 ];
 
 export class InMemoryListingRepository implements ListingRepository {

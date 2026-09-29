@@ -49,9 +49,42 @@ discovery remains available without signing in.
 
 The frontend role is presentation state; authorization is enforced server-side using the authenticated user identity and resource ownership.
 
+## Seller profiles and trust
+
+Seller-specific marketplace information lives in `SellerProfile`, referenced by
+`userId`; `User` remains responsible for authentication identity and credentials.
+The public seller API exposes only a seller id, display name, profile fields and
+derived listing statistics. It never exposes email, password hashes, sessions or
+private offers and negotiation history.
+
+Trust signals are factual marketplace data, not an overall seller score. The
+profile shows member-since date, active listings, sold listings and an optional
+profile response rate. Active and sold counts are derived from listing status,
+so the current `sold` lifecycle is labelled as sold listings rather than
+completed purchases. Verification is the explicit profile state
+`unverified`, `pending` or `verified`; demo `verified` values are deterministic
+marketplace seed data and do not represent KYC or government-ID verification.
+
+Public seller listings include active listings only. Profile edits are limited
+to display name, bio and broad location, and are authorized from the session
+identity rather than a client-supplied user id. Verification, member-since,
+response-rate and listing statistics remain server-controlled.
+
+The seller endpoints are `GET /sellers/:sellerId`, `GET
+/sellers/:sellerId/listings`, `GET /me/seller-profile` and `PATCH
+/me/seller-profile`. The last two require the HTTP-only session; public profile
+and listing responses do not include offer or negotiation data.
+
+Real identity verification should later integrate with a dedicated KYC provider.
+Reviews and ratings are also future extensions, not part of this trust model.
+Response rate is a small seeded marketplace profile value for the demo because
+the current offer model does not provide the timestamps and response lifecycle
+needed for honest analytics.
+
 Development-only demo accounts are seeded by the in-memory repository:
 `seller@example.com` / `seller123`, `buyer@example.com` / `buyer123`, and
-`buyer2@example.com` / `buyer123`. These are not production credentials.
+`buyer2@example.com` / `buyer123`. A second fictional seller is available as
+`seller2@example.com` / `seller123`. These are not production credentials.
 Legacy listings and offers retain the deterministic `demo-seller` and
 `demo-buyer` identities rather than being assigned to the first requester.
 

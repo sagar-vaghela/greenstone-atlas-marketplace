@@ -2,6 +2,8 @@ export type ListingStatus = "draft" | "active" | "sold";
 
 export type UserRole = "buyer" | "seller";
 
+export type SellerVerificationStatus = "unverified" | "pending" | "verified";
+
 export interface User {
   id: string;
   email: string;
@@ -9,6 +11,37 @@ export interface User {
   role: UserRole;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SellerProfile {
+  userId: string;
+  bio?: string;
+  location?: string;
+  memberSince: string;
+  verificationStatus: SellerVerificationStatus;
+  responseRate?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SellerPublicUser {
+  id: string;
+  displayName: string;
+}
+
+export interface SellerProfileResponse {
+  user: SellerPublicUser;
+  profile: Omit<SellerProfile, "userId" | "createdAt" | "updatedAt">;
+  stats: {
+    activeListings: number;
+    soldListings: number;
+  };
+}
+
+export interface UpdateSellerProfileInput {
+  displayName?: string;
+  bio?: string;
+  location?: string;
 }
 
 export type OfferStatus =

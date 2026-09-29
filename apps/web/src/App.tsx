@@ -14,6 +14,8 @@ import { MarketplacePage } from "./pages/MarketplacePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { SellerProfilePage } from "./pages/SellerProfilePage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
 import { fetchCurrentUser, selectAuth } from "./features/auth/authSlice";
 import { CircularProgress, Box } from "@mui/material";
@@ -66,6 +68,15 @@ export function App() {
             }
           />
           <Route path="/listings/:id" element={<ListingDetailsPage />} />
+          <Route path="/sellers/:sellerId" element={<SellerProfilePage />} />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

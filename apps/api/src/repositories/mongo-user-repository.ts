@@ -45,4 +45,21 @@ export class MongoUserRepository implements UserRepository {
     await this.collection.insertOne(user);
     return user;
   }
+
+  async updateDisplayName(
+    id: string,
+    displayName: string,
+  ): Promise<UserRecord | undefined> {
+    const document = await this.collection.findOneAndUpdate(
+      { id },
+      {
+        $set: {
+          displayName: displayName.trim(),
+          updatedAt: new Date().toISOString(),
+        },
+      },
+      { projection: { _id: 0 }, returnDocument: "after" },
+    );
+    return document ? toUser(document) : undefined;
+  }
 }
