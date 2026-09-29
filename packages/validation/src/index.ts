@@ -8,7 +8,11 @@ import type {
 } from "@atlas/types";
 import { z } from "zod";
 
-const listingStatusSchema = z.enum(["draft", "active", "sold"]);
+export const listingStatusSchema: z.ZodType<ListingStatus> = z.enum([
+  "draft",
+  "active",
+  "sold",
+]);
 const listingSortSchema: z.ZodType<ListingSort> = z.enum([
   "newest",
   "oldest",
@@ -60,11 +64,14 @@ export const updateListingSchema: z.ZodType<UpdateListingInput> = z
     price: z.number().finite().nonnegative().optional(),
     currency: z.string().trim().min(1).optional(),
     category: z.string().trim().min(1).optional(),
-    status: listingStatusSchema.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",
   });
+
+export const updateListingStatusSchema = z.object({
+  status: listingStatusSchema,
+});
 
 export const listingSchema: z.ZodType<Listing> = z.object({
   id: z.string().trim().min(1),

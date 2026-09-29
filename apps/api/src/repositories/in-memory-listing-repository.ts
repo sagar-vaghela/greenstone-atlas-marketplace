@@ -2,8 +2,10 @@ import type {
   CreateListingInput,
   Listing,
   ListingQuery,
+  ListingStatus,
   UpdateListingInput,
 } from "@atlas/types";
+import { assertValidListingStatusTransition } from "../domain/listing-status.js";
 import type { ListingRepository } from "./listing-repository.js";
 
 const seedListings: CreateListingInput[] = [
@@ -100,6 +102,26 @@ export class InMemoryListingRepository implements ListingRepository {
     const updatedListing: Listing = {
       ...this.listings[index],
       ...input,
+      updatedAt: new Date().toISOString(),
+    };
+    this.listings[index] = updatedListing;
+    return { ...updatedListing };
+  }
+
+  async updateStatus(
+    id: string,
+    status: ListingStatus,
+  ): Promise<Listing | undefined> {
+    const index = this.listings.findIndex((listing) => listing.id === id);
+    if (index === -1) {
+      return undefined;
+    }
+
+    const currentListing = this.listings[index];
+    assertValidListingStatusTransition(currentListing.status, status);
+    const updatedListing: Listing = {
+      ...currentListing,
+      status,
       updatedAt: new Date().toISOString(),
     };
     this.listings[index] = updatedListing;

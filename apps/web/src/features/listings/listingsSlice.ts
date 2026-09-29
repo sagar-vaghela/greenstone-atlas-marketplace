@@ -3,6 +3,7 @@ import type {
   CreateListingInput,
   Listing,
   ListingQuery,
+  ListingStatus,
   UpdateListingInput,
 } from "@atlas/types";
 import { ApiError } from "../../api/client";
@@ -11,6 +12,7 @@ import {
   getListingById,
   getListings,
   updateListing as updateListingRequest,
+  updateListingStatus as updateListingStatusRequest,
 } from "../../api/listings";
 
 export type RequestStatus = "idle" | "loading" | "succeeded" | "failed";
@@ -25,6 +27,8 @@ interface ListingsState {
   error: string | null;
   createError: string | null;
   updateError: string | null;
+  statusUpdateStatus: RequestStatus;
+  statusUpdateError: string | null;
   detailRequestId: string | null;
 }
 
@@ -38,6 +42,8 @@ const initialState: ListingsState = {
   error: null,
   createError: null,
   updateError: null,
+  statusUpdateStatus: "idle",
+  statusUpdateError: null,
   detailRequestId: null,
 };
 
@@ -101,6 +107,28 @@ export const updateListing = createAsyncThunk<
     }
 
     return rejectWithValue("Unable to update this listing. Please try again.");
+  }
+});
+
+export const updateListingStatus = createAsyncThunk<
+  Listing,
+  { id: string; status: ListingStatus },
+  { rejectValue: string }
+>("listings/updateListingStatus", async ({ id, status }, { rejectWithValue }) => {
+  try {
+    return await updateListingStatusRequest(id, status);
+  } catch (error: unknown) {
+    if (error instanceof ApiError && error.status === 404) {
+      return rejectWithValue("Listing not found");
+    }
+    if (error instanceof ApiError && error.status === 409) {
+      return rejectWithValue("This listing status can no longer be changed.");
+    }
+    if (error instanceof ApiError && error.status === 400) {
+      return rejectWithValue("Please choose a valid listing status.");
+    }
+
+    return rejectWithValue("Unable to update the listing status. Please try again.");
   }
 });
 
@@ -191,6 +219,28 @@ const listingsSlice = createSlice({
         state.updateStatus = "failed";
         state.updateError =
           action.payload ?? "Unable to update this listing. Please try again.";
+      })
+      .addCase(updateListingStatus.pending, (state) => {
+        state.statusUpdateStatus = "loading";
+        state.statusUpdateError = null;
+      })
+      .addCase(updateListingStatus.fulfilled, (state, action) => {
+        state.statusUpdateStatus = "succeeded";
+        state.statusUpdateError = null;
+        const index = state.items.findIndex(
+          (listing) => listing.id === action.payload.id,
+        );
+        if (index !== -1) {
+          state.items[index] = action.payload;
+        }
+        if (state.selectedListing?.id === action.payload.id) {
+          state.selectedListing = action.payload;
+        }
+      })
+      .addCase(updateListingStatus.rejected, (state, action) => {
+        state.statusUpdateStatus = "failed";
+        state.statusUpdateError =
+          action.payload ?? "Unable to update the listing status. Please try again.";
       });
   },
 });
@@ -215,5 +265,9 @@ export const selectUpdateStatus = (state: { listings: ListingsState }) =>
   state.listings.updateStatus;
 export const selectUpdateError = (state: { listings: ListingsState }) =>
   state.listings.updateError;
+export const selectStatusUpdateStatus = (state: { listings: ListingsState }) =>
+  state.listings.statusUpdateStatus;
+export const selectStatusUpdateError = (state: { listings: ListingsState }) =>
+  state.listings.statusUpdateError;
 
 export default listingsSlice.reducer;

@@ -3,9 +3,11 @@ import type {
   CreateListingInput,
   Listing,
   ListingQuery,
+  ListingStatus,
   UpdateListingInput,
 } from "@atlas/types";
 import type { Collection, ObjectId } from "mongodb";
+import { assertValidListingStatusTransition } from "../domain/listing-status.js";
 import type { ListingRepository } from "./listing-repository.js";
 
 interface ListingDocument extends Listing {
@@ -84,6 +86,33 @@ export class MongoListingRepository implements ListingRepository {
       {
         $set: {
           ...input,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+      {
+        projection: { _id: 0 },
+        returnDocument: "after",
+      },
+    );
+
+    return document ? toListing(document) : undefined;
+  }
+
+  async updateStatus(
+    id: string,
+    status: ListingStatus,
+  ): Promise<Listing | undefined> {
+    const currentDocument = await this.collection.findOne({ id });
+    if (!currentDocument) {
+      return undefined;
+    }
+
+    assertValidListingStatusTransition(currentDocument.status, status);
+    const document = await this.collection.findOneAndUpdate(
+      { id, status: currentDocument.status },
+      {
+        $set: {
+          status,
           updatedAt: new Date().toISOString(),
         },
       },

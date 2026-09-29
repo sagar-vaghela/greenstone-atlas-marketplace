@@ -36,5 +36,4 @@ export interface UpdateListingInput {
   price?: number;
   currency?: string;
   category?: string;
-  status?: ListingStatus;
 }

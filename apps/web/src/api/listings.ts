@@ -2,6 +2,7 @@ import type {
   CreateListingInput,
   Listing,
   ListingQuery,
+  ListingStatus,
   UpdateListingInput,
 } from "@atlas/types";
 import { request } from "./client";
@@ -46,5 +47,16 @@ export function updateListing(
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
+  });
+}
+
+export function updateListingStatus(
+  id: string,
+  status: ListingStatus,
+): Promise<Listing> {
+  return request<Listing>(`/listings/${encodeURIComponent(id)}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
   });
 }

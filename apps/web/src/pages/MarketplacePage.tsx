@@ -6,6 +6,7 @@ import {
   Card,
   CardActionArea,
   CardContent,
+  Chip,
   CircularProgress,
   FormControl,
   InputLabel,
@@ -32,6 +33,12 @@ const formatPrice = (listing: Listing) =>
     currency: listing.currency,
     maximumFractionDigits: 0,
   }).format(listing.price);
+
+const statusLabels = {
+  draft: "Draft",
+  active: "Active",
+  sold: "Sold",
+} as const;
 
 export function MarketplacePage() {
   const dispatch = useAppDispatch();
@@ -240,9 +247,20 @@ export function MarketplacePage() {
                 to={`/listings/${listing.id}`}
               >
                 <CardContent>
-                  <Typography variant="h5" component="h2">
-                    {listing.title}
-                  </Typography>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
+                  >
+                    <Typography variant="h5" component="h2">
+                      {listing.title}
+                    </Typography>
+                    <Chip
+                      label={statusLabels[listing.status]}
+                      size="small"
+                      color={listing.status === "active" ? "success" : "default"}
+                    />
+                  </Stack>
                   <Typography variant="h6" sx={{ mt: 1 }}>
                     {formatPrice(listing)}
                   </Typography>

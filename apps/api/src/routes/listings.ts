@@ -1,11 +1,17 @@
-import type { CreateListingInput, UpdateListingInput } from "@atlas/types";
+import type {
+  CreateListingInput,
+  ListingStatus,
+  UpdateListingInput,
+} from "@atlas/types";
 import {
   createListingSchema,
   listingQuerySchema,
+  updateListingStatusSchema,
   updateListingSchema,
 } from "@atlas/validation";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ListingRepository } from "../repositories/listing-repository.js";
+import { InvalidListingStatusTransitionError } from "../domain/listing-status.js";
 
 interface ListingRouteOptions {
   repository: ListingRepository;
@@ -24,6 +30,13 @@ interface CreateListingRequest extends FastifyRequest<{ Body: unknown }> {
 }
 
 interface UpdateListingRequest extends FastifyRequest<{
+  Params: ListingIdParams;
+  Body: unknown;
+}> {
+  body: unknown;
+}
+
+interface UpdateListingStatusRequest extends FastifyRequest<{
   Params: ListingIdParams;
   Body: unknown;
 }> {
@@ -114,6 +127,54 @@ export const registerListingRoutes = async (
         request.params.id,
         result.data satisfies UpdateListingInput,
       );
+      if (!listing) {
+        return reply.status(404).send({
+          error: {
+            code: "LISTING_NOT_FOUND",
+            message: "Listing not found",
+          },
+        });
+      }
+
+      return reply.status(200).send(listing);
+    },
+  );
+
+  app.patch<{ Params: ListingIdParams; Body: unknown }>(
+    "/listings/:id/status",
+    async (request: UpdateListingStatusRequest, reply) => {
+      const result = updateListingStatusSchema.safeParse(request.body);
+      if (!result.success) {
+        return reply.status(400).send({
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid request body",
+            details: result.error.issues.map((issue) => ({
+              path: issue.path,
+              message: issue.message,
+            })),
+          },
+        });
+      }
+
+      let listing;
+      try {
+        listing = await options.repository.updateStatus(
+          request.params.id,
+          result.data.status satisfies ListingStatus,
+        );
+      } catch (error: unknown) {
+        if (error instanceof InvalidListingStatusTransitionError) {
+          return reply.status(409).send({
+            error: {
+              code: "INVALID_STATUS_TRANSITION",
+              message: error.message,
+            },
+          });
+        }
+        throw error;
+      }
+
       if (!listing) {
         return reply.status(404).send({
           error: {
