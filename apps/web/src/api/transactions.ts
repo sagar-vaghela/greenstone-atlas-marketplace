@@ -1,0 +1,44 @@
+import type { Transaction } from "@atlas/types";
+import { request } from "./client";
+
+export const getTransactionById = (id: string): Promise<Transaction> =>
+  request<Transaction>(`/transactions/${encodeURIComponent(id)}`);
+
+export const getMyTransactions = (): Promise<Transaction[]> =>
+  request<{ items: Transaction[] }>("/me/transactions").then((result) => result.items);
+
+export const payTransaction = (id: string): Promise<Transaction> =>
+  request<Transaction>(`/transactions/${encodeURIComponent(id)}/payment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+
+export const shipTransaction = (id: string): Promise<Transaction> =>
+  request<Transaction>(`/transactions/${encodeURIComponent(id)}/ship`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+
+export const deliverTransaction = (id: string): Promise<Transaction> =>
+  request<Transaction>(`/transactions/${encodeURIComponent(id)}/deliver`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+
+export const completeTransaction = (id: string): Promise<Transaction> =>
+  request<Transaction>(`/transactions/${encodeURIComponent(id)}/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+
+export const cancelTransaction = (id: string): Promise<Transaction> =>
+  request<Transaction>(`/transactions/${encodeURIComponent(id)}/cancel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+
+export const disputeTransaction = (id: string): Promise<Transaction> =>
+  request<Transaction>(`/transactions/${encodeURIComponent(id)}/dispute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });

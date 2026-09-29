@@ -38,6 +38,12 @@ const realtimeSlice = createSlice({
         "offer.rejected": "Your offer is no longer available.",
         "offer.withdrawn": "An offer was withdrawn.",
         "listing.status_changed": "Listing status changed.",
+        "transaction.created": "A transaction has been created.",
+        "transaction.payment_updated": "Transaction payment status updated.",
+        "transaction.fulfilment_updated": "Transaction fulfilment status updated.",
+        "transaction.completed": "Transaction completed.",
+        "transaction.cancelled": "Transaction cancelled.",
+        "transaction.disputed": "A dispute has been opened.",
       };
       state.notification = {
         message: messages[event.type],

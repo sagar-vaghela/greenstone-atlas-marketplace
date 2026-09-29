@@ -8,6 +8,12 @@ const eventTypes: MarketplaceEventType[] = [
   "offer.rejected",
   "offer.withdrawn",
   "listing.status_changed",
+  "transaction.created",
+  "transaction.payment_updated",
+  "transaction.fulfilment_updated",
+  "transaction.completed",
+  "transaction.cancelled",
+  "transaction.disputed",
 ];
 
 export type EventConnectionStatus = "connecting" | "connected" | "reconnecting";

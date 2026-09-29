@@ -4,6 +4,7 @@ import offersReducer from "../features/offers/offersSlice";
 import authReducer from "../features/auth/authSlice";
 import sellerReducer from "../features/sellers/sellerSlice";
 import realtimeReducer from "../features/realtime/realtimeSlice";
+import transactionsReducer from "../features/transactions/transactionsSlice";
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     auth: authReducer,
     sellers: sellerReducer,
     realtime: realtimeReducer,
+    transactions: transactionsReducer,
   },
 });
 

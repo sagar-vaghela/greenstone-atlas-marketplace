@@ -1,6 +1,9 @@
 const DEFAULT_HOST = "0.0.0.0";
 const DEFAULT_PORT = 3000;
-const DEFAULT_CORS_ORIGIN = "http://localhost:5173";
+const DEFAULT_CORS_ORIGIN = [
+  "http://localhost:5173",
+  "http://localhost:4173",
+];
 const DEFAULT_MONGODB_DB_NAME = "atlas_marketplace";
 const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -23,12 +26,25 @@ const parsePort = (value: string | undefined): number => {
 export interface ApiConfig {
   host: string;
   port: number;
-  corsOrigin: string;
+  corsOrigin: string | string[];
   mongodbUri?: string;
   mongodbDbName: string;
   sessionTtlMs: number;
   secureCookies: boolean;
 }
+
+const parseCorsOrigin = (value: string | undefined): string | string[] => {
+  if (!value || value.trim() === "") {
+    return DEFAULT_CORS_ORIGIN;
+  }
+
+  const origins = value
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return origins.length > 1 ? origins : origins[0] ?? DEFAULT_CORS_ORIGIN;
+};
 
 export const getApiConfig = (
   env: NodeJS.ProcessEnv = process.env,
@@ -38,7 +54,7 @@ export const getApiConfig = (
   return {
     host: env.HOST?.trim() || DEFAULT_HOST,
     port: parsePort(env.PORT),
-    corsOrigin: env.CORS_ORIGIN?.trim() || DEFAULT_CORS_ORIGIN,
+    corsOrigin: parseCorsOrigin(env.CORS_ORIGIN),
     mongodbUri,
     mongodbDbName: env.MONGODB_DB_NAME?.trim() || DEFAULT_MONGODB_DB_NAME,
     sessionTtlMs: Number(env.SESSION_TTL_MS) || DEFAULT_SESSION_TTL_MS,

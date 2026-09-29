@@ -21,9 +21,9 @@ export const updateOfferStatus = (
   id: string,
   status: "accepted" | "rejected" | "withdrawn",
 ): Promise<Offer> =>
-  request<Offer>(`/offers/${encodeURIComponent(id)}/status`, {
+  request<{ offer: Offer } | Offer>(`/offers/${encodeURIComponent(id)}/status`, {
     ...options({ status }, "PATCH"),
-  });
+  }).then((result) => ("offer" in result ? result.offer : result));
 export const counterOffer = (
   id: string,
   input: { amount: number; currency: string },

@@ -8,6 +8,10 @@ import type {
   CreateOfferInput,
   Offer,
   OfferStatus,
+  Transaction,
+  TransactionStatus,
+  PaymentStatus,
+  FulfilmentStatus,
   UpdateListingInput,
   User,
   UpdateSellerProfileInput,
@@ -141,6 +145,31 @@ export const offerStatusSchema: z.ZodType<OfferStatus> = z.enum([
   "withdrawn",
   "expired",
 ]);
+
+export const transactionStatusSchema: z.ZodType<TransactionStatus> = z.enum([
+  "pending_payment",
+  "paid",
+  "fulfilment_pending",
+  "shipped",
+  "delivered",
+  "completed",
+  "cancelled",
+  "disputed",
+]);
+
+export const paymentStatusSchema: z.ZodType<PaymentStatus> = z.enum([
+  "pending",
+  "paid",
+  "failed",
+  "refunded",
+]);
+
+export const fulfilmentStatusSchema: z.ZodType<FulfilmentStatus> = z.enum([
+  "pending",
+  "shipped",
+  "delivered",
+]);
+
 const moneySchema = z
   .number()
   .finite()
@@ -175,6 +204,24 @@ export const updateOfferStatusSchema = z.object({
   status: z.enum(["accepted", "rejected", "withdrawn"]),
 });
 
+export const transactionSchema: z.ZodType<Transaction> = z.object({
+  id: z.string().trim().min(1),
+  listingId: z.string().trim().min(1),
+  offerId: z.string().trim().min(1),
+  buyerId: z.string().trim().min(1),
+  sellerId: z.string().trim().min(1),
+  amount: z.number().finite().nonnegative(),
+  currency: z.string().trim().min(1),
+  status: transactionStatusSchema,
+  paymentStatus: paymentStatusSchema,
+  fulfilmentStatus: fulfilmentStatusSchema,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  completedAt: z.string().datetime().optional(),
+  cancelledAt: z.string().datetime().optional(),
+  version: z.number().int().nonnegative(),
+});
+
 export type {
   CreateListingInput,
   Listing,
@@ -185,6 +232,10 @@ export type {
   CreateOfferInput,
   Offer,
   OfferStatus,
+  Transaction,
+  TransactionStatus,
+  PaymentStatus,
+  FulfilmentStatus,
   User,
   UpdateSellerProfileInput,
 };

@@ -9,11 +9,13 @@ import { requireAuthenticatedUser } from "../auth/middleware.js";
 import { InvalidOfferTransitionError } from "../domain/offer-status.js";
 import type { ListingRepository } from "../repositories/listing-repository.js";
 import type { OfferRepository } from "../repositories/offer-repository.js";
+import type { TransactionRepository } from "../repositories/transaction-repository.js";
 import type { MarketplaceEventBus } from "../events/marketplace-event-bus.js";
 
 interface Options {
   listingRepository: ListingRepository;
   offerRepository: OfferRepository;
+  transactionRepository: TransactionRepository;
   eventBus: MarketplaceEventBus;
 }
 interface IdParams {
@@ -205,6 +207,41 @@ export const registerOfferRoutes = async (
             );
           }
         }
+        const existingTransaction = await options.transactionRepository.findByListingId(
+          listing.id,
+        );
+        if (
+          existingTransaction &&
+          existingTransaction.status !== "cancelled" &&
+          existingTransaction.status !== "completed"
+        ) {
+          return error(
+            reply,
+            409,
+            "TRANSACTION_ALREADY_EXISTS",
+            "This listing already has an active transaction.",
+          );
+        }
+
+        const transaction = await options.transactionRepository.create({
+          listingId: listing.id,
+          offerId: accepted.id,
+          buyerId: accepted.buyerId,
+          sellerId: accepted.sellerId,
+          amount: accepted.amount,
+          currency: accepted.currency,
+        });
+        options.eventBus.publish(
+          {
+            type: "transaction.created",
+            listingId: transaction.listingId,
+            offerId: transaction.offerId,
+            actorUserId: user.id,
+            payload: { transaction },
+          },
+          [transaction.buyerId, transaction.sellerId],
+        );
+
         const updatedListing = await options.listingRepository.findById(listing.id);
         if (updatedListing) {
           options.eventBus.publish(
@@ -212,7 +249,7 @@ export const registerOfferRoutes = async (
             [updatedListing.sellerId, ...competing.map((item) => item.buyerId), offer.buyerId],
           );
         }
-        return accepted;
+        return reply.status(200).send({ offer: accepted, transaction });
       }
       try {
         const updated = await options.offerRepository.updateStatus(

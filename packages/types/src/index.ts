@@ -52,6 +52,20 @@ export type OfferStatus =
   | "withdrawn"
   | "expired";
 
+export type TransactionStatus =
+  | "pending_payment"
+  | "paid"
+  | "fulfilment_pending"
+  | "shipped"
+  | "delivered"
+  | "completed"
+  | "cancelled"
+  | "disputed";
+
+export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+
+export type FulfilmentStatus = "pending" | "shipped" | "delivered";
+
 export type ListingSort = "newest" | "oldest" | "price_asc" | "price_desc";
 
 export interface ListingImage {
@@ -102,11 +116,18 @@ export type MarketplaceEventType =
   | "offer.accepted"
   | "offer.rejected"
   | "offer.withdrawn"
-  | "listing.status_changed";
+  | "listing.status_changed"
+  | "transaction.created"
+  | "transaction.payment_updated"
+  | "transaction.fulfilment_updated"
+  | "transaction.completed"
+  | "transaction.cancelled"
+  | "transaction.disputed";
 
 export type MarketplaceEventPayload =
   | { offer: Offer }
-  | { listing: Listing };
+  | { listing: Listing }
+  | { transaction: Transaction };
 
 export interface MarketplaceEvent {
   id: string;
@@ -138,6 +159,33 @@ export interface CreateListingInput {
 
 export interface CreateListingRepositoryInput extends CreateListingInput {
   sellerId: string;
+}
+
+export interface Transaction {
+  id: string;
+  listingId: string;
+  offerId: string;
+  buyerId: string;
+  sellerId: string;
+  amount: number;
+  currency: string;
+  status: TransactionStatus;
+  paymentStatus: PaymentStatus;
+  fulfilmentStatus: FulfilmentStatus;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  version: number;
+}
+
+export interface CreateTransactionInput {
+  listingId: string;
+  offerId: string;
+  buyerId: string;
+  sellerId: string;
+  amount: number;
+  currency: string;
 }
 
 export interface UpdateListingInput {

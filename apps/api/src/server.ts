@@ -9,6 +9,8 @@ import { MongoSessionRepository } from "./repositories/mongo-session-repository.
 import { hashPassword } from "./auth/password.js";
 import { InMemorySellerProfileRepository } from "./repositories/in-memory-seller-profile-repository.js";
 import { MongoSellerProfileRepository } from "./repositories/mongo-seller-profile-repository.js";
+import { InMemoryTransactionRepository } from "./repositories/in-memory-transaction-repository.js";
+import { MongoTransactionRepository } from "./repositories/mongo-transaction-repository.js";
 
 let app: ReturnType<typeof buildApp> | undefined;
 let mongoConnection: MongoConnection | undefined;
@@ -95,6 +97,9 @@ const start = async (): Promise<void> => {
                   connection.db.collection("sessions"),
                 ),
                 sellerProfileRepository,
+                transactionRepository: new MongoTransactionRepository(
+                  connection.db.collection("transactions"),
+                ),
               };
             },
           );
@@ -105,6 +110,7 @@ const start = async (): Promise<void> => {
           userRepository: undefined,
           sessionRepository: undefined,
           sellerProfileRepository: new InMemorySellerProfileRepository(),
+          transactionRepository: new InMemoryTransactionRepository(),
         });
 
     const resolvedRepositories = await repositories;
@@ -116,6 +122,7 @@ const start = async (): Promise<void> => {
       secureCookies: config.secureCookies,
       sessionTtlMs: config.sessionTtlMs,
       sellerProfileRepository: resolvedRepositories.sellerProfileRepository,
+      transactionRepository: resolvedRepositories.transactionRepository,
     });
     await resolvedRepositories.sellerProfileRepository.ensureIndexes();
     await app.listen({ host: config.host, port: config.port });

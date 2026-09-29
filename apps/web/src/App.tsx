@@ -21,6 +21,11 @@ import { fetchCurrentUser, selectAuth } from "./features/auth/authSlice";
 import { CircularProgress, Box } from "@mui/material";
 import { connectMarketplaceEvents } from "./api/marketplaceEvents";
 import { connectionStatusChanged, eventReceived } from "./features/realtime/realtimeSlice";
+import {
+  transactionEventReceived,
+} from "./features/transactions/transactionsSlice";
+import { TransactionsPage } from "./pages/TransactionsPage";
+import { TransactionDetailsPage } from "./pages/TransactionDetailsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -53,7 +58,12 @@ export function App() {
       return;
     }
     return connectMarketplaceEvents(
-      (event) => dispatch(eventReceived({ event, userId: user.id })),
+      (event) => {
+        dispatch(eventReceived({ event, userId: user.id }));
+        if (event.type.startsWith("transaction.") && "transaction" in event.payload) {
+          dispatch(transactionEventReceived({ transaction: event.payload.transaction }));
+        }
+      },
       (status) => dispatch(connectionStatusChanged(status)),
     );
   }, [dispatch, user]);
@@ -87,6 +97,22 @@ export function App() {
             element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/transactions"
+            element={
+              <ProtectedRoute>
+                <TransactionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/transactions/:id"
+            element={
+              <ProtectedRoute>
+                <TransactionDetailsPage />
               </ProtectedRoute>
             }
           />

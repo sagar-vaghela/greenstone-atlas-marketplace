@@ -27,16 +27,17 @@ export function AppLayout() {
               Atlas Marketplace
             </Typography>
           </Link>
-          <Button
-            component={RouterLink}
-            to="/listings/new"
-            color="inherit"
-            sx={{ ml: "auto" }}
-          >
-            Create listing
+          <Button component={RouterLink} to="/" color="inherit" sx={{ ml: "auto" }}>
+            Marketplace
           </Button>
           {user ? (
             <>
+              <Button component={RouterLink} to="/transactions" color="inherit">
+                Transactions
+              </Button>
+              <Button component={RouterLink} to="/listings/new" color="inherit">
+                Create listing
+              </Button>
               <Typography
                 variant="body2"
                 sx={{ ml: 2, display: { xs: "none", sm: "block" } }}

@@ -19,6 +19,9 @@ import type { SellerProfileRepository } from "./repositories/seller-profile-repo
 import { registerSellerRoutes } from "./routes/sellers.js";
 import { MarketplaceEventBus } from "./events/marketplace-event-bus.js";
 import { registerEventRoutes } from "./routes/events.js";
+import { InMemoryTransactionRepository } from "./repositories/in-memory-transaction-repository.js";
+import type { TransactionRepository } from "./repositories/transaction-repository.js";
+import { registerTransactionRoutes } from "./routes/transactions.js";
 
 interface BuildAppOptions {
   repository?: ListingRepository;
@@ -28,6 +31,7 @@ interface BuildAppOptions {
   secureCookies?: boolean;
   sessionTtlMs?: number;
   sellerProfileRepository?: SellerProfileRepository;
+  transactionRepository?: TransactionRepository;
   eventBus?: MarketplaceEventBus;
 }
 
@@ -99,6 +103,8 @@ export const buildApp = (options: BuildAppOptions = {}) => {
   const eventBus = options.eventBus ?? new MarketplaceEventBus();
   const offerRepository =
     options.offerRepository ?? new InMemoryOfferRepository();
+  const transactionRepository =
+    options.transactionRepository ?? new InMemoryTransactionRepository();
 
   app.register(registerHealthRoute);
   app.register(registerAuthRoutes, {
@@ -116,6 +122,11 @@ export const buildApp = (options: BuildAppOptions = {}) => {
   app.register(registerOfferRoutes, {
     listingRepository,
     offerRepository,
+    eventBus,
+    transactionRepository,
+  });
+  app.register(registerTransactionRoutes, {
+    transactionRepository,
     eventBus,
   });
   app.register(registerSellerRoutes, {
