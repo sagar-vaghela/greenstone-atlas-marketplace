@@ -6,14 +6,18 @@ import {
   Link,
   Toolbar,
   Typography,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { Link as RouterLink, Outlet } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { logout, selectCurrentUser } from "../../features/auth/authSlice";
+import { notificationClosed, selectRealtime } from "../../features/realtime/realtimeSlice";
 
 export function AppLayout() {
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectCurrentUser);
+  const realtime = useAppSelector(selectRealtime);
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <AppBar position="static" elevation={0}>
@@ -58,6 +62,17 @@ export function AppLayout() {
           )}
         </Toolbar>
       </AppBar>
+      {user && (
+        <Box sx={{ px: 2, py: 0.75, textAlign: "center", bgcolor: "action.hover" }}>
+          <Typography variant="caption" color="text.secondary" role="status">
+            {realtime.connectionStatus === "connected"
+              ? "Live updates connected"
+              : realtime.connectionStatus === "reconnecting"
+                ? "Reconnecting to live updates..."
+                : "Connecting to live updates..."}
+          </Typography>
+        </Box>
+      )}
       <Container component="main" maxWidth="md" sx={{ flex: 1, py: 6 }}>
         <Outlet />
       </Container>
@@ -66,6 +81,16 @@ export function AppLayout() {
           Atlas Marketplace
         </Typography>
       </Box>
+      <Snackbar
+        open={Boolean(realtime.notification)}
+        autoHideDuration={5000}
+        onClose={() => dispatch(notificationClosed())}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert onClose={() => dispatch(notificationClosed())} severity={realtime.notification?.severity} role="status">
+          {realtime.notification?.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

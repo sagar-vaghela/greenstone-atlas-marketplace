@@ -103,6 +103,48 @@ ownership boundary.
 - Acceptance marks the listing sold and rejects competing actionable offers. The current repository flow is guarded with conditional updates; production MongoDB should use a transaction or stronger atomic cross-document operation for race-free settlement.
 - Amounts currently use numbers to match the existing listing model. Production money should move to integer minor units or a decimal-safe representation.
 
+## Real-time offer updates
+
+Offer commands remain REST requests. After a successful repository mutation, the
+API publishes a recipient-scoped `MarketplaceEvent` to an in-memory
+`MarketplaceEventBus`; authenticated clients receive those events through
+`GET /events` using Server-Sent Events, and Redux applies version-aware updates.
+
+```text
+REST command -> Repository -> Event Bus -> Authenticated SSE -> Redux -> React
+```
+
+SSE fits this interview implementation because traffic is primarily
+server-to-client, commands already use REST, and the browser provides a native
+reconnecting client without a WebSocket dependency. The HTTP-only session cookie
+authenticates the stream. The bus maps user ids to listeners, so sellers receive
+their listing offers and buyers receive only their own offer and listing events;
+unrelated users are not subscribed to those events. Event payloads contain no
+passwords, sessions, emails, or competing buyers' private negotiations.
+
+Each event has a unique id and server timestamp. Offers and listings have a
+server-controlled version; Redux ignores an event older than the state it already
+holds. REST remains authoritative, and the client refetches offers when the SSE
+connection is established or restored. SSE ordering is per connection only, so a
+production replay-capable transport should use event ids and a shared log.
+
+The current in-memory bus is reliable only for a single API instance. A scaled
+deployment would publish domain events to a shared broker and deliver them from a
+real-time gateway:
+
+```text
+API instances -> EventBridge / SNS / SQS / Redis -> Real-time gateway -> WebSocket or SSE
+```
+
+Possible managed choices include AWS EventBridge, SNS/SQS, API Gateway WebSocket,
+AWS AppSync, or another service selected for the required fan-out and replay
+semantics. MongoDB remains persistence, not the live event transport. MongoDB
+change streams do not provide recipient authorization by themselves, and the
+explicit domain event model keeps delivery separate from storage. Acceptance is
+still server-authoritative and must use a transaction or equivalent atomic
+cross-document operation at production scale; real-time events are updates, not
+the source of truth.
+
 Start the frontend:
 
 ```bash

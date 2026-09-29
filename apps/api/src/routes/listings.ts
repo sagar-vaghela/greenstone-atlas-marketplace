@@ -7,11 +7,15 @@ import {
 } from "@atlas/validation";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ListingRepository } from "../repositories/listing-repository.js";
+import type { OfferRepository } from "../repositories/offer-repository.js";
+import type { MarketplaceEventBus } from "../events/marketplace-event-bus.js";
 import { InvalidListingStatusTransitionError } from "../domain/listing-status.js";
 import { requireAuthenticatedUser } from "../auth/middleware.js";
 
 interface ListingRouteOptions {
   repository: ListingRepository;
+  offerRepository: OfferRepository;
+  eventBus: MarketplaceEventBus;
 }
 
 interface ListingIdParams {
@@ -221,6 +225,12 @@ export const registerListingRoutes = async (
           },
         });
       }
+
+      const offers = await options.offerRepository.listByListingId(listing.id);
+      options.eventBus.publish(
+        { type: "listing.status_changed", listingId: listing.id, actorUserId: user.id, payload: { listing } },
+        [listing.sellerId, ...offers.map((offer) => offer.buyerId)],
+      );
 
       return reply.status(200).send(listing);
     },

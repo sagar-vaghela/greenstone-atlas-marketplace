@@ -14,6 +14,7 @@ import {
   updateListing as updateListingRequest,
   updateListingStatus as updateListingStatusRequest,
 } from "../../api/listings";
+import { eventReceived } from "../realtime/realtimeSlice";
 
 export type RequestStatus = "idle" | "loading" | "succeeded" | "failed";
 
@@ -241,6 +242,14 @@ const listingsSlice = createSlice({
         state.statusUpdateStatus = "failed";
         state.statusUpdateError =
           action.payload ?? "Unable to update the listing status. Please try again.";
+      })
+      .addCase(eventReceived, (state, action) => {
+        const payload = action.payload.event.payload;
+        if (!("listing" in payload)) return;
+        const listing = payload.listing;
+        const index = state.items.findIndex((item) => item.id === listing.id);
+        if (index !== -1 && listing.version >= state.items[index].version) state.items[index] = listing;
+        if (state.selectedListing?.id === listing.id && listing.version >= state.selectedListing.version) state.selectedListing = listing;
       });
   },
 });

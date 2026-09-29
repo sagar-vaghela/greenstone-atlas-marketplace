@@ -15,16 +15,16 @@ export class InMemoryOfferRepository implements OfferRepository {
   async findById(id: string): Promise<Offer | undefined> { const offer = this.offers.find((item) => item.id === id); return offer ? copy(offer) : undefined; }
   async create(input: CreateOfferInput): Promise<Offer> {
     const timestamp = new Date().toISOString();
-    const offer: Offer = { ...input, id: `offer-${randomUUID()}`, status: "pending", createdAt: timestamp, updatedAt: timestamp };
+    const offer: Offer = { ...input, id: `offer-${randomUUID()}`, status: "pending", createdAt: timestamp, updatedAt: timestamp, version: 1 };
     this.offers.push(offer); return copy(offer);
   }
   async updateStatus(id: string, status: OfferStatus): Promise<Offer | undefined> {
     const offer = this.offers.find((item) => item.id === id); if (!offer) return undefined;
-    assertValidOfferTransition(offer.status, status); offer.status = status; offer.updatedAt = new Date().toISOString(); return copy(offer);
+    assertValidOfferTransition(offer.status, status); offer.status = status; offer.updatedAt = new Date().toISOString(); offer.version += 1; return copy(offer);
   }
   private seed(id: string, listingId: string, buyerId: string, amount: number, status: OfferStatus, parentOfferId?: string): Offer {
     const timestamp = new Date().toISOString();
-    return { id, listingId, buyerId, sellerId: "demo-seller", amount, currency: "INR", status, parentOfferId, createdAt: timestamp, updatedAt: timestamp };
+    return { id, listingId, buyerId, sellerId: "demo-seller", amount, currency: "INR", status, parentOfferId, createdAt: timestamp, updatedAt: timestamp, version: 1 };
   }
 }
 const copy = (offer: Offer): Offer => ({ ...offer });

@@ -9,10 +9,12 @@ import { requireAuthenticatedUser } from "../auth/middleware.js";
 import { InvalidOfferTransitionError } from "../domain/offer-status.js";
 import type { ListingRepository } from "../repositories/listing-repository.js";
 import type { OfferRepository } from "../repositories/offer-repository.js";
+import type { MarketplaceEventBus } from "../events/marketplace-event-bus.js";
 
 interface Options {
   listingRepository: ListingRepository;
   offerRepository: OfferRepository;
+  eventBus: MarketplaceEventBus;
 }
 interface IdParams {
   id: string;
@@ -117,6 +119,10 @@ export const registerOfferRoutes = async (
         buyerId: buyer.id,
         sellerId: listing.sellerId,
       });
+      options.eventBus.publish(
+        { type: "offer.created", listingId: listing.id, offerId: offer.id, actorUserId: buyer.id, payload: { offer } },
+        [listing.sellerId, buyer.id],
+      );
       return reply.status(201).send(offer);
     },
   );
@@ -176,7 +182,7 @@ export const registerOfferRoutes = async (
         const competing = await options.offerRepository.listByListingId(
           listing.id,
         );
-        await Promise.all(
+        const rejected = await Promise.all(
           competing
             .filter(
               (item) =>
@@ -187,13 +193,39 @@ export const registerOfferRoutes = async (
               options.offerRepository.updateStatus(item.id, "rejected"),
             ),
         );
+        options.eventBus.publish(
+          { type: "offer.accepted", listingId: listing.id, offerId: accepted.id, actorUserId: user.id, payload: { offer: accepted } },
+          [offer.sellerId, offer.buyerId],
+        );
+        for (const rejectedOffer of rejected) {
+          if (rejectedOffer) {
+            options.eventBus.publish(
+              { type: "offer.rejected", listingId: listing.id, offerId: rejectedOffer.id, actorUserId: user.id, payload: { offer: rejectedOffer } },
+              [rejectedOffer.buyerId, rejectedOffer.sellerId],
+            );
+          }
+        }
+        const updatedListing = await options.listingRepository.findById(listing.id);
+        if (updatedListing) {
+          options.eventBus.publish(
+            { type: "listing.status_changed", listingId: updatedListing.id, actorUserId: user.id, payload: { listing: updatedListing } },
+            [updatedListing.sellerId, ...competing.map((item) => item.buyerId), offer.buyerId],
+          );
+        }
         return accepted;
       }
       try {
-        return await options.offerRepository.updateStatus(
+        const updated = await options.offerRepository.updateStatus(
           offer.id,
           parsed.data.status as OfferStatus,
         );
+        if (updated) {
+          options.eventBus.publish(
+            { type: `offer.${updated.status}` as "offer.rejected" | "offer.withdrawn", listingId: updated.listingId, offerId: updated.id, actorUserId: user.id, payload: { offer: updated } },
+            [updated.buyerId, updated.sellerId],
+          );
+        }
+        return updated;
       } catch (caught) {
         if (caught instanceof InvalidOfferTransitionError)
           return error(reply, 409, "INVALID_OFFER_TRANSITION", caught.message);
@@ -251,9 +283,16 @@ export const registerOfferRoutes = async (
         parentOfferId: original.id,
       });
       await options.offerRepository.updateStatus(created.id, "countered");
+      const counter = await options.offerRepository.findById(created.id);
+      if (counter) {
+        options.eventBus.publish(
+          { type: "offer.countered", listingId: counter.listingId, offerId: counter.id, actorUserId: user.id, payload: { offer: counter } },
+          [counter.buyerId, counter.sellerId],
+        );
+      }
       return reply
         .status(201)
-        .send(await options.offerRepository.findById(created.id));
+        .send(counter);
     },
   );
 };

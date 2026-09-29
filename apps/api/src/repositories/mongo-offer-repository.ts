@@ -7,7 +7,7 @@ import type { OfferRepository } from "./offer-repository.js";
 interface OfferDocument extends Offer { _id?: ObjectId; }
 const toOffer = (document: OfferDocument): Offer => {
   const { _id: _ignoredId, ...offer } = document;
-  return { ...offer };
+  return { ...offer, version: offer.version ?? 1 };
 };
 
 export class MongoOfferRepository implements OfferRepository {
@@ -21,7 +21,7 @@ export class MongoOfferRepository implements OfferRepository {
   }
   async create(input: CreateOfferInput): Promise<Offer> {
     const timestamp = new Date().toISOString();
-    const offer: OfferDocument = { ...input, id: `offer-${randomUUID()}`, status: "pending", createdAt: timestamp, updatedAt: timestamp };
+    const offer: OfferDocument = { ...input, id: `offer-${randomUUID()}`, status: "pending", createdAt: timestamp, updatedAt: timestamp, version: 1 };
     await this.collection.insertOne(offer);
     return toOffer(offer);
   }
@@ -30,7 +30,7 @@ export class MongoOfferRepository implements OfferRepository {
     if (!current) return undefined;
     assertValidOfferTransition(current.status, status);
     const document = await this.collection.findOneAndUpdate(
-      { id, status: current.status }, { $set: { status, updatedAt: new Date().toISOString() } },
+      { id, status: current.status }, { $set: { status, updatedAt: new Date().toISOString(), version: (current.version ?? 1) + 1 } },
       { projection: { _id: 0 }, returnDocument: "after" },
     );
     return document ? toOffer(document) : undefined;

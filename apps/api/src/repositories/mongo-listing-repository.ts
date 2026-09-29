@@ -20,6 +20,7 @@ const toListing = (document: ListingDocument): Listing => {
     ...listing,
     sellerId: listing.sellerId ?? "demo-seller",
     images: listing.images ?? [],
+    version: listing.version ?? 1,
   };
 };
 
@@ -75,6 +76,7 @@ export class MongoListingRepository implements ListingRepository {
       status: "active",
       createdAt: timestamp,
       updatedAt: timestamp,
+      version: 1,
     };
 
     await this.collection.insertOne(listing);
@@ -92,6 +94,7 @@ export class MongoListingRepository implements ListingRepository {
           ...input,
           updatedAt: new Date().toISOString(),
         },
+        $inc: { version: 1 },
       },
       {
         projection: { _id: 0 },
@@ -118,6 +121,7 @@ export class MongoListingRepository implements ListingRepository {
         $set: {
           status,
           updatedAt: new Date().toISOString(),
+          version: (currentDocument.version ?? 1) + 1,
         },
       },
       {

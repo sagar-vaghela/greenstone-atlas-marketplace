@@ -121,6 +121,7 @@ export class InMemoryListingRepository implements ListingRepository {
       ...this.listings[index],
       ...input,
       updatedAt: new Date().toISOString(),
+      version: this.listings[index].version + 1,
     };
     this.listings[index] = updatedListing;
     return { ...updatedListing, images: [...updatedListing.images] };
@@ -141,6 +142,7 @@ export class InMemoryListingRepository implements ListingRepository {
       ...currentListing,
       status,
       updatedAt: new Date().toISOString(),
+      version: currentListing.version + 1,
     };
     this.listings[index] = updatedListing;
     return { ...updatedListing, images: [...updatedListing.images] };
@@ -159,6 +161,7 @@ export class InMemoryListingRepository implements ListingRepository {
       status: "active",
       createdAt: timestamp,
       updatedAt: timestamp,
+      version: 1,
     };
   }
 }

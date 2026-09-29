@@ -19,6 +19,8 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
 import { fetchCurrentUser, selectAuth } from "./features/auth/authSlice";
 import { CircularProgress, Box } from "@mui/material";
+import { connectMarketplaceEvents } from "./api/marketplaceEvents";
+import { connectionStatusChanged, eventReceived } from "./features/realtime/realtimeSlice";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -41,9 +43,20 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export function App() {
   const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
   useEffect(() => {
     void dispatch(fetchCurrentUser());
   }, [dispatch]);
+  useEffect(() => {
+    if (!user) {
+      dispatch(connectionStatusChanged("disconnected"));
+      return;
+    }
+    return connectMarketplaceEvents(
+      (event) => dispatch(eventReceived({ event, userId: user.id })),
+      (status) => dispatch(connectionStatusChanged(status)),
+    );
+  }, [dispatch, user]);
   return (
     <BrowserRouter>
       <Routes>

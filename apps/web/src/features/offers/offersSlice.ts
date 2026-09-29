@@ -8,6 +8,7 @@ import {
   updateOfferStatus,
 } from "../../api/offers";
 import type { RequestStatus } from "../listings/listingsSlice";
+import { eventReceived } from "../realtime/realtimeSlice";
 
 interface OffersState {
   items: Offer[];
@@ -27,6 +28,11 @@ const initialState: OffersState = {
 };
 const message = (error: unknown, fallback: string) =>
   error instanceof ApiError ? error.message : fallback;
+const upsertOffer = (state: OffersState, offer: Offer) => {
+  const index = state.items.findIndex((item) => item.id === offer.id);
+  if (index === -1) state.items.push(offer);
+  else if (offer.version >= state.items[index].version) state.items[index] = offer;
+};
 export const fetchOffers = createAsyncThunk<
   Offer[],
   string,
@@ -113,7 +119,7 @@ const offersSlice = createSlice({
       })
       .addCase(createOffer.fulfilled, (state, action) => {
         state.mutationStatus = "succeeded";
-        state.items.push(action.payload);
+        upsertOffer(state, action.payload);
       })
       .addCase(createOffer.rejected, (state, action) => {
         state.mutationStatus = "failed";
@@ -128,7 +134,8 @@ const offersSlice = createSlice({
         const index = state.items.findIndex(
           (item) => item.id === action.payload.id,
         );
-        if (index !== -1) state.items[index] = action.payload;
+        if (index === -1) upsertOffer(state, action.payload);
+        else if (action.payload.version >= state.items[index].version) state.items[index] = action.payload;
       })
       .addCase(offerAction.rejected, (state, action) => {
         state.mutationStatus = "failed";
@@ -140,12 +147,15 @@ const offersSlice = createSlice({
       })
       .addCase(counterOffer.fulfilled, (state, action) => {
         state.mutationStatus = "succeeded";
-        state.items.push(action.payload);
+        upsertOffer(state, action.payload);
       })
       .addCase(counterOffer.rejected, (state, action) => {
         state.mutationStatus = "failed";
         state.mutationError =
           action.payload ?? "Unable to send the counter-offer.";
+      })
+      .addCase(eventReceived, (state, action) => {
+        if ("offer" in action.payload.event.payload) upsertOffer(state, action.payload.event.payload.offer);
       });
   },
 });

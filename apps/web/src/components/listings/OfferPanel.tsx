@@ -16,6 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { selectRealtime } from "../../features/realtime/realtimeSlice";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import {
   counterOffer,
@@ -55,6 +56,7 @@ export function OfferPanel({ listing, onAccepted }: Props) {
   const listError = useAppSelector(selectOffersError);
   const mutationStatus = useAppSelector(selectOfferMutationStatus);
   const mutationError = useAppSelector(selectOfferMutationError);
+  const realtimeStatus = useAppSelector(selectRealtime).connectionStatus;
   const [amount, setAmount] = useState("");
   const [counterTarget, setCounterTarget] = useState<Offer | null>(null);
   const [counterAmount, setCounterAmount] = useState("");
@@ -62,7 +64,7 @@ export function OfferPanel({ listing, onAccepted }: Props) {
 
   useEffect(() => {
     void dispatch(fetchOffers(listing.id));
-  }, [dispatch, listing.id]);
+  }, [dispatch, listing.id, realtimeStatus]);
   const currentUser = useAppSelector(selectCurrentUser);
   const isSeller = currentUser?.id === listing.sellerId;
   const visibleOffers = isSeller
@@ -106,11 +108,10 @@ export function OfferPanel({ listing, onAccepted }: Props) {
       }
     };
     void dispatch(
-      createOffer({
-        listingId: listing.id,
+      counterOffer({
+        id: counterTarget.id,
         amount: Number(counterAmount),
         currency: listing.currency,
-        parentOfferId: counterTarget.id,
       }),
     ).then(handleSuccess);
   };

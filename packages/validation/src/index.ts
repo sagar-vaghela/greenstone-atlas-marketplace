@@ -130,6 +130,7 @@ export const listingSchema: z.ZodType<Listing> = z.object({
   status: listingStatusSchema,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  version: z.number().int().nonnegative(),
 });
 
 export const offerStatusSchema: z.ZodType<OfferStatus> = z.enum([

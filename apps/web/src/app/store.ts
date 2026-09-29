@@ -3,6 +3,7 @@ import listingsReducer from "../features/listings/listingsSlice";
 import offersReducer from "../features/offers/offersSlice";
 import authReducer from "../features/auth/authSlice";
 import sellerReducer from "../features/sellers/sellerSlice";
+import realtimeReducer from "../features/realtime/realtimeSlice";
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     offers: offersReducer,
     auth: authReducer,
     sellers: sellerReducer,
+    realtime: realtimeReducer,
   },
 });
 

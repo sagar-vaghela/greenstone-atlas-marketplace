@@ -79,6 +79,7 @@ export interface Listing {
   status: ListingStatus;
   createdAt: string;
   updatedAt: string;
+  version: number;
 }
 
 export interface Offer {
@@ -92,6 +93,29 @@ export interface Offer {
   parentOfferId?: string;
   createdAt: string;
   updatedAt: string;
+  version: number;
+}
+
+export type MarketplaceEventType =
+  | "offer.created"
+  | "offer.countered"
+  | "offer.accepted"
+  | "offer.rejected"
+  | "offer.withdrawn"
+  | "listing.status_changed";
+
+export type MarketplaceEventPayload =
+  | { offer: Offer }
+  | { listing: Listing };
+
+export interface MarketplaceEvent {
+  id: string;
+  type: MarketplaceEventType;
+  timestamp: string;
+  listingId: string;
+  offerId?: string;
+  actorUserId?: string;
+  payload: MarketplaceEventPayload;
 }
 
 export interface CreateOfferInput {

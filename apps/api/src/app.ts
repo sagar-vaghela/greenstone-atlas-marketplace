@@ -17,6 +17,8 @@ import { registerAuthRoutes } from "./routes/auth.js";
 import { InMemorySellerProfileRepository } from "./repositories/in-memory-seller-profile-repository.js";
 import type { SellerProfileRepository } from "./repositories/seller-profile-repository.js";
 import { registerSellerRoutes } from "./routes/sellers.js";
+import { MarketplaceEventBus } from "./events/marketplace-event-bus.js";
+import { registerEventRoutes } from "./routes/events.js";
 
 interface BuildAppOptions {
   repository?: ListingRepository;
@@ -26,6 +28,7 @@ interface BuildAppOptions {
   secureCookies?: boolean;
   sessionTtlMs?: number;
   sellerProfileRepository?: SellerProfileRepository;
+  eventBus?: MarketplaceEventBus;
 }
 
 export const buildApp = (options: BuildAppOptions = {}) => {
@@ -93,6 +96,9 @@ export const buildApp = (options: BuildAppOptions = {}) => {
 
   const listingRepository =
     options.repository ?? new InMemoryListingRepository();
+  const eventBus = options.eventBus ?? new MarketplaceEventBus();
+  const offerRepository =
+    options.offerRepository ?? new InMemoryOfferRepository();
 
   app.register(registerHealthRoute);
   app.register(registerAuthRoutes, {
@@ -102,10 +108,15 @@ export const buildApp = (options: BuildAppOptions = {}) => {
       options.secureCookies ?? process.env.NODE_ENV === "production",
     sessionTtlMs: options.sessionTtlMs ?? 7 * 24 * 60 * 60 * 1000,
   });
-  app.register(registerListingRoutes, { repository: listingRepository });
+  app.register(registerListingRoutes, {
+    repository: listingRepository,
+    offerRepository,
+    eventBus,
+  });
   app.register(registerOfferRoutes, {
     listingRepository,
-    offerRepository: options.offerRepository ?? new InMemoryOfferRepository(),
+    offerRepository,
+    eventBus,
   });
   app.register(registerSellerRoutes, {
     users: userRepository,
@@ -113,6 +124,8 @@ export const buildApp = (options: BuildAppOptions = {}) => {
     profiles:
       options.sellerProfileRepository ?? new InMemorySellerProfileRepository(),
   });
+  app.register(registerEventRoutes, eventBus);
+  app.addHook("onClose", async () => eventBus.close());
 
   return app;
 };
