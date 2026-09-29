@@ -10,11 +10,14 @@ export class ApiError extends Error {
   }
 }
 
-export async function request<T>(path: string): Promise<T> {
+export async function request<T>(
+  path: string,
+  options?: RequestInit,
+): Promise<T> {
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}${path}`);
+    response = await fetch(`${API_BASE_URL}${path}`, options);
   } catch {
     throw new ApiError("Unable to reach the marketplace service.", 0);
   }

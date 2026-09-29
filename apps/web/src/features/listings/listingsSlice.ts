@@ -1,7 +1,11 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import type { Listing } from "@atlas/types";
+import type { CreateListingInput, Listing } from "@atlas/types";
 import { ApiError } from "../../api/client";
-import { getListingById, getListings } from "../../api/listings";
+import {
+  createListing as createListingRequest,
+  getListingById,
+  getListings,
+} from "../../api/listings";
 
 export type RequestStatus = "idle" | "loading" | "succeeded" | "failed";
 
@@ -10,7 +14,9 @@ interface ListingsState {
   selectedListing: Listing | null;
   listStatus: RequestStatus;
   detailStatus: RequestStatus;
+  createStatus: RequestStatus;
   error: string | null;
+  createError: string | null;
   detailRequestId: string | null;
 }
 
@@ -19,7 +25,9 @@ const initialState: ListingsState = {
   selectedListing: null,
   listStatus: "idle",
   detailStatus: "idle",
+  createStatus: "idle",
   error: null,
+  createError: null,
   detailRequestId: null,
 };
 
@@ -51,10 +59,31 @@ export const fetchListingById = createAsyncThunk<
   }
 });
 
+export const createListing = createAsyncThunk<
+  Listing,
+  CreateListingInput,
+  { rejectValue: string }
+>("listings/createListing", async (input, { rejectWithValue }) => {
+  try {
+    return await createListingRequest(input);
+  } catch (error: unknown) {
+    if (error instanceof ApiError && error.status === 400) {
+      return rejectWithValue("Please check the listing details and try again.");
+    }
+
+    return rejectWithValue("Unable to create this listing. Please try again.");
+  }
+});
+
 const listingsSlice = createSlice({
   name: "listings",
   initialState,
-  reducers: {},
+  reducers: {
+    resetCreateState: (state) => {
+      state.createStatus = "idle";
+      state.createError = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchListings.pending, (state) => {
@@ -93,9 +122,25 @@ const listingsSlice = createSlice({
         state.detailStatus = "failed";
         state.error =
           action.payload ?? "Unable to load this listing. Please try again.";
+      })
+      .addCase(createListing.pending, (state) => {
+        state.createStatus = "loading";
+        state.createError = null;
+      })
+      .addCase(createListing.fulfilled, (state, action) => {
+        state.createStatus = "succeeded";
+        state.createError = null;
+        state.items.push(action.payload);
+      })
+      .addCase(createListing.rejected, (state, action) => {
+        state.createStatus = "failed";
+        state.createError =
+          action.payload ?? "Unable to create this listing. Please try again.";
       });
   },
 });
+
+export const { resetCreateState } = listingsSlice.actions;
 
 export const selectListings = (state: { listings: ListingsState }) =>
   state.listings.items;
@@ -107,5 +152,9 @@ export const selectDetailStatus = (state: { listings: ListingsState }) =>
   state.listings.detailStatus;
 export const selectListingsError = (state: { listings: ListingsState }) =>
   state.listings.error;
+export const selectCreateStatus = (state: { listings: ListingsState }) =>
+  state.listings.createStatus;
+export const selectCreateError = (state: { listings: ListingsState }) =>
+  state.listings.createError;
 
 export default listingsSlice.reducer;

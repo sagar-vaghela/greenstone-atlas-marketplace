@@ -1,4 +1,12 @@
-import { AppBar, Box, Container, Link, Toolbar, Typography } from "@mui/material";
+import {
+  AppBar,
+  Box,
+  Button,
+  Container,
+  Link,
+  Toolbar,
+  Typography,
+} from "@mui/material";
 import { Link as RouterLink, Outlet } from "react-router-dom";
 
 export function AppLayout() {
@@ -11,6 +19,14 @@ export function AppLayout() {
               Atlas Marketplace
             </Typography>
           </Link>
+          <Button
+            component={RouterLink}
+            to="/listings/new"
+            color="inherit"
+            sx={{ ml: "auto" }}
+          >
+            Create listing
+          </Button>
         </Toolbar>
       </AppBar>
       <Container component="main" maxWidth="md" sx={{ flex: 1, py: 6 }}>
