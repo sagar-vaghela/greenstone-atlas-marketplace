@@ -2,6 +2,7 @@ const DEFAULT_HOST = "0.0.0.0";
 const DEFAULT_PORT = 3000;
 const DEFAULT_CORS_ORIGIN = "http://localhost:5173";
 const DEFAULT_MONGODB_DB_NAME = "atlas_marketplace";
+const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const packageName = "atlas-marketplace";
 
@@ -25,6 +26,8 @@ export interface ApiConfig {
   corsOrigin: string;
   mongodbUri?: string;
   mongodbDbName: string;
+  sessionTtlMs: number;
+  secureCookies: boolean;
 }
 
 export const getApiConfig = (
@@ -38,5 +41,7 @@ export const getApiConfig = (
     corsOrigin: env.CORS_ORIGIN?.trim() || DEFAULT_CORS_ORIGIN,
     mongodbUri,
     mongodbDbName: env.MONGODB_DB_NAME?.trim() || DEFAULT_MONGODB_DB_NAME,
+    sessionTtlMs: Number(env.SESSION_TTL_MS) || DEFAULT_SESSION_TTL_MS,
+    secureCookies: env.NODE_ENV === "production",
   };
 };

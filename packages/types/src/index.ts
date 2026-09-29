@@ -1,6 +1,23 @@
 export type ListingStatus = "draft" | "active" | "sold";
 
-export type OfferStatus = "pending" | "countered" | "accepted" | "rejected" | "withdrawn" | "expired";
+export type UserRole = "buyer" | "seller";
+
+export interface User {
+  id: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type OfferStatus =
+  | "pending"
+  | "countered"
+  | "accepted"
+  | "rejected"
+  | "withdrawn"
+  | "expired";
 
 export type ListingSort = "newest" | "oldest" | "price_asc" | "price_desc";
 
@@ -60,6 +77,10 @@ export interface CreateListingInput {
   currency: string;
   category: string;
   images: ListingImage[];
+}
+
+export interface CreateListingRepositoryInput extends CreateListingInput {
+  sellerId: string;
 }
 
 export interface UpdateListingInput {

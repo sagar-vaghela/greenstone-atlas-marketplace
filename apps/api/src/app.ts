@@ -8,10 +8,20 @@ import { registerListingRoutes } from "./routes/listings.js";
 import { InMemoryOfferRepository } from "./repositories/in-memory-offer-repository.js";
 import type { OfferRepository } from "./repositories/offer-repository.js";
 import { registerOfferRoutes } from "./routes/offers.js";
+import { InMemoryUserRepository } from "./repositories/in-memory-user-repository.js";
+import { InMemorySessionRepository } from "./repositories/in-memory-session-repository.js";
+import type { UserRepository } from "./repositories/user-repository.js";
+import type { SessionRepository } from "./repositories/session-repository.js";
+import { registerAuthentication } from "./auth/middleware.js";
+import { registerAuthRoutes } from "./routes/auth.js";
 
 interface BuildAppOptions {
   repository?: ListingRepository;
   offerRepository?: OfferRepository;
+  userRepository?: UserRepository;
+  sessionRepository?: SessionRepository;
+  secureCookies?: boolean;
+  sessionTtlMs?: number;
 }
 
 export const buildApp = (options: BuildAppOptions = {}) => {
@@ -21,8 +31,14 @@ export const buildApp = (options: BuildAppOptions = {}) => {
     },
   });
 
+  const userRepository = options.userRepository ?? new InMemoryUserRepository();
+  const sessionRepository =
+    options.sessionRepository ?? new InMemorySessionRepository();
+  registerAuthentication(app, userRepository, sessionRepository);
+
   app.register(cors, {
     origin: config.corsOrigin,
+    credentials: true,
     methods: ["GET", "POST", "PATCH", "OPTIONS"],
   });
 
@@ -75,8 +91,18 @@ export const buildApp = (options: BuildAppOptions = {}) => {
     options.repository ?? new InMemoryListingRepository();
 
   app.register(registerHealthRoute);
+  app.register(registerAuthRoutes, {
+    users: userRepository,
+    sessions: sessionRepository,
+    secureCookies:
+      options.secureCookies ?? process.env.NODE_ENV === "production",
+    sessionTtlMs: options.sessionTtlMs ?? 7 * 24 * 60 * 60 * 1000,
+  });
   app.register(registerListingRoutes, { repository: listingRepository });
-  app.register(registerOfferRoutes, { listingRepository, offerRepository: options.offerRepository ?? new InMemoryOfferRepository() });
+  app.register(registerOfferRoutes, {
+    listingRepository,
+    offerRepository: options.offerRepository ?? new InMemoryOfferRepository(),
+  });
 
   return app;
 };

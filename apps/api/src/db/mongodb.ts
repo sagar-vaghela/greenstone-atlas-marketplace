@@ -16,6 +16,8 @@ export const connectMongoDB = async (
     const db = client.db(databaseName);
     const listings = db.collection("listings");
     const offers = db.collection("offers");
+    const users = db.collection("users");
+    const sessions = db.collection("sessions");
     await listings.createIndex({ id: 1 }, { unique: true });
     await listings.createIndex({ category: 1 });
     await listings.createIndex({ price: 1 });
@@ -24,6 +26,10 @@ export const connectMongoDB = async (
     await offers.createIndex({ listingId: 1, createdAt: 1 });
     await offers.createIndex({ buyerId: 1 });
     await offers.createIndex({ sellerId: 1, status: 1 });
+    await users.createIndex({ id: 1 }, { unique: true });
+    await users.createIndex({ email: 1 }, { unique: true });
+    await sessions.createIndex({ id: 1 }, { unique: true });
+    await sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
     return {
       db,

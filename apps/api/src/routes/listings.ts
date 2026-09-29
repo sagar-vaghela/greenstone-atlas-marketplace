@@ -1,8 +1,4 @@
-import type {
-  CreateListingInput,
-  ListingStatus,
-  UpdateListingInput,
-} from "@atlas/types";
+import type { ListingStatus, UpdateListingInput } from "@atlas/types";
 import {
   createListingSchema,
   listingQuerySchema,
@@ -12,6 +8,7 @@ import {
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ListingRepository } from "../repositories/listing-repository.js";
 import { InvalidListingStatusTransitionError } from "../domain/listing-status.js";
+import { requireAuthenticatedUser } from "../auth/middleware.js";
 
 interface ListingRouteOptions {
   repository: ListingRepository;
@@ -86,6 +83,8 @@ export const registerListingRoutes = async (
   );
 
   app.post("/listings", async (request: CreateListingRequest, reply) => {
+    const user = requireAuthenticatedUser(request, reply);
+    if (!user) return;
     const result = createListingSchema.safeParse(request.body);
     if (!result.success) {
       return reply.status(400).send({
@@ -100,9 +99,10 @@ export const registerListingRoutes = async (
       });
     }
 
-    const listing = await options.repository.create(
-      result.data satisfies CreateListingInput,
-    );
+    const listing = await options.repository.create({
+      ...result.data,
+      sellerId: user.id,
+    });
     return reply.status(201).send(listing);
   });
 
@@ -122,6 +122,25 @@ export const registerListingRoutes = async (
           },
         });
       }
+
+      const user = requireAuthenticatedUser(request, reply);
+      if (!user) return;
+      const existing = await options.repository.findById(request.params.id);
+      if (!existing)
+        return reply
+          .status(404)
+          .send({
+            error: { code: "LISTING_NOT_FOUND", message: "Listing not found" },
+          });
+      if (existing.sellerId !== user.id)
+        return reply
+          .status(403)
+          .send({
+            error: {
+              code: "FORBIDDEN",
+              message: "You don't have permission to perform this action.",
+            },
+          });
 
       const listing = await options.repository.update(
         request.params.id,
@@ -156,6 +175,25 @@ export const registerListingRoutes = async (
           },
         });
       }
+
+      const user = requireAuthenticatedUser(request, reply);
+      if (!user) return;
+      const existing = await options.repository.findById(request.params.id);
+      if (!existing)
+        return reply
+          .status(404)
+          .send({
+            error: { code: "LISTING_NOT_FOUND", message: "Listing not found" },
+          });
+      if (existing.sellerId !== user.id)
+        return reply
+          .status(403)
+          .send({
+            error: {
+              code: "FORBIDDEN",
+              message: "You don't have permission to perform this action.",
+            },
+          });
 
       let listing;
       try {

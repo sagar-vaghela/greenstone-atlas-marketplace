@@ -9,6 +9,7 @@ import type {
   Offer,
   OfferStatus,
   UpdateListingInput,
+  User,
 } from "@atlas/types";
 import { z } from "zod";
 
@@ -78,6 +79,17 @@ export const createListingSchema: z.ZodType<CreateListingInput> = z.object({
   images: listingImagesSchema.default([]),
 });
 
+export const registerSchema = z.object({
+  email: z.string().trim().email(),
+  displayName: z.string().trim().min(1).max(120),
+  password: z.string().min(8).max(256),
+});
+
+export const loginSchema = z.object({
+  email: z.string().trim().email(),
+  password: z.string().min(1),
+});
+
 export const updateListingSchema: z.ZodType<UpdateListingInput> = z
   .object({
     title: z.string().trim().min(1).optional(),
@@ -109,20 +121,47 @@ export const listingSchema: z.ZodType<Listing> = z.object({
   updatedAt: z.string().datetime(),
 });
 
-export const offerStatusSchema: z.ZodType<OfferStatus> = z.enum(["pending", "countered", "accepted", "rejected", "withdrawn", "expired"]);
-const moneySchema = z.number().finite().positive().refine((value) => Number.isInteger(Math.round(value * 100)), "Amount must use at most two decimal places");
-const currencySchema = z.string().trim().length(3).transform((value) => value.toUpperCase());
+export const offerStatusSchema: z.ZodType<OfferStatus> = z.enum([
+  "pending",
+  "countered",
+  "accepted",
+  "rejected",
+  "withdrawn",
+  "expired",
+]);
+const moneySchema = z
+  .number()
+  .finite()
+  .positive()
+  .refine(
+    (value) => Number.isInteger(Math.round(value * 100)),
+    "Amount must use at most two decimal places",
+  );
+const currencySchema = z
+  .string()
+  .trim()
+  .length(3)
+  .transform((value) => value.toUpperCase());
 export const createOfferSchema: z.ZodType<CreateOfferInput> = z.object({
-  listingId: z.string().trim().min(1), buyerId: z.string().trim().min(1), sellerId: z.string().trim().min(1), amount: moneySchema, currency: currencySchema, parentOfferId: z.string().trim().min(1).optional(),
-});
-export const createOfferRequestSchema = z.object({
+  listingId: z.string().trim().min(1),
   buyerId: z.string().trim().min(1),
+  sellerId: z.string().trim().min(1),
   amount: moneySchema,
   currency: currencySchema,
   parentOfferId: z.string().trim().min(1).optional(),
 });
-export const counterOfferRequestSchema = z.object({ amount: moneySchema, currency: currencySchema });
-export const updateOfferStatusSchema = z.object({ status: z.enum(["accepted", "rejected", "withdrawn"]) });
+export const createOfferRequestSchema = z.object({
+  amount: moneySchema,
+  currency: currencySchema,
+  parentOfferId: z.string().trim().min(1).optional(),
+});
+export const counterOfferRequestSchema = z.object({
+  amount: moneySchema,
+  currency: currencySchema,
+});
+export const updateOfferStatusSchema = z.object({
+  status: z.enum(["accepted", "rejected", "withdrawn"]),
+});
 
 export type {
   CreateListingInput,
@@ -134,4 +173,5 @@ export type {
   CreateOfferInput,
   Offer,
   OfferStatus,
+  User,
 };

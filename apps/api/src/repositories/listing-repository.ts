@@ -1,5 +1,6 @@
 import type {
   CreateListingInput,
+  CreateListingRepositoryInput,
   Listing,
   ListingQuery,
   ListingStatus,
@@ -9,7 +10,7 @@ import type {
 export interface ListingRepository {
   list(query?: ListingQuery): Promise<Listing[]>;
   findById(id: string): Promise<Listing | undefined>;
-  create(input: CreateListingInput): Promise<Listing>;
+  create(input: CreateListingRepositoryInput): Promise<Listing>;
   update(id: string, input: UpdateListingInput): Promise<Listing | undefined>;
   updateStatus(id: string, status: ListingStatus): Promise<Listing | undefined>;
 }

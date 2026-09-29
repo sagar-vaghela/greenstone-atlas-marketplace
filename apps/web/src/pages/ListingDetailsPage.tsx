@@ -18,6 +18,7 @@ import {
 import type { ListingStatus } from "@atlas/types";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
+import { selectCurrentUser } from "../features/auth/authSlice";
 import { OfferPanel } from "../components/listings/OfferPanel";
 import {
   fetchListingById,
@@ -45,6 +46,7 @@ export function ListingDetailsPage() {
   const { id } = useParams();
   const dispatch = useAppDispatch();
   const listing = useAppSelector(selectSelectedListing);
+  const currentUser = useAppSelector(selectCurrentUser);
   const detailStatus = useAppSelector(selectDetailStatus);
   const error = useAppSelector(selectListingsError);
   const statusUpdateStatus = useAppSelector(selectStatusUpdateStatus);
@@ -155,17 +157,38 @@ export function ListingDetailsPage() {
           />
         </Box>
       </Stack>
-      <OfferPanel listing={listing} onAccepted={() => void dispatch(fetchListingById(listing.id))} />
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-        <Button
-          component={RouterLink}
-          to={`/listings/${listing.id}/edit`}
-          variant="contained"
-          disabled={statusUpdateStatus === "loading"}
+      {currentUser ? (
+        <OfferPanel
+          listing={listing}
+          onAccepted={() => void dispatch(fetchListingById(listing.id))}
+        />
+      ) : (
+        <Alert
+          severity="info"
+          action={
+            <Button
+              component={RouterLink}
+              to={`/login?returnTo=${encodeURIComponent(`/listings/${listing.id}`)}`}
+            >
+              Sign in
+            </Button>
+          }
         >
-          Edit listing
-        </Button>
-        {listing.status !== "sold" && (
+          Please sign in to make or manage offers.
+        </Alert>
+      )}
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        {currentUser?.id === listing.sellerId && (
+          <Button
+            component={RouterLink}
+            to={`/listings/${listing.id}/edit`}
+            variant="contained"
+            disabled={statusUpdateStatus === "loading"}
+          >
+            Edit listing
+          </Button>
+        )}
+        {currentUser?.id === listing.sellerId && listing.status !== "sold" && (
           <Button
             variant="outlined"
             onClick={() => {

@@ -1,5 +1,6 @@
 import type {
   CreateListingInput,
+  CreateListingRepositoryInput,
   Listing,
   ListingQuery,
   ListingStatus,
@@ -7,16 +8,17 @@ import type {
 } from "@atlas/types";
 import { assertValidListingStatusTransition } from "../domain/listing-status.js";
 import type { ListingRepository } from "./listing-repository.js";
-import { getCurrentUser } from "../auth/demo-user.js";
 
-const seedListings: CreateListingInput[] = [
+const seedListings: CreateListingRepositoryInput[] = [
   {
     title: "Rolex Submariner Date 126610LN",
-    description: "Pre-owned luxury watch in excellent condition, with box and papers.",
+    description:
+      "Pre-owned luxury watch in excellent condition, with box and papers.",
     price: 1250000,
     currency: "INR",
     category: "luxury-watches",
     images: [],
+    sellerId: "demo-seller",
   },
   {
     title: "Omega Speedmaster Professional Moonwatch",
@@ -25,6 +27,7 @@ const seedListings: CreateListingInput[] = [
     currency: "INR",
     category: "luxury-watches",
     images: [],
+    sellerId: "demo-seller",
   },
 ];
 
@@ -53,7 +56,9 @@ export class InMemoryListingRepository implements ListingRepository {
       const matchesMaxPrice =
         query.maxPrice === undefined || listing.price <= query.maxPrice;
 
-      return matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice;
+      return (
+        matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice
+      );
     });
 
     return filteredListings
@@ -86,7 +91,7 @@ export class InMemoryListingRepository implements ListingRepository {
       : undefined;
   }
 
-  async create(input: CreateListingInput): Promise<Listing> {
+  async create(input: CreateListingRepositoryInput): Promise<Listing> {
     const listing = this.createListing(`listing-${this.nextId}`, input);
     this.nextId += 1;
     this.listings.push(listing);
@@ -131,12 +136,15 @@ export class InMemoryListingRepository implements ListingRepository {
     return { ...updatedListing, images: [...updatedListing.images] };
   }
 
-  private createListing(id: string, input: CreateListingInput): Listing {
+  private createListing(
+    id: string,
+    input: CreateListingRepositoryInput,
+  ): Listing {
     const timestamp = new Date().toISOString();
     return {
       ...input,
       images: [...(input.images ?? [])],
-      sellerId: getCurrentUser("seller").id,
+      sellerId: input.sellerId,
       id,
       status: "active",
       createdAt: timestamp,

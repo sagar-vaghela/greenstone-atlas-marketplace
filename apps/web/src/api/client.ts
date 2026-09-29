@@ -17,7 +17,10 @@ export async function request<T>(
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, options);
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      credentials: "include",
+      ...options,
+    });
   } catch {
     throw new ApiError("Unable to reach the marketplace service.", 0);
   }
