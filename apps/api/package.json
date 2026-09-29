@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@atlas/config": "0.1.0",
+    "@atlas/types": "0.1.0",
+    "@atlas/validation": "0.1.0",
     "@fastify/cors": "^11.1.0",
     "fastify": "^5.6.1"
   },

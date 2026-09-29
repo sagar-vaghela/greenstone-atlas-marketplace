@@ -1,7 +1,9 @@
 import cors from '@fastify/cors';
 import Fastify from 'fastify';
 import { config } from './config/index.js';
+import { InMemoryListingRepository } from './repositories/in-memory-listing-repository.js';
 import { registerHealthRoute } from './routes/health.js';
+import { registerListingRoutes } from './routes/listings.js';
 
 export const buildApp = () => {
   const app = Fastify({
@@ -43,13 +45,26 @@ export const buildApp = () => {
 
     return reply.status(statusCode).send({
       error: {
-        code: statusCode === 404 ? 'NOT_FOUND' : 'INTERNAL_SERVER_ERROR',
-        message: statusCode < 500 ? message : 'Internal server error',
+        code:
+          statusCode === 400
+            ? 'VALIDATION_ERROR'
+            : statusCode === 404
+              ? 'NOT_FOUND'
+              : 'INTERNAL_SERVER_ERROR',
+        message:
+          statusCode === 400
+            ? 'Invalid request'
+            : statusCode < 500
+              ? message
+              : 'Internal server error',
       },
     });
   });
 
+  const listingRepository = new InMemoryListingRepository();
+
   app.register(registerHealthRoute);
+  app.register(registerListingRoutes, { repository: listingRepository });
 
   return app;
 };
