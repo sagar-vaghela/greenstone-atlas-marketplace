@@ -13,7 +13,6 @@
     "test": "vitest run",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:e2e:stripe": "node scripts/e2e-stripe.mjs",
     "test:e2e:demo": "node scripts/e2e-demo.mjs",
     "test:watch": "vitest",
     "build": "npm run build --workspaces",
