@@ -220,6 +220,42 @@ npm run dev:api
 
 The API health check is available at `http://localhost:3000/health`.
 
+## Notifications and activity center
+
+Commit 20 persists actionable user activity separately from transport events:
+
+```text
+Domain action -> MarketplaceEvent -> NotificationService -> repository
+             -> recipient-scoped SSE -> Redux -> badge / Snackbar / activity center
+```
+
+`Notification` records are lightweight and contain a server-derived recipient,
+one of the offer, message, payment, shipment, delivery, completion, or listing
+types, a resource reference, read state, and creation time. Offer recipients
+are derived from buyer/seller fields, message recipients from the conversation,
+and transaction recipients from the transaction lifecycle. No client-supplied
+user id or notification type is trusted.
+
+The API exposes authenticated `GET /notifications?limit=30&before=...`,
+`GET /notifications/unread-count`, `POST /notifications/:id/read`, and
+`POST /notifications/read-all`. Results are ordered newest first with a stable
+id tie-breaker. MongoDB stores notifications separately from domain events and
+uses unique `id` and `userId + sourceEventId` indexes, plus user/time and
+unread query indexes, to prevent duplicate projections and keep inbox queries
+bounded. The in-memory repository follows the same contract for local runs.
+
+`notification.created` is an additional recipient-scoped SSE event; existing
+offer, message, transaction, and listing events continue to synchronize their
+feature slices. Redux hydrates through REST, prepends and deduplicates SSE
+notifications, reconciles unread counts after SSE reconnect, and marks read
+state only when a notification is opened or the explicit mark-all action is
+used. The activity center supports cursor pagination and navigates through the
+existing listing, conversation, offer, and transaction routes without embedding
+large domain objects.
+
+Email, push, SMS, preferences, digests, moderation, and a distributed event
+broker are future extensions and are intentionally outside Commit 20.
+
 ## Monorepo structure
 
 ```text

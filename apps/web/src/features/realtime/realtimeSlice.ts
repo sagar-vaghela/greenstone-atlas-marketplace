@@ -46,9 +46,12 @@ const realtimeSlice = createSlice({
         "transaction.disputed": "A dispute has been opened.",
         "message.created": "You have a new message.",
         "conversation.read": "Conversation read status updated.",
+        "notification.created": "You have a new notification.",
       };
       state.notification = {
-        message: messages[event.type],
+        message: event.type === "notification.created" && "notification" in event.payload
+          ? event.payload.notification.title
+          : messages[event.type],
         severity: event.type === "offer.accepted" ? "success" : "info",
       };
     },

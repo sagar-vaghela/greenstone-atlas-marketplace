@@ -6,6 +6,7 @@ import sellerReducer from "../features/sellers/sellerSlice";
 import realtimeReducer from "../features/realtime/realtimeSlice";
 import transactionsReducer from "../features/transactions/transactionsSlice";
 import messagingReducer from "../features/messaging/messagingSlice";
+import notificationsReducer from "../features/notifications/notificationsSlice";
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     realtime: realtimeReducer,
     transactions: transactionsReducer,
     messaging: messagingReducer,
+    notifications: notificationsReducer,
   },
 });
 

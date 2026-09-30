@@ -20,7 +20,7 @@ import { useAppDispatch, useAppSelector } from "./app/hooks";
 import { fetchCurrentUser, selectAuth } from "./features/auth/authSlice";
 import { CircularProgress, Box } from "@mui/material";
 import { connectMarketplaceEvents } from "./api/marketplaceEvents";
-import { connectionStatusChanged, eventReceived } from "./features/realtime/realtimeSlice";
+import { connectionStatusChanged, eventReceived, selectRealtime } from "./features/realtime/realtimeSlice";
 import {
   transactionEventReceived,
 } from "./features/transactions/transactionsSlice";
@@ -29,6 +29,8 @@ import { TransactionDetailsPage } from "./pages/TransactionDetailsPage";
 import { MessagesPage } from "./pages/MessagesPage";
 import { ConversationPage } from "./pages/ConversationPage";
 import { messageEventReceived } from "./features/messaging/messagingSlice";
+import { fetchNotifications, fetchUnreadCount, notificationEventReceived } from "./features/notifications/notificationsSlice";
+import { NotificationsPage } from "./pages/NotificationsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -52,6 +54,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export function App() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
+  const connectionStatus = useAppSelector(selectRealtime).connectionStatus;
   useEffect(() => {
     void dispatch(fetchCurrentUser());
   }, [dispatch]);
@@ -63,6 +66,7 @@ export function App() {
     return connectMarketplaceEvents(
       (event) => {
         dispatch(eventReceived({ event, userId: user.id }));
+        if (event.type === "notification.created") dispatch(notificationEventReceived({ event }));
         if (event.type.startsWith("transaction.") && "transaction" in event.payload) {
           dispatch(transactionEventReceived({ transaction: event.payload.transaction }));
         }
@@ -73,6 +77,14 @@ export function App() {
       (status) => dispatch(connectionStatusChanged(status)),
     );
   }, [dispatch, user]);
+  useEffect(() => {
+    if (!user) return;
+    void dispatch(fetchNotifications());
+    void dispatch(fetchUnreadCount());
+  }, [dispatch, user]);
+  useEffect(() => {
+    if (user && connectionStatus === "connected") void dispatch(fetchUnreadCount());
+  }, [connectionStatus, dispatch, user]);
   return (
     <BrowserRouter>
       <Routes>
@@ -130,6 +142,7 @@ export function App() {
             path="/messages/:conversationId"
             element={<ProtectedRoute><ConversationPage /></ProtectedRoute>}
           />
+          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

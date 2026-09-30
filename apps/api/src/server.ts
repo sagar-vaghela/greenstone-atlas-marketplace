@@ -13,6 +13,7 @@ import { InMemoryTransactionRepository } from "./repositories/in-memory-transact
 import { MongoTransactionRepository } from "./repositories/mongo-transaction-repository.js";
 import { MongoConversationRepository } from "./repositories/mongo-conversation-repository.js";
 import { InMemoryConversationRepository } from "./repositories/in-memory-conversation-repository.js";
+import { MongoNotificationRepository } from "./repositories/mongo-notification-repository.js";
 
 let app: ReturnType<typeof buildApp> | undefined;
 let mongoConnection: MongoConnection | undefined;
@@ -106,6 +107,9 @@ const start = async (): Promise<void> => {
                   connection.db.collection("conversations"),
                   connection.db.collection("messages"),
                 ),
+                notificationRepository: new MongoNotificationRepository(
+                  connection.db.collection("notifications"),
+                ),
               };
             },
           );
@@ -118,6 +122,7 @@ const start = async (): Promise<void> => {
           sellerProfileRepository: new InMemorySellerProfileRepository(),
           transactionRepository: new InMemoryTransactionRepository(),
           conversationRepository: new InMemoryConversationRepository(),
+          notificationRepository: undefined,
         });
 
     const resolvedRepositories = await repositories;

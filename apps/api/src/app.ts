@@ -25,6 +25,10 @@ import { registerTransactionRoutes } from "./routes/transactions.js";
 import { InMemoryConversationRepository } from "./repositories/in-memory-conversation-repository.js";
 import type { ConversationRepository } from "./repositories/conversation-repository.js";
 import { registerConversationRoutes } from "./routes/conversations.js";
+import { InMemoryNotificationRepository } from "./repositories/in-memory-notification-repository.js";
+import type { NotificationRepository } from "./repositories/notification-repository.js";
+import { registerNotificationRoutes } from "./routes/notifications.js";
+import { NotificationService } from "./events/notification-service.js";
 
 interface BuildAppOptions {
   repository?: ListingRepository;
@@ -37,6 +41,7 @@ interface BuildAppOptions {
   transactionRepository?: TransactionRepository;
   eventBus?: MarketplaceEventBus;
   conversationRepository?: ConversationRepository;
+  notificationRepository?: NotificationRepository;
 }
 
 export const buildApp = (options: BuildAppOptions = {}) => {
@@ -111,6 +116,9 @@ export const buildApp = (options: BuildAppOptions = {}) => {
     options.transactionRepository ?? new InMemoryTransactionRepository();
   const conversationRepository =
     options.conversationRepository ?? new InMemoryConversationRepository();
+  const notificationRepository =
+    options.notificationRepository ?? new InMemoryNotificationRepository();
+  const notificationService = new NotificationService(notificationRepository, eventBus);
 
   app.register(registerHealthRoute);
   app.register(registerAuthRoutes, {
@@ -141,6 +149,7 @@ export const buildApp = (options: BuildAppOptions = {}) => {
     users: userRepository,
     eventBus,
   });
+  app.register(registerNotificationRoutes, { repository: notificationRepository });
   app.register(registerSellerRoutes, {
     users: userRepository,
     listings: listingRepository,
@@ -148,7 +157,10 @@ export const buildApp = (options: BuildAppOptions = {}) => {
       options.sellerProfileRepository ?? new InMemorySellerProfileRepository(),
   });
   app.register(registerEventRoutes, eventBus);
-  app.addHook("onClose", async () => eventBus.close());
+  app.addHook("onClose", async () => {
+    notificationService.close();
+    eventBus.close();
+  });
 
   return app;
 };

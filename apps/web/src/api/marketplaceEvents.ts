@@ -16,6 +16,7 @@ const eventTypes: MarketplaceEventType[] = [
   "transaction.disputed",
   "message.created",
   "conversation.read",
+  "notification.created",
 ];
 
 export type EventConnectionStatus = "connecting" | "connected" | "reconnecting";

@@ -8,16 +8,28 @@ import {
   Typography,
   Snackbar,
   Alert,
+  Badge,
+  IconButton,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import { Link as RouterLink, Outlet } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { logout, selectCurrentUser } from "../../features/auth/authSlice";
 import { notificationClosed, selectRealtime } from "../../features/realtime/realtimeSlice";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+import { fetchNotifications, fetchUnreadCount, selectNotificationState, selectNotifications } from "../../features/notifications/notificationsSlice";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export function AppLayout() {
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectCurrentUser);
   const realtime = useAppSelector(selectRealtime);
+  const notifications = useAppSelector(selectNotificationState);
+  const latest = useAppSelector(selectNotifications).slice(0, 4);
+  const navigate = useNavigate();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <AppBar position="static" elevation={0}>
@@ -38,6 +50,13 @@ export function AppLayout() {
               <Button component={RouterLink} to="/messages" color="inherit">
                 Messages
               </Button>
+              <IconButton color="inherit" onClick={(event) => { setAnchorEl(event.currentTarget); void dispatch(fetchNotifications()); void dispatch(fetchUnreadCount()); }} aria-label={`Notifications, ${notifications.unreadCount} unread`}>
+                <Badge badgeContent={notifications.unreadCount > 99 ? "99+" : notifications.unreadCount} color="error"><NotificationsNoneIcon /></Badge>
+              </IconButton>
+              <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)} slotProps={{ paper: { sx: { width: { xs: "calc(100vw - 24px)", sm: 360 }, maxWidth: 360 } } }}>
+                {latest.length === 0 ? <MenuItem disabled>No notifications yet</MenuItem> : latest.map((notification) => <MenuItem key={notification.id} selected={!notification.readAt} onClick={() => { setAnchorEl(null); navigate("/notifications"); }}>{notification.title}</MenuItem>)}
+                <MenuItem onClick={() => { setAnchorEl(null); navigate("/notifications"); }}>View all notifications</MenuItem>
+              </Menu>
               <Button component={RouterLink} to="/listings/new" color="inherit">
                 Create listing
               </Button>

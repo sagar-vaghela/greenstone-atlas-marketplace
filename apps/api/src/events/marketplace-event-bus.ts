@@ -5,6 +5,12 @@ export type MarketplaceEventListener = (event: MarketplaceEvent) => void;
 
 export class MarketplaceEventBus {
   private readonly listeners = new Map<string, Set<MarketplaceEventListener>>();
+  private readonly globalListeners = new Set<MarketplaceEventListener>();
+
+  subscribeAll(listener: MarketplaceEventListener): () => void {
+    this.globalListeners.add(listener);
+    return () => this.globalListeners.delete(listener);
+  }
 
   subscribe(userId: string, listener: MarketplaceEventListener): () => void {
     const listeners = this.listeners.get(userId) ?? new Set();
@@ -32,10 +38,12 @@ export class MarketplaceEventBus {
     for (const userId of new Set(recipientUserIds)) {
       for (const listener of this.listeners.get(userId) ?? []) listener(completeEvent);
     }
+    for (const listener of this.globalListeners) listener(completeEvent);
     return completeEvent;
   }
 
   close(): void {
     this.listeners.clear();
+    this.globalListeners.clear();
   }
 }

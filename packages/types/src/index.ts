@@ -153,13 +153,48 @@ export type MarketplaceEventType =
   | "transaction.cancelled"
   | "transaction.disputed"
   | "message.created"
-  | "conversation.read";
+  | "conversation.read"
+  | "notification.created";
+
+export type NotificationType =
+  | "offer_received"
+  | "offer_countered"
+  | "offer_accepted"
+  | "offer_rejected"
+  | "offer_withdrawn"
+  | "message_received"
+  | "payment_required"
+  | "payment_received"
+  | "shipment_created"
+  | "delivery_confirmed"
+  | "transaction_completed"
+  | "listing_sold";
+
+export type NotificationResourceType =
+  | "listing"
+  | "offer"
+  | "transaction"
+  | "conversation";
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  resourceType: NotificationResourceType;
+  resourceId: string;
+  sourceEventId: string;
+  readAt?: string;
+  createdAt: string;
+}
 
 export type MarketplaceEventPayload =
   | { offer: Offer }
   | { listing: Listing }
   | { transaction: Transaction }
   | { message: Message }
+  | { notification: Notification }
   | { conversationId: string; readAt: string };
 
 export interface MarketplaceEvent {

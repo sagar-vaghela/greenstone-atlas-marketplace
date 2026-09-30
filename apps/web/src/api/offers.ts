@@ -10,6 +10,8 @@ export const getOffersForListing = (listingId: string): Promise<Offer[]> =>
   request<{ items: Offer[] }>(
     `/listings/${encodeURIComponent(listingId)}/offers`,
   ).then((result) => result.items);
+export const getOffer = (id: string): Promise<Offer> =>
+  request<Offer>(`/offers/${encodeURIComponent(id)}`);
 export const createOffer = (
   listingId: string,
   input: { amount: number; currency: string; parentOfferId?: string },
