@@ -136,6 +136,36 @@ export class InMemoryTransactionRepository implements TransactionRepository {
 
     return copy(transaction);
   }
+
+  async applyPaymentResult(
+    id: string,
+    input: { idempotencyKey: string; provider: string; outcome: "paid" | "failed"; failureCode?: string },
+  ): Promise<{ transaction: Transaction; changed: boolean } | undefined> {
+    const transaction = this.transactions.find((item) => item.id === id);
+    if (!transaction) return undefined;
+    if (transaction.paymentAttemptKey === input.idempotencyKey) {
+      return { transaction: copy(transaction), changed: false };
+    }
+    if (transaction.status !== "pending_payment") {
+      throw new InvalidTransactionStateError(transaction.status, input.outcome === "paid" ? "paid" : "failed");
+    }
+    const nextPaymentStatus = input.outcome === "paid" ? "paid" : "failed";
+    assertValidPaymentTransition(transaction.paymentStatus, nextPaymentStatus);
+    const timestamp = new Date().toISOString();
+    transaction.paymentStatus = nextPaymentStatus;
+    transaction.paymentAttemptKey = input.idempotencyKey;
+    transaction.paymentProvider = input.provider;
+    transaction.paymentFailureCode = input.failureCode;
+    transaction.updatedAt = timestamp;
+    transaction.version += 1;
+    if (input.outcome === "paid") {
+      transaction.status = "paid";
+      transaction.paidAt = timestamp;
+    } else {
+      transaction.paymentFailedAt = timestamp;
+    }
+    return { transaction: copy(transaction), changed: true };
+  }
 }
 
 const copy = (transaction: Transaction): Transaction => ({ ...transaction });

@@ -69,11 +69,11 @@ export const fetchTransaction = createAsyncThunk<
 
 export const payTransactionAction = createAsyncThunk<
   Transaction,
-  string,
+  { id: string; idempotencyKey: string; outcome?: "success" | "failure" },
   { rejectValue: string }
->("transactions/pay", async (id, { rejectWithValue }) => {
+>("transactions/pay", async ({ id, idempotencyKey, outcome }, { rejectWithValue }) => {
   try {
-    return await payTransaction(id);
+    return await payTransaction(id, idempotencyKey, outcome);
   } catch (error) {
     return rejectWithValue(message(error, "Unable to complete payment."));
   }
@@ -268,4 +268,6 @@ export const selectTransactionsListStatus = (state: { transactions: Transactions
   state.transactions.listStatus;
 export const selectTransactionsError = (state: { transactions: TransactionsState }) =>
   state.transactions.error;
+export const selectTransactionsMutationStatus = (state: { transactions: TransactionsState }) =>
+  state.transactions.mutationStatus;
 export default transactionsSlice.reducer;

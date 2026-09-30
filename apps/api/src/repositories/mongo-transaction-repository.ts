@@ -196,4 +196,48 @@ export class MongoTransactionRepository implements TransactionRepository {
 
     return toTransaction(document);
   }
+
+  async applyPaymentResult(
+    id: string,
+    input: { idempotencyKey: string; provider: string; outcome: "paid" | "failed"; failureCode?: string },
+  ): Promise<{ transaction: Transaction; changed: boolean } | undefined> {
+    const currentDocument = await this.collection.findOne({ id });
+    if (!currentDocument) return undefined;
+    if (currentDocument.paymentAttemptKey === input.idempotencyKey) {
+      return { transaction: toTransaction(currentDocument), changed: false };
+    }
+    if (currentDocument.status !== "pending_payment") {
+      throw new InvalidTransactionStateError(currentDocument.status, input.outcome === "paid" ? "paid" : "failed");
+    }
+    const nextPaymentStatus = input.outcome === "paid" ? "paid" : "failed";
+    assertValidPaymentTransition(currentDocument.paymentStatus, nextPaymentStatus);
+    const timestamp = new Date().toISOString();
+    const document = await this.collection.findOneAndUpdate(
+      {
+        id,
+        version: currentDocument.version ?? 1,
+        ...(currentDocument.paymentAttemptKey
+          ? { paymentAttemptKey: currentDocument.paymentAttemptKey }
+          : { paymentAttemptKey: { $exists: false } }),
+      },
+      {
+        $set: {
+          paymentStatus: nextPaymentStatus,
+          ...(input.outcome === "paid" ? { status: "paid", paidAt: timestamp } : { paymentFailedAt: timestamp }),
+          paymentAttemptKey: input.idempotencyKey,
+          paymentProvider: input.provider,
+          ...(input.failureCode ? { paymentFailureCode: input.failureCode } : {}),
+          updatedAt: timestamp,
+          version: (currentDocument.version ?? 1) + 1,
+        },
+      },
+      { projection: { _id: 0 }, returnDocument: "after" },
+    );
+    if (!document) {
+      const latest = await this.findById(id);
+      if (latest?.paymentAttemptKey === input.idempotencyKey) return { transaction: latest, changed: false };
+      throw new InvalidTransactionStateError(currentDocument.status, nextPaymentStatus);
+    }
+    return { transaction: toTransaction(document), changed: true };
+  }
 }

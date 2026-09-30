@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   Alert,
   Box,
@@ -13,6 +13,7 @@ import {
   StepLabel,
   Stepper,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
@@ -27,6 +28,7 @@ import {
   shipTransactionAction,
   selectTransactionDetail,
   selectTransactionsError,
+  selectTransactionsMutationStatus,
   selectTransactionsListStatus,
 } from "../features/transactions/transactionsSlice";
 
@@ -51,14 +53,6 @@ const fulfilmentLabels: Record<string, string> = {
   delivered: "Delivered",
 };
 
-const stepStatusMap: Record<string, number> = {
-  pending_payment: 0,
-  paid: 1,
-  completed: 2,
-  cancelled: 0,
-  disputed: 1,
-};
-
 export function TransactionDetailsPage() {
   const { id } = useParams();
   const dispatch = useAppDispatch();
@@ -66,6 +60,9 @@ export function TransactionDetailsPage() {
   const transaction = useAppSelector(selectTransactionDetail);
   const listStatus = useAppSelector(selectTransactionsListStatus);
   const error = useAppSelector(selectTransactionsError);
+  const mutationStatus = useAppSelector(selectTransactionsMutationStatus);
+  const paymentAttemptKey = useRef<string | null>(null);
+  const compactTimeline = useMediaQuery("(max-width:600px)");
 
   useEffect(() => {
     if (id) {
@@ -101,7 +98,7 @@ export function TransactionDetailsPage() {
   const canPay = Boolean(
     isBuyer &&
       transaction.status === "pending_payment" &&
-      transaction.paymentStatus === "pending",
+      ["pending", "failed"].includes(transaction.paymentStatus),
   );
   const canShip = Boolean(
     isSeller &&
@@ -128,11 +125,26 @@ export function TransactionDetailsPage() {
       transaction.paymentStatus === "paid",
   );
 
-  const stepLabels = [
-    "Payment",
-    "Fulfilment",
+  const timeline = [
+    "Offer accepted",
+    "Payment pending",
+    "Payment completed",
+    "Fulfilment pending",
+    "Shipped",
+    "Delivered",
     "Completed",
   ];
+  const timelineStep = transaction.status === "completed"
+    ? 6
+    : transaction.status === "paid"
+      ? transaction.fulfilmentStatus === "delivered" ? 5 : transaction.fulfilmentStatus === "shipped" ? 4 : 3
+      : 1;
+  const submitPayment = () => {
+    if (!window.confirm(`Pay ${transaction.amount.toLocaleString()} ${transaction.currency} for this accepted offer?`)) return;
+    const idempotencyKey = crypto.randomUUID();
+    paymentAttemptKey.current = idempotencyKey;
+    void dispatch(payTransactionAction({ id: transaction.id, idempotencyKey }));
+  };
 
   return (
     <Stack spacing={3}>
@@ -153,14 +165,19 @@ export function TransactionDetailsPage() {
             <Chip label={statusLabels[transaction.status] ?? transaction.status} color="primary" />
           </Stack>
           <Typography color="text.secondary">Listing {transaction.listingId}</Typography>
-          <Typography variant="h5">{transaction.amount.toLocaleString()} {transaction.currency}</Typography>
+          <Typography variant="h5">Accepted offer: {transaction.amount.toLocaleString()} {transaction.currency}</Typography>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={{ xs: 0.5, sm: 3 }}>
+            <Typography variant="body2">Buyer: {transaction.buyerId}</Typography>
+            <Typography variant="body2">Seller: {transaction.sellerId}</Typography>
+          </Stack>
+          <Typography variant="body2" color="text.secondary">Created {new Date(transaction.createdAt).toLocaleString()} · Updated {new Date(transaction.updatedAt).toLocaleString()}</Typography>
         </Stack>
       </Paper>
 
       <Card sx={{ borderRadius: 3 }}>
         <Box sx={{ p: 2 }}>
-          <Stepper activeStep={stepStatusMap[transaction.status] ?? 0} alternativeLabel>
-            {stepLabels.map((label) => (
+          <Stepper activeStep={timelineStep} orientation={compactTimeline ? "vertical" : "horizontal"} alternativeLabel={!compactTimeline}>
+            {timeline.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
               </Step>
@@ -183,8 +200,10 @@ export function TransactionDetailsPage() {
           <Box sx={{ p: 2 }}>
             <Typography variant="h6">Payment</Typography>
             <Stack spacing={1} sx={{ mt: 1 }}>
-              <Chip label={paymentLabels[transaction.paymentStatus] ?? transaction.paymentStatus} />
+              <Chip label={paymentLabels[transaction.paymentStatus] ?? transaction.paymentStatus} color={transaction.paymentStatus === "failed" ? "error" : transaction.paymentStatus === "paid" ? "success" : "default"} />
               <Typography>Amount: {transaction.amount.toLocaleString()} {transaction.currency}</Typography>
+              {transaction.paidAt && <Typography variant="body2">Paid {new Date(transaction.paidAt).toLocaleString()}</Typography>}
+              {transaction.paymentFailedAt && <Typography variant="body2" color="error">Last failed {new Date(transaction.paymentFailedAt).toLocaleString()}</Typography>}
             </Stack>
           </Box>
         </Card>
@@ -205,6 +224,12 @@ export function TransactionDetailsPage() {
       {transaction.status === "disputed" && (
         <Alert severity="warning">This transaction is disputed. A production dispute workflow would add evidence review and resolution.</Alert>
       )}
+      {isSeller && transaction.paymentStatus === "paid" && transaction.fulfilmentStatus === "pending" && (
+        <Alert severity="success">Payment received. You can now proceed to fulfilment.</Alert>
+      )}
+      {isBuyer && transaction.paymentStatus === "failed" && (
+        <Alert severity="error">Payment failed. Check the demo payment result and retry.</Alert>
+      )}
 
       {(canPay || canShip || canDeliver || canComplete || canCancel || canDispute) && (
         <Card sx={{ borderRadius: 3 }}>
@@ -212,8 +237,8 @@ export function TransactionDetailsPage() {
             <Typography variant="h6">Actions</Typography>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 2, flexWrap: "wrap" }}>
               {canPay && (
-                <Button variant="contained" onClick={() => void dispatch(payTransactionAction(transaction.id))}>
-                  Complete payment
+                <Button variant="contained" disabled={mutationStatus === "loading"} onClick={submitPayment}>
+                  {mutationStatus === "loading" ? "Processing payment..." : transaction.paymentStatus === "failed" ? "Retry payment" : "Pay now"}
                 </Button>
               )}
               {canShip && (

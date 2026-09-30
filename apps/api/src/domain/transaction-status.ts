@@ -45,7 +45,7 @@ export const assertValidPaymentTransition = (
   const allowed: Record<string, PaymentStatus[]> = {
     pending: ["paid", "failed"],
     paid: ["refunded"],
-    failed: ["pending"],
+    failed: ["pending", "paid"],
     refunded: [],
   };
 

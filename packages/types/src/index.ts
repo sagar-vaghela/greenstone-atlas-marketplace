@@ -165,6 +165,7 @@ export type NotificationType =
   | "message_received"
   | "payment_required"
   | "payment_received"
+  | "payment_failed"
   | "shipment_created"
   | "delivery_confirmed"
   | "transaction_completed"
@@ -247,6 +248,11 @@ export interface Transaction {
   completedAt?: string;
   cancelledAt?: string;
   version: number;
+  paymentAttemptKey?: string;
+  paymentProvider?: string;
+  paymentFailureCode?: string;
+  paidAt?: string;
+  paymentFailedAt?: string;
 }
 
 export interface CreateTransactionInput {

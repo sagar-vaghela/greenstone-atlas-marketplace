@@ -21,4 +21,13 @@ export interface TransactionRepository {
     id: string,
     fulfilmentStatus: FulfilmentStatus,
   ): Promise<Transaction | undefined>;
+  applyPaymentResult(
+    id: string,
+    input: {
+      idempotencyKey: string;
+      provider: string;
+      outcome: "paid" | "failed";
+      failureCode?: string;
+    },
+  ): Promise<{ transaction: Transaction; changed: boolean } | undefined>;
 }

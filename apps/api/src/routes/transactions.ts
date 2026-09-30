@@ -3,14 +3,20 @@ import { requireAuthenticatedUser } from "../auth/middleware.js";
 import { InvalidTransactionStateError } from "../domain/transaction-status.js";
 import type { MarketplaceEventBus } from "../events/marketplace-event-bus.js";
 import type { TransactionRepository } from "../repositories/transaction-repository.js";
+import type { PaymentProvider } from "../payments/payment-provider.js";
 
 interface Options {
   transactionRepository: TransactionRepository;
   eventBus: MarketplaceEventBus;
+  paymentProvider: PaymentProvider;
 }
 
 interface IdParams {
   id: string;
+}
+
+interface PaymentBody {
+  outcome?: "success" | "failure";
 }
 
 const error = (
@@ -97,7 +103,7 @@ export const registerTransactionRoutes = async (
     }
   };
 
-  app.post<{ Params: IdParams }>('/transactions/:id/payment', async (request, reply) => {
+  app.post<{ Params: IdParams; Body: PaymentBody }>('/transactions/:id/payment', async (request, reply) => {
     const user = requireAuthenticatedUser(request, reply);
     if (!user) return;
 
@@ -108,32 +114,49 @@ export const registerTransactionRoutes = async (
     if (transaction.buyerId !== user.id) {
       return error(reply, 403, 'FORBIDDEN', 'Only the buyer can submit payment.');
     }
-    if (transaction.status !== 'pending_payment' || transaction.paymentStatus !== 'pending') {
+    const idempotencyKeyHeader = request.headers["idempotency-key"];
+    const idempotencyKey = Array.isArray(idempotencyKeyHeader)
+      ? idempotencyKeyHeader[0]
+      : idempotencyKeyHeader ?? `legacy:${transaction.id}:${user.id}`;
+    const outcome = request.body?.outcome ?? "success";
+    if (outcome !== "success" && outcome !== "failure") {
+      return error(reply, 400, "INVALID_PAYMENT_REQUEST", "Payment outcome must be success or failure.");
+    }
+
+    if (transaction.paymentAttemptKey === idempotencyKey) return transaction;
+    if (transaction.status !== 'pending_payment' || !['pending', 'failed'].includes(transaction.paymentStatus)) {
       return error(reply, 409, 'INVALID_TRANSACTION_STATE', 'Payment is not currently pending for this transaction.');
     }
 
     try {
-      const updatedPayment = await options.transactionRepository.updatePaymentStatus(
-        transaction.id,
-        'paid',
-      );
-      const updatedStatus = updatedPayment
-        ? await options.transactionRepository.updateStatus(transaction.id, 'paid')
-        : undefined;
-      const finalTransaction = updatedStatus ?? updatedPayment;
-      if (finalTransaction) {
+      const providerResult = await options.paymentProvider.charge({
+        transactionId: transaction.id,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        idempotencyKey,
+        demoOutcome: outcome,
+      });
+      const result = await options.transactionRepository.applyPaymentResult(transaction.id, {
+        idempotencyKey,
+        provider: providerResult.provider,
+        outcome: providerResult.outcome,
+        failureCode: providerResult.failureCode,
+      });
+      if (result?.changed) {
+        const finalTransaction = result.transaction;
         options.eventBus.publish(
           {
             type: 'transaction.payment_updated',
             listingId: finalTransaction.listingId,
             offerId: finalTransaction.offerId,
             actorUserId: user.id,
+            version: finalTransaction.version,
             payload: { transaction: finalTransaction },
           },
           [finalTransaction.buyerId, finalTransaction.sellerId],
         );
       }
-      return finalTransaction;
+      return result?.transaction;
     } catch (caught) {
       if (caught instanceof InvalidTransactionStateError) {
         return error(reply, 409, 'INVALID_TRANSACTION_STATE', caught.message);

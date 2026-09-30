@@ -29,6 +29,8 @@ import { InMemoryNotificationRepository } from "./repositories/in-memory-notific
 import type { NotificationRepository } from "./repositories/notification-repository.js";
 import { registerNotificationRoutes } from "./routes/notifications.js";
 import { NotificationService } from "./events/notification-service.js";
+import type { PaymentProvider } from "./payments/payment-provider.js";
+import { DemoPaymentProvider } from "./payments/payment-provider.js";
 
 interface BuildAppOptions {
   repository?: ListingRepository;
@@ -42,6 +44,7 @@ interface BuildAppOptions {
   eventBus?: MarketplaceEventBus;
   conversationRepository?: ConversationRepository;
   notificationRepository?: NotificationRepository;
+  paymentProvider?: PaymentProvider;
 }
 
 export const buildApp = (options: BuildAppOptions = {}) => {
@@ -118,6 +121,7 @@ export const buildApp = (options: BuildAppOptions = {}) => {
     options.conversationRepository ?? new InMemoryConversationRepository();
   const notificationRepository =
     options.notificationRepository ?? new InMemoryNotificationRepository();
+  const paymentProvider = options.paymentProvider ?? new DemoPaymentProvider();
   const notificationService = new NotificationService(notificationRepository, eventBus);
 
   app.register(registerHealthRoute);
@@ -142,6 +146,7 @@ export const buildApp = (options: BuildAppOptions = {}) => {
   app.register(registerTransactionRoutes, {
     transactionRepository,
     eventBus,
+    paymentProvider,
   });
   app.register(registerConversationRoutes, {
     conversations: conversationRepository,

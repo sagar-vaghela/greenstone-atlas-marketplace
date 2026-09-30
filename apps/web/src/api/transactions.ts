@@ -7,10 +7,15 @@ export const getTransactionById = (id: string): Promise<Transaction> =>
 export const getMyTransactions = (): Promise<Transaction[]> =>
   request<{ items: Transaction[] }>("/me/transactions").then((result) => result.items);
 
-export const payTransaction = (id: string): Promise<Transaction> =>
+export const payTransaction = (
+  id: string,
+  idempotencyKey: string,
+  outcome: "success" | "failure" = "success",
+): Promise<Transaction> =>
   request<Transaction>(`/transactions/${encodeURIComponent(id)}/payment`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ outcome }),
   });
 
 export const shipTransaction = (id: string): Promise<Transaction> =>
