@@ -44,6 +44,8 @@ const realtimeSlice = createSlice({
         "transaction.completed": "Transaction completed.",
         "transaction.cancelled": "Transaction cancelled.",
         "transaction.disputed": "A dispute has been opened.",
+        "message.created": "You have a new message.",
+        "conversation.read": "Conversation read status updated.",
       };
       state.notification = {
         message: messages[event.type],

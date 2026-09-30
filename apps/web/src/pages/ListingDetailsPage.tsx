@@ -16,7 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 import type { ListingStatus } from "@atlas/types";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { OfferPanel } from "../components/listings/OfferPanel";
@@ -30,6 +30,7 @@ import {
   selectSelectedListing,
   updateListingStatus,
 } from "../features/listings/listingsSlice";
+import { createConversationAction } from "../features/messaging/messagingSlice";
 
 const statusLabels: Record<ListingStatus, string> = {
   draft: "Draft",
@@ -46,6 +47,7 @@ const statusColors: Record<ListingStatus, "default" | "success" | "info"> = {
 export function ListingDetailsPage() {
   const { id } = useParams();
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const listing = useAppSelector(selectSelectedListing);
   const currentUser = useAppSelector(selectCurrentUser);
   const detailStatus = useAppSelector(selectDetailStatus);
@@ -159,6 +161,20 @@ export function ListingDetailsPage() {
         </Box>
       </Stack>
       <SellerCard sellerId={listing.sellerId} />
+      {currentUser && currentUser.id !== listing.sellerId && (
+        <Button
+          variant="outlined"
+          onClick={() => {
+            void dispatch(createConversationAction(listing.id)).then((result) => {
+              if (createConversationAction.fulfilled.match(result)) {
+                void navigate(`/messages/${result.payload.id}`);
+              }
+            });
+          }}
+        >
+          Message seller
+        </Button>
+      )}
       {currentUser ? (
         <OfferPanel
           listing={listing}

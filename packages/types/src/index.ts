@@ -29,6 +29,38 @@ export interface SellerPublicUser {
   displayName: string;
 }
 
+export interface Conversation {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  offerId?: string;
+  transactionId?: string;
+  lastMessageAt: string;
+  lastMessagePreview?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+  readAt?: string;
+}
+
+export interface ConversationSummary extends Conversation {
+  listing: Pick<Listing, "id" | "title" | "images">;
+  otherParticipant: SellerPublicUser;
+  unreadCount: number;
+}
+
+export interface CreateConversationInput {
+  listingId: string;
+}
+
 export interface SellerProfileResponse {
   user: SellerPublicUser;
   profile: Omit<SellerProfile, "userId" | "createdAt" | "updatedAt">;
@@ -119,12 +151,16 @@ export type MarketplaceEventType =
   | "transaction.fulfilment_updated"
   | "transaction.completed"
   | "transaction.cancelled"
-  | "transaction.disputed";
+  | "transaction.disputed"
+  | "message.created"
+  | "conversation.read";
 
 export type MarketplaceEventPayload =
   | { offer: Offer }
   | { listing: Listing }
-  | { transaction: Transaction };
+  | { transaction: Transaction }
+  | { message: Message }
+  | { conversationId: string; readAt: string };
 
 export interface MarketplaceEvent {
   id: string;
@@ -133,6 +169,8 @@ export interface MarketplaceEvent {
   listingId: string;
   offerId?: string;
   actorUserId?: string;
+  recipientUserId?: string;
+  version?: number;
   payload: MarketplaceEventPayload;
 }
 

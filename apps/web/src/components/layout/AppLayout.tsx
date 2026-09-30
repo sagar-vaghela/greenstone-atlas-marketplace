@@ -21,7 +21,7 @@ export function AppLayout() {
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <AppBar position="static" elevation={0}>
-        <Toolbar>
+        <Toolbar sx={{ minWidth: 0, overflowX: "auto", flexWrap: { xs: "wrap", sm: "nowrap" }, gap: { xs: 0.25, sm: 1 } }}>
           <Link component={RouterLink} to="/" color="inherit" underline="none">
             <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
               Atlas Marketplace
@@ -34,6 +34,9 @@ export function AppLayout() {
             <>
               <Button component={RouterLink} to="/transactions" color="inherit">
                 Transactions
+              </Button>
+              <Button component={RouterLink} to="/messages" color="inherit">
+                Messages
               </Button>
               <Button component={RouterLink} to="/listings/new" color="inherit">
                 Create listing

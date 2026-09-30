@@ -232,3 +232,46 @@ packages/
   config/
 docs/
 ```
+
+## Buyer and seller messaging
+
+Commit 19 adds private messaging around a listing. A conversation always has a
+listing, buyer and seller; offer and transaction ids remain optional so a buyer
+can ask a question before negotiating or purchasing.
+
+```text
+Conversation -> Messages -> REST persistence -> recipient-scoped SSE -> Redux synchronization
+```
+
+The API derives buyer, seller and sender identity from the authenticated session.
+Only the conversation participants can read, send, or mark messages read; an
+unrelated authenticated user receives `403`, and unauthenticated requests
+receive `401`. Public participant data is limited to id and display name.
+Messages are trimmed plain text, limited to 2,000 characters, and never rendered
+as HTML.
+
+Messaging endpoints are `POST /conversations`, `GET /conversations`, `GET
+/conversations/:id`, `GET /conversations/:id/messages?limit=50&before=cursor`,
+`POST /conversations/:id/messages`, and `POST /conversations/:id/read`.
+Messages are returned chronologically. The first page is capped at 50 items;
+older pages use the oldest returned message timestamp as a deterministic cursor.
+
+MongoDB stores `conversations` and `messages`. Conversations have unique id,
+buyer, seller, listing, composite buyer/seller/listing, and last-message-time
+indexes. Messages have unique id, conversation/created-time, and sender indexes.
+Read state is stored as participant-specific last-read timestamps and unread
+counts are calculated server-side.
+
+New `message.created` and `conversation.read` events use the existing SSE event
+bus and are published only to the other participant. Redux deduplicates message
+ids, preserves chronological order, updates previews and unread counts, and
+continues to use REST as the source of truth after reconnects. SSE was chosen
+because this workflow already uses REST commands and primarily needs
+server-to-client notifications; a shared broker plus WebSocket or replayable
+SSE gateway should be considered if scale requires it.
+
+Attachments, typing indicators, message editing/deletion, moderation, abuse
+reporting, notification preferences, email/push notifications, and a brokered
+WebSocket architecture are future extensions and are intentionally outside
+Commit 19.
+```

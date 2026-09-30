@@ -15,6 +15,7 @@ import type {
   UpdateListingInput,
   User,
   UpdateSellerProfileInput,
+  CreateConversationInput,
 } from "@atlas/types";
 import { z } from "zod";
 
@@ -93,6 +94,20 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(1),
+});
+
+export const createConversationSchema: z.ZodType<CreateConversationInput> =
+  z.object({
+    listingId: z.string().trim().min(1),
+  });
+
+export const createMessageSchema = z.object({
+  body: z.string().trim().min(1).max(2000),
+});
+
+export const messagePaginationSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).default(50),
+  before: z.string().trim().min(1).optional(),
 });
 
 export const updateSellerProfileSchema: z.ZodType<UpdateSellerProfileInput> = z
@@ -235,4 +250,5 @@ export type {
   FulfilmentStatus,
   User,
   UpdateSellerProfileInput,
+  CreateConversationInput,
 };

@@ -22,6 +22,9 @@ import { registerEventRoutes } from "./routes/events.js";
 import { InMemoryTransactionRepository } from "./repositories/in-memory-transaction-repository.js";
 import type { TransactionRepository } from "./repositories/transaction-repository.js";
 import { registerTransactionRoutes } from "./routes/transactions.js";
+import { InMemoryConversationRepository } from "./repositories/in-memory-conversation-repository.js";
+import type { ConversationRepository } from "./repositories/conversation-repository.js";
+import { registerConversationRoutes } from "./routes/conversations.js";
 
 interface BuildAppOptions {
   repository?: ListingRepository;
@@ -33,6 +36,7 @@ interface BuildAppOptions {
   sellerProfileRepository?: SellerProfileRepository;
   transactionRepository?: TransactionRepository;
   eventBus?: MarketplaceEventBus;
+  conversationRepository?: ConversationRepository;
 }
 
 export const buildApp = (options: BuildAppOptions = {}) => {
@@ -105,6 +109,8 @@ export const buildApp = (options: BuildAppOptions = {}) => {
     options.offerRepository ?? new InMemoryOfferRepository();
   const transactionRepository =
     options.transactionRepository ?? new InMemoryTransactionRepository();
+  const conversationRepository =
+    options.conversationRepository ?? new InMemoryConversationRepository();
 
   app.register(registerHealthRoute);
   app.register(registerAuthRoutes, {
@@ -127,6 +133,12 @@ export const buildApp = (options: BuildAppOptions = {}) => {
   });
   app.register(registerTransactionRoutes, {
     transactionRepository,
+    eventBus,
+  });
+  app.register(registerConversationRoutes, {
+    conversations: conversationRepository,
+    listings: listingRepository,
+    users: userRepository,
     eventBus,
   });
   app.register(registerSellerRoutes, {

@@ -26,6 +26,9 @@ import {
 } from "./features/transactions/transactionsSlice";
 import { TransactionsPage } from "./pages/TransactionsPage";
 import { TransactionDetailsPage } from "./pages/TransactionDetailsPage";
+import { MessagesPage } from "./pages/MessagesPage";
+import { ConversationPage } from "./pages/ConversationPage";
+import { messageEventReceived } from "./features/messaging/messagingSlice";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -62,6 +65,9 @@ export function App() {
         dispatch(eventReceived({ event, userId: user.id }));
         if (event.type.startsWith("transaction.") && "transaction" in event.payload) {
           dispatch(transactionEventReceived({ transaction: event.payload.transaction }));
+        }
+        if (event.type === "message.created" || event.type === "conversation.read") {
+          dispatch(messageEventReceived({ event, userId: user.id }));
         }
       },
       (status) => dispatch(connectionStatusChanged(status)),
@@ -115,6 +121,14 @@ export function App() {
                 <TransactionDetailsPage />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/messages"
+            element={<ProtectedRoute><MessagesPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/messages/:conversationId"
+            element={<ProtectedRoute><ConversationPage /></ProtectedRoute>}
           />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
