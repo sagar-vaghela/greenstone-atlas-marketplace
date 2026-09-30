@@ -16,7 +16,10 @@ import {
   TextField,
   Stack,
   Typography,
+  InputAdornment,
 } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
+import TuneIcon from "@mui/icons-material/Tune";
 import type { Listing, ListingQuery, ListingSort } from "@atlas/types";
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
@@ -27,19 +30,12 @@ import {
   selectListingsError,
   selectListStatus,
 } from "../features/listings/listingsSlice";
-
-const formatPrice = (listing: Listing) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: listing.currency,
-    maximumFractionDigits: 0,
-  }).format(listing.price);
-
-const statusLabels = {
-  draft: "Draft",
-  active: "Active",
-  sold: "Sold",
-} as const;
+import { EmptyState } from "../components/common/EmptyState";
+import { ErrorState } from "../components/common/ErrorState";
+import { LoadingState } from "../components/common/LoadingState";
+import { PageHeader } from "../components/common/PageHeader";
+import { PriceDisplay } from "../components/common/PriceDisplay";
+import { StatusChip } from "../components/common/StatusChip";
 
 export function MarketplacePage() {
   const dispatch = useAppDispatch();
@@ -129,20 +125,26 @@ export function MarketplacePage() {
 
   return (
     <Stack spacing={4}>
-      <Stack spacing={1}>
-        <Typography variant="h1">Atlas Marketplace</Typography>
-        <Typography color="text.secondary">
-          Browse the latest listings from the marketplace.
-        </Typography>
-      </Stack>
-
-      <Stack spacing={2}>
+      <Box sx={{ borderBottom: 1, borderColor: "divider", pb: { xs: 4, md: 6 } }}>
+        <PageHeader
+          eyebrow="The considered collection"
+          title="Find the watch that stays with you."
+          description="A curated marketplace for pre-owned watches, with clear provenance and thoughtful sellers."
+        />
         <TextField
-          label="Search listings"
+          label="Search the collection"
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
           fullWidth
+          slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon color="action" /></InputAdornment> } }}
         />
+      </Box>
+
+      <Stack spacing={2}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          <TuneIcon color="action" />
+          <Typography variant="h6">Refine your search</Typography>
+        </Stack>
         <Box
           sx={{
             display: "grid",
@@ -206,44 +208,20 @@ export function MarketplacePage() {
         )}
       </Stack>
 
-      {listStatus === "loading" && (
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-            py: 6,
-          }}
-        >
-          <CircularProgress aria-label="Loading listings" />
-          <Typography color="text.secondary">Loading listings...</Typography>
-        </Box>
-      )}
+      {listStatus === "loading" && <LoadingState label="Loading listings" skeleton={listings.length === 0} />}
 
       {listStatus === "failed" && (
-        <Alert
-          severity="error"
-          action={<Button onClick={loadListings}>Try again</Button>}
-        >
-          {error ?? "Unable to load listings."} Please try again.
-        </Alert>
+        <ErrorState message={error ?? "Unable to load listings."} onRetry={loadListings} />
       )}
 
       {listStatus === "succeeded" && listings.length === 0 && (
-        <Stack spacing={1} sx={{ alignItems: "flex-start" }}>
-          <Typography variant="h5">No listings found</Typography>
-          <Typography color="text.secondary">
-            Try adjusting your search or filters.
-          </Typography>
-          {hasFilters && <Button onClick={clearFilters}>Clear filters</Button>}
-        </Stack>
+        <EmptyState title="No watches found" description="Try adjusting your search or filters." action={hasFilters ? <Button onClick={clearFilters}>Clear filters</Button> : undefined} />
       )}
 
       {listings.length > 0 && listStatus !== "idle" && (
-        <Stack spacing={2}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" }, gap: 2.5 }}>
           {listings.map((listing) => (
-            <Card key={listing.id} variant="outlined">
+            <Card key={listing.id} variant="outlined" sx={{ overflow: "hidden", bgcolor: "background.paper", transition: "transform 180ms ease, box-shadow 180ms ease", "&:hover": { transform: "translateY(-3px)", boxShadow: 5 } }}>
               <CardActionArea
                 component={RouterLink}
                 to={`/listings/${listing.id}`}
@@ -280,20 +258,12 @@ export function MarketplacePage() {
                     spacing={1}
                     sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
                   >
-                    <Typography variant="h5" component="h2">
+                    <Typography variant="h5" component="h2" sx={{ flex: 1 }}>
                       {listing.title}
                     </Typography>
-                    <Chip
-                      label={statusLabels[listing.status]}
-                      size="small"
-                      color={
-                        listing.status === "active" ? "success" : "default"
-                      }
-                    />
+                    <StatusChip status={listing.status} />
                   </Stack>
-                  <Typography variant="h6" sx={{ mt: 1 }}>
-                    {formatPrice(listing)}
-                  </Typography>
+                  <PriceDisplay amount={listing.price} currency={listing.currency} variant="h6" sx={{ mt: 1, color: "primary.main" }} />
                   <Typography color="text.secondary" sx={{ mt: 1 }}>
                     {listing.category}
                   </Typography>
@@ -301,7 +271,7 @@ export function MarketplacePage() {
               </CardActionArea>
             </Card>
           ))}
-        </Stack>
+        </Box>
       )}
     </Stack>
   );

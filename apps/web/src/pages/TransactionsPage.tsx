@@ -19,14 +19,10 @@ import {
   selectTransactionsListStatus,
   selectTransactionsError,
 } from "../features/transactions/transactionsSlice";
-
-const statusLabels: Record<string, string> = {
-  pending_payment: "Pending payment",
-  paid: "Paid",
-  completed: "Completed",
-  cancelled: "Cancelled",
-  disputed: "Disputed",
-};
+import { EmptyState } from "../components/common/EmptyState";
+import { PriceDisplay } from "../components/common/PriceDisplay";
+import { StatusChip } from "../components/common/StatusChip";
+import { PageHeader } from "../components/common/PageHeader";
 
 export function TransactionsPage() {
   const dispatch = useAppDispatch();
@@ -62,12 +58,12 @@ export function TransactionsPage() {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h3">Transactions</Typography>
+      <PageHeader title="Transactions" description="Keep the handover clear from accepted offer to completed delivery." />
       {error && <Alert severity="error">{error}</Alert>}
       <Stack spacing={2}>
-        <Typography variant="h5">Buying</Typography>
+          <Typography variant="h5">Buying</Typography>
         {buying.length === 0 ? (
-          <Typography color="text.secondary">No buying transactions yet.</Typography>
+          <EmptyState title="No purchases yet" description="Accepted offers will appear here." />
         ) : (
           buying.map((transaction) => (
             <Card key={transaction.id} sx={{ borderRadius: 3 }}>
@@ -83,10 +79,10 @@ export function TransactionsPage() {
                     </Typography>
                     <Typography variant="h6">Listing {transaction.listingId}</Typography>
                   </Box>
-                  <Chip label={statusLabels[transaction.status] ?? transaction.status} color="primary" />
+                  <StatusChip status={transaction.status} />
                 </Stack>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 2 }}>
-                  <Typography>Amount: {transaction.amount.toLocaleString()} {transaction.currency}</Typography>
+                  <PriceDisplay amount={transaction.amount} currency={transaction.currency} variant="body2" />
                   <Typography>Payment: {transaction.paymentStatus}</Typography>
                   <Typography>Fulfilment: {transaction.fulfilmentStatus}</Typography>
                 </Stack>
@@ -101,9 +97,9 @@ export function TransactionsPage() {
         )}
       </Stack>
       <Stack spacing={2}>
-        <Typography variant="h5">Selling</Typography>
+          <Typography variant="h5">Selling</Typography>
         {selling.length === 0 ? (
-          <Typography color="text.secondary">No selling transactions yet.</Typography>
+          <EmptyState title="No sales yet" description="Your completed listings will appear here." />
         ) : (
           selling.map((transaction) => (
             <Card key={transaction.id} sx={{ borderRadius: 3 }}>
@@ -119,10 +115,10 @@ export function TransactionsPage() {
                     </Typography>
                     <Typography variant="h6">Listing {transaction.listingId}</Typography>
                   </Box>
-                  <Chip label={statusLabels[transaction.status] ?? transaction.status} color="secondary" />
+                  <StatusChip status={transaction.status} />
                 </Stack>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 2 }}>
-                  <Typography>Amount: {transaction.amount.toLocaleString()} {transaction.currency}</Typography>
+                  <PriceDisplay amount={transaction.amount} currency={transaction.currency} variant="body2" />
                   <Typography>Payment: {transaction.paymentStatus}</Typography>
                   <Typography>Fulfilment: {transaction.fulfilmentStatus}</Typography>
                 </Stack>

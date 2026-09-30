@@ -16,6 +16,8 @@ import {
   Typography,
 } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { PriceDisplay } from "../common/PriceDisplay";
+import { StatusChip } from "../common/StatusChip";
 import { selectRealtime } from "../../features/realtime/realtimeSlice";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import {
@@ -29,21 +31,6 @@ import {
   selectOffersError,
   selectOffersStatus,
 } from "../../features/offers/offersSlice";
-
-const statusLabel: Record<OfferStatus, string> = {
-  pending: "Pending",
-  countered: "Seller countered",
-  accepted: "Offer accepted",
-  rejected: "Offer declined",
-  withdrawn: "Withdrawn",
-  expired: "Expired",
-};
-const formatMoney = (amount: number, currency: string) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
 
 interface Props {
   listing: Listing;
@@ -127,7 +114,7 @@ export function OfferPanel({ listing, onAccepted }: Props) {
             Offers for this watch
           </Typography>
           <Typography color="text.secondary">
-            Asking price: {formatMoney(listing.price, listing.currency)}
+            Asking price: {new Intl.NumberFormat("en-IN", { style: "currency", currency: listing.currency, maximumFractionDigits: 0 }).format(listing.price)}
           </Typography>
         </Box>
         {currentUser && (
@@ -204,20 +191,9 @@ export function OfferPanel({ listing, onAccepted }: Props) {
                           ? "Seller countered your offer"
                           : "Your offer"}
                     </Typography>
-                    <Typography variant="h6">
-                      {formatMoney(offer.amount, offer.currency)}
-                    </Typography>
+                    <PriceDisplay amount={offer.amount} currency={offer.currency} variant="h6" sx={{ color: "primary.main" }} />
                   </Box>
-                  <Chip
-                    label={statusLabel[offer.status]}
-                    color={
-                      offer.status === "accepted"
-                        ? "success"
-                        : offer.status === "rejected"
-                          ? "default"
-                          : "warning"
-                    }
-                  />
+                  <StatusChip status={offer.status} />
                 </Stack>
                 <Typography variant="body2" color="text.secondary">
                   {new Date(offer.createdAt).toLocaleString()}{" "}
@@ -310,7 +286,7 @@ export function OfferPanel({ listing, onAccepted }: Props) {
           <Typography>
             Accepting{" "}
             {acceptTarget &&
-              formatMoney(acceptTarget.amount, acceptTarget.currency)}{" "}
+              new Intl.NumberFormat("en-IN", { style: "currency", currency: acceptTarget.currency, maximumFractionDigits: 0 }).format(acceptTarget.amount)}{" "}
             marks the watch as sold and closes competing offers.
           </Typography>
         </DialogContent>

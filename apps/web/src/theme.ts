@@ -4,25 +4,109 @@ export const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1976d2',
+      main: '#183b3b',
+      light: '#2f5b58',
+      dark: '#102c2c',
+      contrastText: '#fffdf8',
     },
     secondary: {
-      main: '#9c27b0',
+      main: '#b08a4a',
+      light: '#d0ad70',
+      dark: '#765a2e',
+      contrastText: '#fffdf8',
+    },
+    background: {
+      default: '#f7f5f0',
+      paper: '#fffdf8',
+    },
+    text: {
+      primary: '#1e2928',
+      secondary: '#64706c',
+    },
+    divider: 'rgba(30, 41, 40, 0.13)',
+    success: {
+      main: '#3f765c',
+    },
+    warning: {
+      main: '#ad752d',
+    },
+    error: {
+      main: '#a94c43',
     },
   },
   typography: {
-    fontFamily: 'Inter, system-ui, sans-serif',
+    fontFamily: '"Avenir Next", "Helvetica Neue", sans-serif',
     h1: {
-      fontSize: '2.25rem',
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontSize: 'clamp(2.15rem, 5vw, 3.7rem)',
+      fontWeight: 400,
+      lineHeight: 1.05,
+      letterSpacing: 0,
+    },
+    h2: {
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontWeight: 400,
+      letterSpacing: 0,
+    },
+    h3: {
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontWeight: 400,
+      letterSpacing: 0,
+    },
+    h4: {
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontWeight: 400,
+      letterSpacing: 0,
+    },
+    h5: {
       fontWeight: 600,
+      letterSpacing: 0,
+    },
+    h6: {
+      fontWeight: 600,
+      letterSpacing: 0,
+    },
+    button: {
+      fontWeight: 600,
+      letterSpacing: '0.02em',
     },
   },
+  shape: {
+    borderRadius: 10,
+  },
+  spacing: 8,
   components: {
     MuiCssBaseline: {
       styleOverrides: {
         body: {
           margin: 0,
+          backgroundColor: '#f7f5f0',
         },
+        '*:focus-visible': {
+          outline: '3px solid #d0ad70',
+          outlineOffset: 2,
+        },
+      },
+    },
+    MuiAppBar: {
+      defaultProps: { elevation: 0 },
+      styleOverrides: {
+        root: { backgroundImage: 'none' },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: { boxShadow: '0 8px 24px rgba(30, 41, 40, 0.06)' },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: { borderRadius: 7, minHeight: 42 },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: { fontWeight: 600 },
       },
     },
   },

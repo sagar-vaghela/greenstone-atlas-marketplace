@@ -12,12 +12,19 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Avatar,
+  Divider,
+  Stack,
 } from "@mui/material";
 import { Link as RouterLink, Outlet } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { logout, selectCurrentUser } from "../../features/auth/authSlice";
 import { notificationClosed, selectRealtime } from "../../features/realtime/realtimeSlice";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+import StorefrontIcon from "@mui/icons-material/Storefront";
+import MessageOutlinedIcon from "@mui/icons-material/MessageOutlined";
+import AddIcon from "@mui/icons-material/Add";
+import LogoutIcon from "@mui/icons-material/Logout";
 import { fetchNotifications, fetchUnreadCount, selectNotificationState, selectNotifications } from "../../features/notifications/notificationsSlice";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -32,56 +39,57 @@ export function AppLayout() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <AppBar position="static" elevation={0}>
-        <Toolbar sx={{ minWidth: 0, overflowX: "auto", flexWrap: { xs: "wrap", sm: "nowrap" }, gap: { xs: 0.25, sm: 1 } }}>
+      <AppBar position="static" color="primary">
+        <Toolbar sx={{ minWidth: 0, gap: { xs: 0.5, sm: 1 }, py: 1 }}>
           <Link component={RouterLink} to="/" color="inherit" underline="none">
-            <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
-              Atlas Marketplace
-            </Typography>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <StorefrontIcon fontSize="small" />
+              <Typography variant="h6" component="span" sx={{ fontWeight: 700, letterSpacing: "0.01em" }}>
+                Atlas
+              </Typography>
+            </Stack>
           </Link>
-          <Button component={RouterLink} to="/" color="inherit" sx={{ ml: "auto" }}>
+          <Button component={RouterLink} to="/" color="inherit" startIcon={<StorefrontIcon />} sx={{ ml: { xs: "auto", sm: 3 } }}>
             Marketplace
           </Button>
           {user ? (
             <>
-              <Button component={RouterLink} to="/transactions" color="inherit">
+              <Button component={RouterLink} to="/transactions" color="inherit" sx={{ display: { xs: "none", md: "inline-flex" } }}>
                 Transactions
               </Button>
-              <Button component={RouterLink} to="/messages" color="inherit">
+              <Button component={RouterLink} to="/messages" color="inherit" startIcon={<MessageOutlinedIcon />} sx={{ display: { xs: "none", sm: "inline-flex" } }}>
                 Messages
               </Button>
+              <IconButton color="inherit" component={RouterLink} to="/messages" sx={{ display: { xs: "inline-flex", sm: "none" } }} aria-label="Messages">
+                <MessageOutlinedIcon />
+              </IconButton>
               <IconButton color="inherit" onClick={(event) => { setAnchorEl(event.currentTarget); void dispatch(fetchNotifications()); void dispatch(fetchUnreadCount()); }} aria-label={`Notifications, ${notifications.unreadCount} unread`}>
-                <Badge badgeContent={notifications.unreadCount > 99 ? "99+" : notifications.unreadCount} color="error"><NotificationsNoneIcon /></Badge>
+                <Badge badgeContent={notifications.unreadCount > 99 ? "99+" : notifications.unreadCount} color="secondary"><NotificationsNoneIcon /></Badge>
               </IconButton>
               <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)} slotProps={{ paper: { sx: { width: { xs: "calc(100vw - 24px)", sm: 360 }, maxWidth: 360 } } }}>
                 {latest.length === 0 ? <MenuItem disabled>No notifications yet</MenuItem> : latest.map((notification) => <MenuItem key={notification.id} selected={!notification.readAt} onClick={() => { setAnchorEl(null); navigate("/notifications"); }}>{notification.title}</MenuItem>)}
+                <Divider />
                 <MenuItem onClick={() => { setAnchorEl(null); navigate("/notifications"); }}>View all notifications</MenuItem>
               </Menu>
-              <Button component={RouterLink} to="/listings/new" color="inherit">
-                Create listing
+              <Button component={RouterLink} to="/listings/new" color="secondary" variant="contained" startIcon={<AddIcon />} sx={{ display: { xs: "none", sm: "inline-flex" } }}>
+                List a watch
               </Button>
-              <Typography
-                variant="body2"
-                sx={{ ml: 2, display: { xs: "none", sm: "block" } }}
-              >
-                {user.displayName}
-              </Typography>
-              <Button component={RouterLink} to="/profile" color="inherit">
-                Profile
-              </Button>
-              <Button color="inherit" onClick={() => void dispatch(logout())}>
+              <IconButton color="inherit" component={RouterLink} to="/profile" aria-label="Open profile">
+                <Avatar sx={{ width: 32, height: 32, bgcolor: "secondary.main", color: "primary.dark", fontSize: "0.9rem" }}>{user.displayName.slice(0, 1).toUpperCase()}</Avatar>
+              </IconButton>
+              <Button color="inherit" onClick={() => void dispatch(logout())} startIcon={<LogoutIcon />} sx={{ display: { xs: "none", md: "inline-flex" } }}>
                 Logout
               </Button>
             </>
           ) : (
-            <>
+            <Stack direction="row" spacing={1} sx={{ ml: "auto" }}>
               <Button component={RouterLink} to="/login" color="inherit">
                 Sign in
               </Button>
-              <Button component={RouterLink} to="/register" color="inherit">
+              <Button component={RouterLink} to="/register" color="secondary" variant="contained">
                 Create account
               </Button>
-            </>
+            </Stack>
           )}
         </Toolbar>
       </AppBar>
@@ -96,7 +104,7 @@ export function AppLayout() {
           </Typography>
         </Box>
       )}
-      <Container component="main" maxWidth="md" sx={{ flex: 1, py: 6 }}>
+      <Container component="main" maxWidth="lg" sx={{ flex: 1, py: { xs: 4, md: 7 } }}>
         <Outlet />
       </Container>
       <Box component="footer" sx={{ py: 3, textAlign: "center" }}>

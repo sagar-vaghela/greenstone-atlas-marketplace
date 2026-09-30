@@ -31,6 +31,9 @@ import {
   updateListingStatus,
 } from "../features/listings/listingsSlice";
 import { createConversationAction } from "../features/messaging/messagingSlice";
+import { PriceDisplay } from "../components/common/PriceDisplay";
+import { StatusChip } from "../components/common/StatusChip";
+import { LoadingState } from "../components/common/LoadingState";
 
 const statusLabels: Record<ListingStatus, string> = {
   draft: "Draft",
@@ -92,8 +95,7 @@ export function ListingDetailsPage() {
           py: 6,
         }}
       >
-        <CircularProgress aria-label="Loading listing" />
-        <Typography color="text.secondary">Loading listing...</Typography>
+        <LoadingState label="Loading listing" skeleton />
       </Box>
     );
   }
@@ -154,10 +156,7 @@ export function ListingDetailsPage() {
         <Typography variant="h1">{listing.title}</Typography>
         <Typography color="text.secondary">{listing.category}</Typography>
         <Box>
-          <Chip
-            label={statusLabels[listing.status]}
-            color={statusColors[listing.status]}
-          />
+          <StatusChip status={listing.status} />
         </Box>
       </Stack>
       <SellerCard sellerId={listing.sellerId} />
