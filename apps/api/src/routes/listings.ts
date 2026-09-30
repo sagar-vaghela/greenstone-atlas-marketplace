@@ -113,6 +113,8 @@ export const registerListingRoutes = async (
   app.patch<{ Params: ListingIdParams; Body: unknown }>(
     "/listings/:id",
     async (request: UpdateListingRequest, reply) => {
+      const user = requireAuthenticatedUser(request, reply);
+      if (!user) return;
       const result = updateListingSchema.safeParse(request.body);
       if (!result.success) {
         return reply.status(400).send({
@@ -127,24 +129,18 @@ export const registerListingRoutes = async (
         });
       }
 
-      const user = requireAuthenticatedUser(request, reply);
-      if (!user) return;
       const existing = await options.repository.findById(request.params.id);
       if (!existing)
-        return reply
-          .status(404)
-          .send({
-            error: { code: "LISTING_NOT_FOUND", message: "Listing not found" },
-          });
+        return reply.status(404).send({
+          error: { code: "LISTING_NOT_FOUND", message: "Listing not found" },
+        });
       if (existing.sellerId !== user.id)
-        return reply
-          .status(403)
-          .send({
-            error: {
-              code: "FORBIDDEN",
-              message: "You don't have permission to perform this action.",
-            },
-          });
+        return reply.status(403).send({
+          error: {
+            code: "FORBIDDEN",
+            message: "You don't have permission to perform this action.",
+          },
+        });
 
       const listing = await options.repository.update(
         request.params.id,
@@ -166,6 +162,8 @@ export const registerListingRoutes = async (
   app.patch<{ Params: ListingIdParams; Body: unknown }>(
     "/listings/:id/status",
     async (request: UpdateListingStatusRequest, reply) => {
+      const user = requireAuthenticatedUser(request, reply);
+      if (!user) return;
       const result = updateListingStatusSchema.safeParse(request.body);
       if (!result.success) {
         return reply.status(400).send({
@@ -180,24 +178,18 @@ export const registerListingRoutes = async (
         });
       }
 
-      const user = requireAuthenticatedUser(request, reply);
-      if (!user) return;
       const existing = await options.repository.findById(request.params.id);
       if (!existing)
-        return reply
-          .status(404)
-          .send({
-            error: { code: "LISTING_NOT_FOUND", message: "Listing not found" },
-          });
+        return reply.status(404).send({
+          error: { code: "LISTING_NOT_FOUND", message: "Listing not found" },
+        });
       if (existing.sellerId !== user.id)
-        return reply
-          .status(403)
-          .send({
-            error: {
-              code: "FORBIDDEN",
-              message: "You don't have permission to perform this action.",
-            },
-          });
+        return reply.status(403).send({
+          error: {
+            code: "FORBIDDEN",
+            message: "You don't have permission to perform this action.",
+          },
+        });
 
       let listing;
       try {
@@ -228,7 +220,12 @@ export const registerListingRoutes = async (
 
       const offers = await options.offerRepository.listByListingId(listing.id);
       options.eventBus.publish(
-        { type: "listing.status_changed", listingId: listing.id, actorUserId: user.id, payload: { listing } },
+        {
+          type: "listing.status_changed",
+          listingId: listing.id,
+          actorUserId: user.id,
+          payload: { listing },
+        },
         [listing.sellerId, ...offers.map((offer) => offer.buyerId)],
       );
 

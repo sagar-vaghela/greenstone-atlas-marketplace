@@ -164,11 +164,13 @@ export function ListingDetailsPage() {
         <Button
           variant="outlined"
           onClick={() => {
-            void dispatch(createConversationAction(listing.id)).then((result) => {
-              if (createConversationAction.fulfilled.match(result)) {
-                void navigate(`/messages/${result.payload.id}`);
-              }
-            });
+            void dispatch(createConversationAction(listing.id)).then(
+              (result) => {
+                if (createConversationAction.fulfilled.match(result)) {
+                  void navigate(`/messages/${result.payload.id}`);
+                }
+              },
+            );
           }}
         >
           Message seller
@@ -325,7 +327,7 @@ export function ListingDetailsPage() {
       <Typography>{listing.description}</Typography>
       <Stack spacing={1}>
         <Typography variant="h4">
-          {new Intl.NumberFormat("en-IN", {
+          {new Intl.NumberFormat("en-AE", {
             style: "currency",
             currency: listing.currency,
             maximumFractionDigits: 0,

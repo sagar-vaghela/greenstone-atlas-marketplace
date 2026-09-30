@@ -8,15 +8,17 @@ The current concept is a pre-owned luxury-watch marketplace. The demo API includ
 
 ## High-level architecture
 
-- `apps/web` — React and Vite frontend
-- `apps/api` — Fastify and TypeScript backend
-- `packages/types` — shared TypeScript domain types
-- `packages/validation` — shared Zod validation schemas
-- `packages/config` — shared non-secret configuration and constants
-
 ## Technology direction
 
 The project uses npm workspaces, TypeScript with strict checking, React with Vite, and Node.js with Fastify. Additional application and domain dependencies will be introduced only as later features require them.
+
+## Greenstone Equity Partners UAE POC
+
+The Greenstone Equity Partners UAE POC is AED-only and uses UAE locale formatting.
+New data is validated as AED. For an existing MongoDB database, approve an
+exchange rate and run `LEGACY_INR_TO_AED_RATE=0.043 npm run
+migrate:currency --workspace @atlas/api`; the command reports skipped Stripe-linked
+transactions instead of changing their authoritative payment amount.
 
 ## Local setup
 
@@ -347,4 +349,57 @@ Attachments, typing indicators, message editing/deletion, moderation, abuse
 reporting, notification preferences, email/push notifications, and a brokered
 WebSocket architecture are future extensions and are intentionally outside
 Commit 19.
-```
+
+````
+
+## Stripe Test Mode payments
+
+Stripe is optional and defaults to the existing `DemoPaymentProvider`. To use
+Stripe Test Mode, set `PAYMENT_PROVIDER=stripe` and configure
+`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and the browser-safe
+`STRIPE_PUBLISHABLE_KEY` in `.env`. The secret key and webhook secret are
+server-only; only the publishable key is exposed through `VITE_STRIPE_PUBLISHABLE_KEY`.
+
+The payment boundary is:
+
+```text
+React + Redux -> POST /transactions/:id/payment-intent
+  -> PaymentProvider -> Stripe PaymentIntent
+  -> POST /webhooks/stripe -> signature verification
+  -> idempotent transaction reconciliation -> notification/SSE -> Redux
+````
+
+The API derives the amount and buyer authorization from the transaction. Existing
+amounts are major currency units, so Stripe conversion uses deterministic minor
+unit conversion (for example, AED 10.00 becomes 1000). The transaction stores
+the provider reference, while card numbers, CVV, client secrets, and Stripe
+credentials are never persisted or placed in Redux.
+
+For local forwarding, use the Stripe CLI with `stripe listen --forward-to
+localhost:3000/webhooks/stripe` and copy the printed signing secret into
+`STRIPE_WEBHOOK_SECRET`. Use Stripe's official test cards in the Atlas card
+dialog, such as `4242 4242 4242 4242` for success and `4000 0000 0000 9995`
+for a declined payment, with any future expiry and CVC. The webhook, not the
+browser confirmation response, changes the Atlas transaction to paid.
+
+PaymentIntent creation reuses the stored provider reference and sends an
+idempotency key to Stripe. Webhook event ids are also used as Atlas payment
+attempt keys, so replayed events do not duplicate transaction mutations,
+notifications, or SSE updates. The DemoPaymentProvider remains available for
+offline development and regression tests.
+
+For the automated browser journey, place fresh rotated Stripe Test Mode keys in
+the ignored `.env` and run `stripe listen` in a second terminal, then run
+`npm run test:e2e:stripe`. The script creates an accepted demo transaction,
+logs in as the buyer, enters the `4242 4242 4242 4242` test card, waits for
+webhook reconciliation, and prints the transaction and PaymentIntent ids. View
+the result in Stripe Dashboard with **Test mode** enabled under **Payments**;
+open the PaymentIntent id printed by the script. The transaction id is also
+stored in the PaymentIntent metadata.
+
+Full Stripe Connect onboarding, KYC, payouts, platform fees, tax, and dispute
+operations are intentionally out of scope. A production marketplace would use
+connected seller accounts, explicit platform-fee and transfer policy, seller
+onboarding/KYC, payout reconciliation, and the corresponding account, charge,
+refund, dispute, and transfer webhooks. This implementation does not process
+real money and makes no PCI-compliance claim.

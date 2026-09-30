@@ -250,6 +250,7 @@ export interface Transaction {
   version: number;
   paymentAttemptKey?: string;
   paymentProvider?: string;
+  paymentProviderReference?: string;
   paymentFailureCode?: string;
   paidAt?: string;
   paymentFailedAt?: string;

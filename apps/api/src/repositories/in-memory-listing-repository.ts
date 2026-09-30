@@ -14,8 +14,8 @@ const seedListings: CreateListingRepositoryInput[] = [
     title: "Rolex Submariner Date 126610LN",
     description:
       "Pre-owned luxury watch in excellent condition, with box and papers.",
-    price: 1250000,
-    currency: "INR",
+    price: 28500,
+    currency: "AED",
     category: "luxury-watches",
     images: [],
     sellerId: "demo-seller",
@@ -23,8 +23,8 @@ const seedListings: CreateListingRepositoryInput[] = [
   {
     title: "Omega Speedmaster Professional Moonwatch",
     description: "Pre-owned chronograph offered by a verified-demo seller.",
-    price: 620000,
-    currency: "INR",
+    price: 18500,
+    currency: "AED",
     category: "luxury-watches",
     images: [],
     sellerId: "demo-seller",
@@ -33,8 +33,8 @@ const seedListings: CreateListingRepositoryInput[] = [
     title: "Cartier Santos Medium WSSA0029",
     description:
       "Pre-owned classic with a clean bracelet and broad wrist appeal.",
-    price: 710000,
-    currency: "INR",
+    price: 22000,
+    currency: "AED",
     category: "luxury-watches",
     images: [],
     sellerId: "demo-seller-2",

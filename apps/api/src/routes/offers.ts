@@ -74,6 +74,8 @@ export const registerOfferRoutes = async (
   app.post<{ Params: ListingParams; Body: unknown }>(
     "/listings/:listingId/offers",
     async (request, reply) => {
+      const buyer = requireAuthenticatedUser(request, reply);
+      if (!buyer) return;
       const parsed = createOfferRequestSchema.safeParse(request.body);
       if (!parsed.success)
         return error(reply, 400, "VALIDATION_ERROR", "Invalid offer details.");
@@ -89,8 +91,6 @@ export const registerOfferRoutes = async (
           "LISTING_NOT_ACTIVE",
           "This listing is no longer accepting offers.",
         );
-      const buyer = requireAuthenticatedUser(request, reply);
-      if (!buyer) return;
       if (buyer.id === listing.sellerId)
         return error(
           reply,
@@ -122,7 +122,13 @@ export const registerOfferRoutes = async (
         sellerId: listing.sellerId,
       });
       options.eventBus.publish(
-        { type: "offer.created", listingId: listing.id, offerId: offer.id, actorUserId: buyer.id, payload: { offer } },
+        {
+          type: "offer.created",
+          listingId: listing.id,
+          offerId: offer.id,
+          actorUserId: buyer.id,
+          payload: { offer },
+        },
         [listing.sellerId, buyer.id],
       );
       return reply.status(201).send(offer);
@@ -131,14 +137,14 @@ export const registerOfferRoutes = async (
   app.patch<{ Params: IdParams; Body: unknown }>(
     "/offers/:id/status",
     async (request, reply) => {
+      const user = requireAuthenticatedUser(request, reply);
+      if (!user) return;
       const parsed = updateOfferStatusSchema.safeParse(request.body);
       if (!parsed.success)
         return error(reply, 400, "VALIDATION_ERROR", "Invalid offer action.");
       const offer = await options.offerRepository.findById(request.params.id);
       if (!offer)
         return error(reply, 404, "OFFER_NOT_FOUND", "Offer not found");
-      const user = requireAuthenticatedUser(request, reply);
-      if (!user) return;
       const isSeller = user.id === offer.sellerId;
       const isBuyer = user.id === offer.buyerId;
       if (
@@ -196,20 +202,31 @@ export const registerOfferRoutes = async (
             ),
         );
         options.eventBus.publish(
-          { type: "offer.accepted", listingId: listing.id, offerId: accepted.id, actorUserId: user.id, payload: { offer: accepted } },
+          {
+            type: "offer.accepted",
+            listingId: listing.id,
+            offerId: accepted.id,
+            actorUserId: user.id,
+            payload: { offer: accepted },
+          },
           [offer.sellerId, offer.buyerId],
         );
         for (const rejectedOffer of rejected) {
           if (rejectedOffer) {
             options.eventBus.publish(
-              { type: "offer.rejected", listingId: listing.id, offerId: rejectedOffer.id, actorUserId: user.id, payload: { offer: rejectedOffer } },
+              {
+                type: "offer.rejected",
+                listingId: listing.id,
+                offerId: rejectedOffer.id,
+                actorUserId: user.id,
+                payload: { offer: rejectedOffer },
+              },
               [rejectedOffer.buyerId, rejectedOffer.sellerId],
             );
           }
         }
-        const existingTransaction = await options.transactionRepository.findByListingId(
-          listing.id,
-        );
+        const existingTransaction =
+          await options.transactionRepository.findByListingId(listing.id);
         if (
           existingTransaction &&
           existingTransaction.status !== "cancelled" &&
@@ -242,11 +259,22 @@ export const registerOfferRoutes = async (
           [transaction.buyerId, transaction.sellerId],
         );
 
-        const updatedListing = await options.listingRepository.findById(listing.id);
+        const updatedListing = await options.listingRepository.findById(
+          listing.id,
+        );
         if (updatedListing) {
           options.eventBus.publish(
-            { type: "listing.status_changed", listingId: updatedListing.id, actorUserId: user.id, payload: { listing: updatedListing } },
-            [updatedListing.sellerId, ...competing.map((item) => item.buyerId), offer.buyerId],
+            {
+              type: "listing.status_changed",
+              listingId: updatedListing.id,
+              actorUserId: user.id,
+              payload: { listing: updatedListing },
+            },
+            [
+              updatedListing.sellerId,
+              ...competing.map((item) => item.buyerId),
+              offer.buyerId,
+            ],
           );
         }
         return reply.status(200).send({ offer: accepted, transaction });
@@ -258,7 +286,15 @@ export const registerOfferRoutes = async (
         );
         if (updated) {
           options.eventBus.publish(
-            { type: `offer.${updated.status}` as "offer.rejected" | "offer.withdrawn", listingId: updated.listingId, offerId: updated.id, actorUserId: user.id, payload: { offer: updated } },
+            {
+              type: `offer.${updated.status}` as
+                | "offer.rejected"
+                | "offer.withdrawn",
+              listingId: updated.listingId,
+              offerId: updated.id,
+              actorUserId: user.id,
+              payload: { offer: updated },
+            },
             [updated.buyerId, updated.sellerId],
           );
         }
@@ -273,6 +309,8 @@ export const registerOfferRoutes = async (
   app.post<{ Params: IdParams; Body: unknown }>(
     "/offers/:id/counter",
     async (request, reply) => {
+      const user = requireAuthenticatedUser(request, reply);
+      if (!user) return;
       const parsed = counterOfferRequestSchema.safeParse(request.body);
       if (!parsed.success)
         return error(
@@ -286,8 +324,6 @@ export const registerOfferRoutes = async (
       );
       if (!original)
         return error(reply, 404, "OFFER_NOT_FOUND", "Offer not found");
-      const user = requireAuthenticatedUser(request, reply);
-      if (!user) return;
       if (user.id !== original.sellerId)
         return error(
           reply,
@@ -323,13 +359,17 @@ export const registerOfferRoutes = async (
       const counter = await options.offerRepository.findById(created.id);
       if (counter) {
         options.eventBus.publish(
-          { type: "offer.countered", listingId: counter.listingId, offerId: counter.id, actorUserId: user.id, payload: { offer: counter } },
+          {
+            type: "offer.countered",
+            listingId: counter.listingId,
+            offerId: counter.id,
+            actorUserId: user.id,
+            payload: { offer: counter },
+          },
           [counter.buyerId, counter.sellerId],
         );
       }
-      return reply
-        .status(201)
-        .send(counter);
+      return reply.status(201).send(counter);
     },
   );
 };

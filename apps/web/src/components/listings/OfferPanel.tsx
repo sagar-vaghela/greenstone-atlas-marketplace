@@ -114,7 +114,12 @@ export function OfferPanel({ listing, onAccepted }: Props) {
             Offers for this watch
           </Typography>
           <Typography color="text.secondary">
-            Asking price: {new Intl.NumberFormat("en-IN", { style: "currency", currency: listing.currency, maximumFractionDigits: 0 }).format(listing.price)}
+            Asking price:{" "}
+            {new Intl.NumberFormat("en-AE", {
+              style: "currency",
+              currency: listing.currency,
+              maximumFractionDigits: 0,
+            }).format(listing.price)}
           </Typography>
         </Box>
         {currentUser && (
@@ -191,7 +196,12 @@ export function OfferPanel({ listing, onAccepted }: Props) {
                           ? "Seller countered your offer"
                           : "Your offer"}
                     </Typography>
-                    <PriceDisplay amount={offer.amount} currency={offer.currency} variant="h6" sx={{ color: "primary.main" }} />
+                    <PriceDisplay
+                      amount={offer.amount}
+                      currency={offer.currency}
+                      variant="h6"
+                      sx={{ color: "primary.main" }}
+                    />
                   </Box>
                   <StatusChip status={offer.status} />
                 </Stack>
@@ -286,7 +296,11 @@ export function OfferPanel({ listing, onAccepted }: Props) {
           <Typography>
             Accepting{" "}
             {acceptTarget &&
-              new Intl.NumberFormat("en-IN", { style: "currency", currency: acceptTarget.currency, maximumFractionDigits: 0 }).format(acceptTarget.amount)}{" "}
+              new Intl.NumberFormat("en-AE", {
+                style: "currency",
+                currency: acceptTarget.currency,
+                maximumFractionDigits: 0,
+              }).format(acceptTarget.amount)}{" "}
             marks the watch as sold and closes competing offers.
           </Typography>
         </DialogContent>

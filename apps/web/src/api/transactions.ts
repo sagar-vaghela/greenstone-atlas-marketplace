@@ -5,7 +5,9 @@ export const getTransactionById = (id: string): Promise<Transaction> =>
   request<Transaction>(`/transactions/${encodeURIComponent(id)}`);
 
 export const getMyTransactions = (): Promise<Transaction[]> =>
-  request<{ items: Transaction[] }>("/me/transactions").then((result) => result.items);
+  request<{ items: Transaction[] }>("/me/transactions").then(
+    (result) => result.items,
+  );
 
 export const payTransaction = (
   id: string,
@@ -14,9 +16,32 @@ export const payTransaction = (
 ): Promise<Transaction> =>
   request<Transaction>(`/transactions/${encodeURIComponent(id)}/payment`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    },
     body: JSON.stringify({ outcome }),
   });
+
+export interface PaymentIntentResponse {
+  transactionId: string;
+  provider: string;
+  paymentIntentId: string;
+  clientSecret?: string;
+  status: "pending" | "paid" | "failed";
+}
+
+export const createPaymentIntent = (
+  id: string,
+  idempotencyKey: string,
+): Promise<PaymentIntentResponse> =>
+  request<PaymentIntentResponse>(
+    `/transactions/${encodeURIComponent(id)}/payment-intent`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+    },
+  );
 
 export const shipTransaction = (id: string): Promise<Transaction> =>
   request<Transaction>(`/transactions/${encodeURIComponent(id)}/ship`, {

@@ -20,7 +20,7 @@ const initialValues: ListingFormValues = {
   title: "",
   description: "",
   price: "",
-  currency: "INR",
+  currency: "AED",
   category: "",
   images: [],
 };

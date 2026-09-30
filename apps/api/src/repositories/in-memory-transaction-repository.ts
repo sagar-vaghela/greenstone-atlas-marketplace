@@ -43,13 +43,26 @@ export class InMemoryTransactionRepository implements TransactionRepository {
     return transaction ? copy(transaction) : undefined;
   }
 
+  async findByPaymentProviderReference(
+    providerReference: string,
+  ): Promise<Transaction | undefined> {
+    const transaction = this.transactions.find(
+      (item) => item.paymentProviderReference === providerReference,
+    );
+    return transaction ? copy(transaction) : undefined;
+  }
+
   async findByOfferId(offerId: string): Promise<Transaction | undefined> {
-    const transaction = this.transactions.find((item) => item.offerId === offerId);
+    const transaction = this.transactions.find(
+      (item) => item.offerId === offerId,
+    );
     return transaction ? copy(transaction) : undefined;
   }
 
   async findByListingId(listingId: string): Promise<Transaction | undefined> {
-    const transaction = this.transactions.find((item) => item.listingId === listingId);
+    const transaction = this.transactions.find(
+      (item) => item.listingId === listingId,
+    );
     return transaction ? copy(transaction) : undefined;
   }
 
@@ -110,24 +123,37 @@ export class InMemoryTransactionRepository implements TransactionRepository {
     const transaction = this.transactions.find((item) => item.id === id);
     if (!transaction) return undefined;
 
-    assertValidFulfilmentTransition(transaction.fulfilmentStatus, fulfilmentStatus);
+    assertValidFulfilmentTransition(
+      transaction.fulfilmentStatus,
+      fulfilmentStatus,
+    );
 
     if (
       fulfilmentStatus === "shipped" &&
-      !(transaction.status === "paid" &&
+      !(
+        transaction.status === "paid" &&
         transaction.paymentStatus === "paid" &&
-        transaction.fulfilmentStatus === "pending")
+        transaction.fulfilmentStatus === "pending"
+      )
     ) {
-      throw new InvalidTransactionStateError(transaction.status, fulfilmentStatus);
+      throw new InvalidTransactionStateError(
+        transaction.status,
+        fulfilmentStatus,
+      );
     }
 
     if (
       fulfilmentStatus === "delivered" &&
-      !(transaction.status === "paid" &&
+      !(
+        transaction.status === "paid" &&
         transaction.paymentStatus === "paid" &&
-        transaction.fulfilmentStatus === "shipped")
+        transaction.fulfilmentStatus === "shipped"
+      )
     ) {
-      throw new InvalidTransactionStateError(transaction.status, fulfilmentStatus);
+      throw new InvalidTransactionStateError(
+        transaction.status,
+        fulfilmentStatus,
+      );
     }
 
     transaction.fulfilmentStatus = fulfilmentStatus;
@@ -139,7 +165,12 @@ export class InMemoryTransactionRepository implements TransactionRepository {
 
   async applyPaymentResult(
     id: string,
-    input: { idempotencyKey: string; provider: string; outcome: "paid" | "failed"; failureCode?: string },
+    input: {
+      idempotencyKey: string;
+      provider: string;
+      outcome: "paid" | "failed";
+      failureCode?: string;
+    },
   ): Promise<{ transaction: Transaction; changed: boolean } | undefined> {
     const transaction = this.transactions.find((item) => item.id === id);
     if (!transaction) return undefined;
@@ -147,7 +178,10 @@ export class InMemoryTransactionRepository implements TransactionRepository {
       return { transaction: copy(transaction), changed: false };
     }
     if (transaction.status !== "pending_payment") {
-      throw new InvalidTransactionStateError(transaction.status, input.outcome === "paid" ? "paid" : "failed");
+      throw new InvalidTransactionStateError(
+        transaction.status,
+        input.outcome === "paid" ? "paid" : "failed",
+      );
     }
     const nextPaymentStatus = input.outcome === "paid" ? "paid" : "failed";
     assertValidPaymentTransition(transaction.paymentStatus, nextPaymentStatus);
@@ -165,6 +199,22 @@ export class InMemoryTransactionRepository implements TransactionRepository {
       transaction.paymentFailedAt = timestamp;
     }
     return { transaction: copy(transaction), changed: true };
+  }
+
+  async setPaymentProviderReference(
+    id: string,
+    provider: string,
+    providerReference: string,
+  ): Promise<Transaction | undefined> {
+    const transaction = this.transactions.find((item) => item.id === id);
+    if (!transaction) return undefined;
+    if (transaction.paymentProviderReference === providerReference)
+      return copy(transaction);
+    transaction.paymentProvider = provider;
+    transaction.paymentProviderReference = providerReference;
+    transaction.updatedAt = new Date().toISOString();
+    transaction.version += 1;
+    return copy(transaction);
   }
 }
 

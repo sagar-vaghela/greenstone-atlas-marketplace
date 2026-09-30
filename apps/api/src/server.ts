@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { buildApp } from "./app.js";
 import { config } from "./config/index.js";
 import { connectMongoDB, type MongoConnection } from "./db/mongodb.js";
@@ -126,7 +127,7 @@ const start = async (): Promise<void> => {
           transactionRepository: new InMemoryTransactionRepository(),
           conversationRepository: new InMemoryConversationRepository(),
           notificationRepository: undefined,
-                readinessCheck: undefined,
+          readinessCheck: undefined,
         });
 
     const resolvedRepositories = await repositories;

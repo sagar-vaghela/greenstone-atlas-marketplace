@@ -80,7 +80,7 @@ export const createListingSchema: z.ZodType<CreateListingInput> = z.object({
   title: z.string().trim().min(1),
   description: z.string().trim().min(1),
   price: z.number().finite().nonnegative(),
-  currency: z.string().trim().min(1),
+  currency: z.literal("AED"),
   category: z.string().trim().min(1),
   images: listingImagesSchema.default([]),
 });
@@ -125,7 +125,7 @@ export const updateListingSchema: z.ZodType<UpdateListingInput> = z
     title: z.string().trim().min(1).optional(),
     description: z.string().trim().min(1).optional(),
     price: z.number().finite().nonnegative().optional(),
-    currency: z.string().trim().min(1).optional(),
+    currency: z.literal("AED").optional(),
     category: z.string().trim().min(1).optional(),
     images: listingImagesSchema.optional(),
   })
@@ -194,7 +194,8 @@ const currencySchema = z
   .string()
   .trim()
   .length(3)
-  .transform((value) => value.toUpperCase());
+  .transform((value) => value.toUpperCase())
+  .pipe(z.literal("AED"));
 export const createOfferSchema: z.ZodType<CreateOfferInput> = z.object({
   listingId: z.string().trim().min(1),
   buyerId: z.string().trim().min(1),
@@ -223,7 +224,7 @@ export const transactionSchema: z.ZodType<Transaction> = z.object({
   buyerId: z.string().trim().min(1),
   sellerId: z.string().trim().min(1),
   amount: z.number().finite().nonnegative(),
-  currency: z.string().trim().min(1),
+  currency: z.literal("AED"),
   status: transactionStatusSchema,
   paymentStatus: paymentStatusSchema,
   fulfilmentStatus: fulfilmentStatusSchema,

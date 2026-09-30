@@ -31,6 +31,8 @@ import { registerNotificationRoutes } from "./routes/notifications.js";
 import { NotificationService } from "./events/notification-service.js";
 import type { PaymentProvider } from "./payments/payment-provider.js";
 import { DemoPaymentProvider } from "./payments/payment-provider.js";
+import { StripePaymentProvider } from "./payments/stripe-payment-provider.js";
+import { registerPaymentRoutes } from "./routes/payments.js";
 
 interface BuildAppOptions {
   repository?: ListingRepository;
@@ -56,7 +58,10 @@ declare module "fastify" {
   }
 }
 
-const getRequestId = (request: { id: string; headers: Record<string, string | string[] | undefined> }): string => {
+const getRequestId = (request: {
+  id: string;
+  headers: Record<string, string | string[] | undefined>;
+}): string => {
   const incoming = request.headers["x-request-id"];
   const value = Array.isArray(incoming) ? incoming[0] : incoming;
   return value && requestIdPattern.test(value) ? value : request.id;
@@ -65,7 +70,8 @@ const getRequestId = (request: { id: string; headers: Record<string, string | st
 export const buildApp = (options: BuildAppOptions = {}) => {
   const app = Fastify({
     requestIdHeader: "x-request-id",
-    genReqId: (request) => getRequestId({ id: crypto.randomUUID(), headers: request.headers }),
+    genReqId: (request) =>
+      getRequestId({ id: crypto.randomUUID(), headers: request.headers }),
     logger: {
       level: config.logLevel,
     },
@@ -77,7 +83,39 @@ export const buildApp = (options: BuildAppOptions = {}) => {
   registerAuthentication(app, userRepository, sessionRepository);
 
   app.register(cors, {
-    origin: config.corsOrigin,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const allowedOrigins = Array.isArray(config.corsOrigin)
+        ? config.corsOrigin
+        : [config.corsOrigin];
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      try {
+        const parsedOrigin = new URL(origin);
+        const isLocalDevOrigin =
+          (parsedOrigin.hostname === "localhost" ||
+            parsedOrigin.hostname === "127.0.0.1" ||
+            parsedOrigin.hostname === "::1") &&
+          (Number(parsedOrigin.port) >= 5173 || Number(parsedOrigin.port) === 4173 || Number(parsedOrigin.port) === 4174 || Number(parsedOrigin.port) === 4175);
+
+        if (isLocalDevOrigin) {
+          callback(null, true);
+          return;
+        }
+      } catch {
+        // The request origin is malformed, so the browser will reject it anyway.
+      }
+
+      callback(new Error("CORS origin not allowed"), false);
+    },
     credentials: true,
     methods: ["GET", "POST", "PATCH", "OPTIONS"],
   });
@@ -116,7 +154,10 @@ export const buildApp = (options: BuildAppOptions = {}) => {
   });
 
   app.setErrorHandler((error, request, reply) => {
-    request.log.error({ err: error, requestId: request.id }, "Unhandled API error");
+    request.log.error(
+      { err: error, requestId: request.id },
+      "Unhandled API error",
+    );
 
     const statusCode =
       typeof error === "object" &&
@@ -141,13 +182,17 @@ export const buildApp = (options: BuildAppOptions = {}) => {
                   : statusCode === 429
                     ? "RATE_LIMITED"
                     : "INTERNAL_SERVER_ERROR";
-    const message = statusCode >= 500
-      ? "Internal server error"
-      : statusCode === 400 || statusCode === 422
-        ? "Invalid request"
-        : typeof error === "object" && error !== null && "message" in error && typeof error.message === "string"
-          ? error.message
-          : "Request could not be completed";
+    const message =
+      statusCode >= 500
+        ? "Internal server error"
+        : statusCode === 400 || statusCode === 422
+          ? "Invalid request"
+          : typeof error === "object" &&
+              error !== null &&
+              "message" in error &&
+              typeof error.message === "string"
+            ? error.message
+            : "Request could not be completed";
 
     return reply.status(statusCode).send({
       error: {
@@ -169,8 +214,18 @@ export const buildApp = (options: BuildAppOptions = {}) => {
     options.conversationRepository ?? new InMemoryConversationRepository();
   const notificationRepository =
     options.notificationRepository ?? new InMemoryNotificationRepository();
-  const paymentProvider = options.paymentProvider ?? new DemoPaymentProvider();
-  const notificationService = new NotificationService(notificationRepository, eventBus);
+  const paymentProvider =
+    options.paymentProvider ??
+    (config.paymentProvider === "stripe"
+      ? new StripePaymentProvider(
+          config.stripeSecretKey!,
+          config.stripeWebhookSecret!,
+        )
+      : new DemoPaymentProvider());
+  const notificationService = new NotificationService(
+    notificationRepository,
+    eventBus,
+  );
 
   app.register(registerHealthRoute, {
     readinessCheck: options.readinessCheck,
@@ -198,13 +253,20 @@ export const buildApp = (options: BuildAppOptions = {}) => {
     eventBus,
     paymentProvider,
   });
+  app.register(registerPaymentRoutes, {
+    transactionRepository,
+    paymentProvider,
+    eventBus,
+  });
   app.register(registerConversationRoutes, {
     conversations: conversationRepository,
     listings: listingRepository,
     users: userRepository,
     eventBus,
   });
-  app.register(registerNotificationRoutes, { repository: notificationRepository });
+  app.register(registerNotificationRoutes, {
+    repository: notificationRepository,
+  });
   app.register(registerSellerRoutes, {
     users: userRepository,
     listings: listingRepository,

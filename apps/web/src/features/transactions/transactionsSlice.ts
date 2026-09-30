@@ -1,4 +1,8 @@
-import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import {
+  createAsyncThunk,
+  createSlice,
+  type PayloadAction,
+} from "@reduxjs/toolkit";
 import type { Transaction } from "@atlas/types";
 import { ApiError } from "../../api/client";
 import {
@@ -8,9 +12,11 @@ import {
   disputeTransaction,
   getMyTransactions,
   getTransactionById,
+  createPaymentIntent,
   payTransaction,
   shipTransaction,
 } from "../../api/transactions";
+import type { PaymentIntentResponse } from "../../api/transactions";
 
 type RequestStatus = "idle" | "loading" | "succeeded" | "failed";
 
@@ -71,11 +77,26 @@ export const payTransactionAction = createAsyncThunk<
   Transaction,
   { id: string; idempotencyKey: string; outcome?: "success" | "failure" },
   { rejectValue: string }
->("transactions/pay", async ({ id, idempotencyKey, outcome }, { rejectWithValue }) => {
+>(
+  "transactions/pay",
+  async ({ id, idempotencyKey, outcome }, { rejectWithValue }) => {
+    try {
+      return await payTransaction(id, idempotencyKey, outcome);
+    } catch (error) {
+      return rejectWithValue(message(error, "Unable to complete payment."));
+    }
+  },
+);
+
+export const createPaymentIntentAction = createAsyncThunk<
+  PaymentIntentResponse,
+  { id: string; idempotencyKey: string },
+  { rejectValue: string }
+>("transactions/createPaymentIntent", async (input, { rejectWithValue }) => {
   try {
-    return await payTransaction(id, idempotencyKey, outcome);
+    return await createPaymentIntent(input.id, input.idempotencyKey);
   } catch (error) {
-    return rejectWithValue(message(error, "Unable to complete payment."));
+    return rejectWithValue(message(error, "Unable to prepare payment."));
   }
 });
 
@@ -87,7 +108,9 @@ export const shipTransactionAction = createAsyncThunk<
   try {
     return await shipTransaction(id);
   } catch (error) {
-    return rejectWithValue(message(error, "Unable to mark the item as shipped."));
+    return rejectWithValue(
+      message(error, "Unable to mark the item as shipped."),
+    );
   }
 });
 
@@ -111,7 +134,9 @@ export const completeTransactionAction = createAsyncThunk<
   try {
     return await completeTransaction(id);
   } catch (error) {
-    return rejectWithValue(message(error, "Unable to complete the transaction."));
+    return rejectWithValue(
+      message(error, "Unable to complete the transaction."),
+    );
   }
 });
 
@@ -123,7 +148,9 @@ export const cancelTransactionAction = createAsyncThunk<
   try {
     return await cancelTransaction(id);
   } catch (error) {
-    return rejectWithValue(message(error, "Unable to cancel this transaction."));
+    return rejectWithValue(
+      message(error, "Unable to cancel this transaction."),
+    );
   }
 });
 
@@ -192,6 +219,17 @@ const transactionsSlice = createSlice({
         state.mutationStatus = "failed";
         state.error = action.payload ?? "Unable to complete payment.";
       })
+      .addCase(createPaymentIntentAction.pending, (state) => {
+        state.mutationStatus = "loading";
+        state.error = null;
+      })
+      .addCase(createPaymentIntentAction.fulfilled, (state) => {
+        state.mutationStatus = "succeeded";
+      })
+      .addCase(createPaymentIntentAction.rejected, (state, action) => {
+        state.mutationStatus = "failed";
+        state.error = action.payload ?? "Unable to prepare payment.";
+      })
       .addCase(shipTransactionAction.pending, (state) => {
         state.mutationStatus = "loading";
         state.error = null;
@@ -255,19 +293,27 @@ const transactionsSlice = createSlice({
   },
 });
 
-export const { transactionEventReceived, clearTransactionError } = transactionsSlice.actions;
-export const selectTransactions = (state: { transactions: TransactionsState }) =>
+export const { transactionEventReceived, clearTransactionError } =
+  transactionsSlice.actions;
+export const selectTransactions = (state: {
+  transactions: TransactionsState;
+}) =>
   Object.values(state.transactions.items).sort((left, right) =>
     right.updatedAt.localeCompare(left.updatedAt),
   );
-export const selectTransactionDetail = (state: { transactions: TransactionsState }) =>
+export const selectTransactionDetail = (state: {
+  transactions: TransactionsState;
+}) =>
   state.transactions.selectedId
-    ? state.transactions.items[state.transactions.selectedId] ?? null
+    ? (state.transactions.items[state.transactions.selectedId] ?? null)
     : null;
-export const selectTransactionsListStatus = (state: { transactions: TransactionsState }) =>
-  state.transactions.listStatus;
-export const selectTransactionsError = (state: { transactions: TransactionsState }) =>
-  state.transactions.error;
-export const selectTransactionsMutationStatus = (state: { transactions: TransactionsState }) =>
-  state.transactions.mutationStatus;
+export const selectTransactionsListStatus = (state: {
+  transactions: TransactionsState;
+}) => state.transactions.listStatus;
+export const selectTransactionsError = (state: {
+  transactions: TransactionsState;
+}) => state.transactions.error;
+export const selectTransactionsMutationStatus = (state: {
+  transactions: TransactionsState;
+}) => state.transactions.mutationStatus;
 export default transactionsSlice.reducer;

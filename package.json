@@ -13,6 +13,8 @@
     "test": "vitest run",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:e2e:stripe": "node scripts/e2e-stripe.mjs",
+    "test:e2e:demo": "node scripts/e2e-demo.mjs",
     "test:watch": "vitest",
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces"
@@ -25,7 +27,9 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
+    "@vitest/coverage-v8": "^5.0.2",
     "jsdom": "^29.1.1",
+    "playwright": "^1.63.0",
     "vitest": "^5.0.2"
   }
 }

@@ -142,7 +142,7 @@ export function SellerProfilePage() {
                 <CardContent>
                   <Typography variant="h6">{listing.title}</Typography>
                   <Typography color="text.secondary">
-                    {new Intl.NumberFormat("en-IN", {
+                    {new Intl.NumberFormat("en-AE", {
                       style: "currency",
                       currency: listing.currency,
                       maximumFractionDigits: 0,
