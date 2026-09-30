@@ -89,6 +89,9 @@ const start = async (): Promise<void> => {
                 }
               }
               return {
+                readinessCheck: async () => {
+                  await connection.db.command({ ping: 1 });
+                },
                 listingRepository: new MongoListingRepository(
                   connection.db.collection("listings"),
                 ),
@@ -123,6 +126,7 @@ const start = async (): Promise<void> => {
           transactionRepository: new InMemoryTransactionRepository(),
           conversationRepository: new InMemoryConversationRepository(),
           notificationRepository: undefined,
+                readinessCheck: undefined,
         });
 
     const resolvedRepositories = await repositories;
@@ -135,6 +139,9 @@ const start = async (): Promise<void> => {
       sessionTtlMs: config.sessionTtlMs,
       sellerProfileRepository: resolvedRepositories.sellerProfileRepository,
       transactionRepository: resolvedRepositories.transactionRepository,
+      conversationRepository: resolvedRepositories.conversationRepository,
+      notificationRepository: resolvedRepositories.notificationRepository,
+      readinessCheck: resolvedRepositories.readinessCheck,
     });
     await resolvedRepositories.sellerProfileRepository.ensureIndexes();
     await app.listen({ host: config.host, port: config.port });

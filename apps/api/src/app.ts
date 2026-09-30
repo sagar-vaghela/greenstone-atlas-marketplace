@@ -45,12 +45,29 @@ interface BuildAppOptions {
   conversationRepository?: ConversationRepository;
   notificationRepository?: NotificationRepository;
   paymentProvider?: PaymentProvider;
+  readinessCheck?: () => Promise<void>;
 }
+
+const requestIdPattern = /^[A-Za-z0-9._:-]{1,128}$/;
+
+declare module "fastify" {
+  interface FastifyRequest {
+    startedAt: number;
+  }
+}
+
+const getRequestId = (request: { id: string; headers: Record<string, string | string[] | undefined> }): string => {
+  const incoming = request.headers["x-request-id"];
+  const value = Array.isArray(incoming) ? incoming[0] : incoming;
+  return value && requestIdPattern.test(value) ? value : request.id;
+};
 
 export const buildApp = (options: BuildAppOptions = {}) => {
   const app = Fastify({
+    requestIdHeader: "x-request-id",
+    genReqId: (request) => getRequestId({ id: crypto.randomUUID(), headers: request.headers }),
     logger: {
-      level: process.env.LOG_LEVEL ?? "info",
+      level: config.logLevel,
     },
   });
 
@@ -65,17 +82,41 @@ export const buildApp = (options: BuildAppOptions = {}) => {
     methods: ["GET", "POST", "PATCH", "OPTIONS"],
   });
 
-  app.setNotFoundHandler((_request, reply) => {
+  app.decorateRequest("startedAt", 0);
+  app.addHook("onRequest", async (request, reply) => {
+    request.startedAt = performance.now();
+    reply.header("X-Request-Id", request.id);
+  });
+
+  app.addHook("onResponse", async (request, reply) => {
+    const durationMs = performance.now() - request.startedAt;
+    const metadata = {
+      requestId: request.id,
+      method: request.method,
+      route: request.routeOptions.url,
+      statusCode: reply.statusCode,
+      durationMs: Math.round(durationMs),
+      ...(request.user ? { userId: request.user.id } : {}),
+    };
+    if (durationMs >= config.slowRequestMs) {
+      request.log.warn(metadata, "Slow API request");
+    } else {
+      request.log.info(metadata, "API request completed");
+    }
+  });
+
+  app.setNotFoundHandler((request, reply) => {
     return reply.status(404).send({
       error: {
         code: "NOT_FOUND",
         message: "Route not found",
+        requestId: request.id,
       },
     });
   });
 
-  app.setErrorHandler((error, _request, reply) => {
-    app.log.error(error);
+  app.setErrorHandler((error, request, reply) => {
+    request.log.error({ err: error, requestId: request.id }, "Unhandled API error");
 
     const statusCode =
       typeof error === "object" &&
@@ -84,28 +125,35 @@ export const buildApp = (options: BuildAppOptions = {}) => {
       typeof error.statusCode === "number"
         ? error.statusCode
         : 500;
-    const message =
-      typeof error === "object" &&
-      error !== null &&
-      "message" in error &&
-      typeof error.message === "string"
-        ? error.message
-        : "Internal server error";
+    const code =
+      statusCode === 400
+        ? "VALIDATION_ERROR"
+        : statusCode === 401
+          ? "UNAUTHENTICATED"
+          : statusCode === 403
+            ? "FORBIDDEN"
+            : statusCode === 404
+              ? "NOT_FOUND"
+              : statusCode === 409
+                ? "CONFLICT"
+                : statusCode === 422
+                  ? "VALIDATION_ERROR"
+                  : statusCode === 429
+                    ? "RATE_LIMITED"
+                    : "INTERNAL_SERVER_ERROR";
+    const message = statusCode >= 500
+      ? "Internal server error"
+      : statusCode === 400 || statusCode === 422
+        ? "Invalid request"
+        : typeof error === "object" && error !== null && "message" in error && typeof error.message === "string"
+          ? error.message
+          : "Request could not be completed";
 
     return reply.status(statusCode).send({
       error: {
-        code:
-          statusCode === 400
-            ? "VALIDATION_ERROR"
-            : statusCode === 404
-              ? "NOT_FOUND"
-              : "INTERNAL_SERVER_ERROR",
-        message:
-          statusCode === 400
-            ? "Invalid request"
-            : statusCode < 500
-              ? message
-              : "Internal server error",
+        code,
+        message,
+        requestId: request.id,
       },
     });
   });
@@ -124,7 +172,9 @@ export const buildApp = (options: BuildAppOptions = {}) => {
   const paymentProvider = options.paymentProvider ?? new DemoPaymentProvider();
   const notificationService = new NotificationService(notificationRepository, eventBus);
 
-  app.register(registerHealthRoute);
+  app.register(registerHealthRoute, {
+    readinessCheck: options.readinessCheck,
+  });
   app.register(registerAuthRoutes, {
     users: userRepository,
     sessions: sessionRepository,

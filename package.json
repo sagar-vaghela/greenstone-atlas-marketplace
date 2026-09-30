@@ -11,6 +11,8 @@
     "dev:web": "npm run dev --workspace @atlas/web",
     "dev:api": "npm run dev --workspace @atlas/api",
     "test": "vitest run",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces"

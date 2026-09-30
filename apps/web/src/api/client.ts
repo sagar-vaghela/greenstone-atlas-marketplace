@@ -17,6 +17,7 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code?: string,
     readonly kind: ApiErrorKind = classifyErrorKind(status),
+    readonly requestId?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -80,11 +81,7 @@ export async function request<T>(
         ? errorBody.code
         : undefined;
 
-    throw new ApiError(
-      message,
-      response.status,
-      code,
-    );
+    throw new ApiError(message, response.status, code, classifyErrorKind(response.status), response.headers.get("x-request-id") ?? (errorBody && "requestId" in errorBody && typeof errorBody.requestId === "string" ? errorBody.requestId : undefined));
   }
 
   return body as T;

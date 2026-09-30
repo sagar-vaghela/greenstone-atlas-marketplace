@@ -16,6 +16,17 @@ describe("authentication and listings", () => {
     expect((await inject(app, { method: "GET", url: "/auth/me" }, cookie)).statusCode).toBe(401);
   });
 
+  it("correlates responses and separates liveness from readiness", async () => {
+    const health = await app.inject({ method: "GET", url: "/health", headers: { "x-request-id": "browser-check-1" } });
+    expect(health.statusCode).toBe(200);
+    expect(health.headers["x-request-id"]).toBe("browser-check-1");
+    expect((await app.inject({ method: "GET", url: "/ready" })).json()).toEqual({ status: "ready" });
+    const missing = await app.inject({ method: "GET", url: "/does-not-exist" });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.headers["x-request-id"]).toBeTruthy();
+    expect(missing.json().error.requestId).toBe(missing.headers["x-request-id"]);
+  });
+
   it("rejects invalid credentials and protects listing creation", async () => {
     const invalid = await app.inject({ method: "POST", url: "/auth/login", payload: { email: "buyer@example.com", password: "wrong" } });
     expect(invalid.statusCode).toBe(401);

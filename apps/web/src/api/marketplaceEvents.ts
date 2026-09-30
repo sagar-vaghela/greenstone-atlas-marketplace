@@ -19,7 +19,7 @@ const eventTypes: MarketplaceEventType[] = [
   "notification.created",
 ];
 
-export type EventConnectionStatus = "connecting" | "connected" | "reconnecting";
+export type EventConnectionStatus = "connecting" | "connected" | "reconnecting" | "disconnected";
 
 export const connectMarketplaceEvents = (
   onEvent: (event: MarketplaceEvent) => void,
@@ -27,8 +27,11 @@ export const connectMarketplaceEvents = (
 ): (() => void) => {
   onStatus("connecting");
   const source = new EventSource(`${API_BASE_URL}/events`, { withCredentials: true });
+  let closed = false;
   source.onopen = () => onStatus("connected");
-  source.onerror = () => onStatus("reconnecting");
+  source.onerror = () => {
+    if (!closed) onStatus("reconnecting");
+  };
   for (const type of eventTypes) {
     source.addEventListener(type, (message) => {
       try {
@@ -38,5 +41,9 @@ export const connectMarketplaceEvents = (
       }
     });
   }
-  return () => source.close();
+  return () => {
+    closed = true;
+    source.close();
+    onStatus("disconnected");
+  };
 };

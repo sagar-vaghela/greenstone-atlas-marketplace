@@ -6,6 +6,7 @@ const DEFAULT_CORS_ORIGIN = [
 ];
 const DEFAULT_MONGODB_DB_NAME = "atlas_marketplace";
 const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const DEFAULT_SLOW_REQUEST_MS = 1000;
 
 export const packageName = "atlas-marketplace";
 
@@ -31,6 +32,8 @@ export interface ApiConfig {
   mongodbDbName: string;
   sessionTtlMs: number;
   secureCookies: boolean;
+  logLevel: string;
+  slowRequestMs: number;
 }
 
 const parseCorsOrigin = (value: string | undefined): string | string[] => {
@@ -51,13 +54,21 @@ export const getApiConfig = (
 ): ApiConfig => {
   const mongodbUri = env.MONGODB_URI?.trim() || undefined;
 
+  const sessionTtlMs = Number(env.SESSION_TTL_MS);
+  const slowRequestMs = Number(env.SLOW_REQUEST_MS);
+  if (env.NODE_ENV === "production" && (!env.CORS_ORIGIN || parseCorsOrigin(env.CORS_ORIGIN).length === 0)) {
+    throw new Error("CORS_ORIGIN is required in production");
+  }
+
   return {
     host: env.HOST?.trim() || DEFAULT_HOST,
     port: parsePort(env.PORT),
     corsOrigin: parseCorsOrigin(env.CORS_ORIGIN),
     mongodbUri,
     mongodbDbName: env.MONGODB_DB_NAME?.trim() || DEFAULT_MONGODB_DB_NAME,
-    sessionTtlMs: Number(env.SESSION_TTL_MS) || DEFAULT_SESSION_TTL_MS,
+    sessionTtlMs: Number.isFinite(sessionTtlMs) && sessionTtlMs > 0 ? sessionTtlMs : DEFAULT_SESSION_TTL_MS,
     secureCookies: env.NODE_ENV === "production",
+    logLevel: env.LOG_LEVEL?.trim() || "info",
+    slowRequestMs: Number.isFinite(slowRequestMs) && slowRequestMs > 0 ? slowRequestMs : DEFAULT_SLOW_REQUEST_MS,
   };
 };

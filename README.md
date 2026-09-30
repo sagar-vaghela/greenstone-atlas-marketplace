@@ -220,6 +220,43 @@ npm run dev:api
 
 The API health check is available at `http://localhost:3000/health`.
 
+## Production Readiness
+
+The API uses Fastify request IDs. A validated incoming `X-Request-Id` is reused
+when present; otherwise the server generates one. The ID is returned in the
+response header and safe API error payload, and structured request-completion
+logs include method, route, status, duration, request ID and (when available)
+the authenticated user ID. Slow requests use the configured
+`SLOW_REQUEST_MS` threshold. Unexpected failures are logged server-side and
+return a generic `INTERNAL_SERVER_ERROR` without stack traces or database
+details. Business validation, authentication, authorization and conflict
+errors retain stable client-safe codes.
+
+`GET /health` is a liveness check. `GET /ready` is a lightweight readiness
+check; MongoDB-backed startup supplies a `ping` dependency check, while the
+in-memory demo is ready immediately. The API handles `SIGINT` and `SIGTERM`,
+closes the Fastify app and event bus, and closes MongoDB connections during
+shutdown. HTTP-only session cookies are secure in production, CORS is
+configured with `CORS_ORIGIN`, and `VITE_*` values are the only configuration
+intended for the browser. MongoDB URI, sessions, credentials and payment
+provider secrets remain server-only.
+
+The frontend normalizes network and HTTP failures into `ApiError`, preserves
+the request ID for support diagnostics, clears expired sessions through the
+existing centralized auth restore flow, and provides a recovery boundary for
+unexpected React errors. SSE exposes connecting, connected, reconnecting and
+disconnected states, cleans up listeners and heartbeats, and never logs event
+contents. REST remains authoritative after reconnects.
+
+Intentional limitations: the demo uses an in-process event bus, so multiple
+API instances would need a shared broker or pub/sub layer; logs are intended
+for a centralized log sink in deployment; metrics, tracing, alerting,
+distributed rate limiting, CSRF policy, managed MongoDB backups and payment
+provider integration remain deployment-level production work. MongoDB
+repositories preserve explicit indexes and version/state checks; a production
+settlement flow should use a MongoDB transaction or equivalent atomic
+cross-document operation where required.
+
 ## Notifications and activity center
 
 Commit 20 persists actionable user activity separately from transport events:
