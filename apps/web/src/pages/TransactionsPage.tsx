@@ -23,9 +23,6 @@ import {
 const statusLabels: Record<string, string> = {
   pending_payment: "Pending payment",
   paid: "Paid",
-  fulfilment_pending: "Fulfilment pending",
-  shipped: "Shipped",
-  delivered: "Delivered",
   completed: "Completed",
   cancelled: "Cancelled",
   disputed: "Disputed",

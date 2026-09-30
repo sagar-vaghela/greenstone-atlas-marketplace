@@ -149,9 +149,6 @@ export const offerStatusSchema: z.ZodType<OfferStatus> = z.enum([
 export const transactionStatusSchema: z.ZodType<TransactionStatus> = z.enum([
   "pending_payment",
   "paid",
-  "fulfilment_pending",
-  "shipped",
-  "delivered",
   "completed",
   "cancelled",
   "disputed",

@@ -103,6 +103,67 @@ ownership boundary.
 - Acceptance marks the listing sold and rejects competing actionable offers. The current repository flow is guarded with conditional updates; production MongoDB should use a transaction or stronger atomic cross-document operation for race-free settlement.
 - Amounts currently use numbers to match the existing listing model. Production money should move to integer minor units or a decimal-safe representation.
 
+## Transaction lifecycle
+
+Transaction state is intentionally separated from payment and fulfilment states:
+
+```text
+TransactionStatus:
+- pending_payment
+- paid
+- completed
+- cancelled
+- disputed
+
+PaymentStatus:
+- pending
+- paid
+- failed
+- refunded
+
+FulfilmentStatus:
+- pending
+- shipped
+- delivered
+```
+
+The normal lifecycle still follows the existing offer-to-transaction flow:
+
+```text
+Offer accepted
+  -> status = pending_payment
+  -> paymentStatus = pending
+  -> fulfilmentStatus = pending
+
+Buyer pays
+  -> status = paid
+  -> paymentStatus = paid
+  -> fulfilmentStatus = pending
+
+Seller ships
+  -> status = paid
+  -> paymentStatus = paid
+  -> fulfilmentStatus = shipped
+
+Buyer confirms delivery
+  -> status = paid
+  -> paymentStatus = paid
+  -> fulfilmentStatus = delivered
+
+Complete
+  -> status = completed
+  -> paymentStatus = paid
+  -> fulfilmentStatus = delivered
+```
+
+Cross-state rules are enforced server-side:
+
+- Shipping requires `transaction.status === paid`, `paymentStatus === paid`, and `fulfilmentStatus === pending`.
+- Delivery requires `transaction.status === paid`, `paymentStatus === paid`, and `fulfilmentStatus === shipped`.
+- Completion requires `transaction.status === paid`, `paymentStatus === paid`, and `fulfilmentStatus === delivered`.
+- Shipping and delivery are represented in `fulfilmentStatus`; they do not change `TransactionStatus`.
+- The API preserves the existing action endpoints (`POST /transactions/:id/payment`, `/ship`, `/deliver`, `/complete`, `/cancel`, `/dispute`) and rejects invalid lifecycle transitions with a `409` conflict.
+
 ## Real-time offer updates
 
 Offer commands remain REST requests. After a successful repository mutation, the

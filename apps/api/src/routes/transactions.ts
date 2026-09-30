@@ -108,23 +108,19 @@ export const registerTransactionRoutes = async (
     if (transaction.buyerId !== user.id) {
       return error(reply, 403, 'FORBIDDEN', 'Only the buyer can submit payment.');
     }
-    if (transaction.status !== 'pending_payment') {
-      return error(reply, 409, 'INVALID_TRANSACTION_STATE', 'Payment is no longer pending for this transaction.');
-    }
-    if (transaction.paymentStatus === 'paid') {
-      return error(reply, 409, 'TRANSACTION_ALREADY_PAID', 'Payment has already been recorded.');
+    if (transaction.status !== 'pending_payment' || transaction.paymentStatus !== 'pending') {
+      return error(reply, 409, 'INVALID_TRANSACTION_STATE', 'Payment is not currently pending for this transaction.');
     }
 
     try {
-      const updatedStatus = await options.transactionRepository.updateStatus(
-        transaction.id,
-        'paid',
-      );
       const updatedPayment = await options.transactionRepository.updatePaymentStatus(
         transaction.id,
         'paid',
       );
-      const finalTransaction = updatedPayment ?? updatedStatus;
+      const updatedStatus = updatedPayment
+        ? await options.transactionRepository.updateStatus(transaction.id, 'paid')
+        : undefined;
+      const finalTransaction = updatedStatus ?? updatedPayment;
       if (finalTransaction) {
         options.eventBus.publish(
           {
@@ -157,33 +153,32 @@ export const registerTransactionRoutes = async (
     if (transaction.sellerId !== user.id) {
       return error(reply, 403, 'FORBIDDEN', 'Only the seller can ship this transaction.');
     }
-    if (transaction.status !== 'paid' && transaction.status !== 'fulfilment_pending') {
+    if (
+      transaction.status !== 'paid' ||
+      transaction.paymentStatus !== 'paid' ||
+      transaction.fulfilmentStatus !== 'pending'
+    ) {
       return error(reply, 409, 'INVALID_TRANSACTION_STATE', 'This transaction cannot be shipped yet.');
     }
 
     try {
-      const updatedStatus = await options.transactionRepository.updateStatus(
-        transaction.id,
-        'shipped',
-      );
       const updatedFulfilment = await options.transactionRepository.updateFulfilmentStatus(
         transaction.id,
         'shipped',
       );
-      const finalTransaction = updatedFulfilment ?? updatedStatus;
-      if (finalTransaction) {
+      if (updatedFulfilment) {
         options.eventBus.publish(
           {
             type: 'transaction.fulfilment_updated',
-            listingId: finalTransaction.listingId,
-            offerId: finalTransaction.offerId,
+            listingId: updatedFulfilment.listingId,
+            offerId: updatedFulfilment.offerId,
             actorUserId: user.id,
-            payload: { transaction: finalTransaction },
+            payload: { transaction: updatedFulfilment },
           },
-          [finalTransaction.buyerId, finalTransaction.sellerId],
+          [updatedFulfilment.buyerId, updatedFulfilment.sellerId],
         );
       }
-      return finalTransaction;
+      return updatedFulfilment;
     } catch (caught) {
       if (caught instanceof InvalidTransactionStateError) {
         return error(reply, 409, 'INVALID_TRANSACTION_STATE', caught.message);
@@ -203,33 +198,32 @@ export const registerTransactionRoutes = async (
     if (transaction.buyerId !== user.id) {
       return error(reply, 403, 'FORBIDDEN', 'Only the buyer can confirm delivery.');
     }
-    if (transaction.status !== 'shipped') {
+    if (
+      transaction.status !== 'paid' ||
+      transaction.paymentStatus !== 'paid' ||
+      transaction.fulfilmentStatus !== 'shipped'
+    ) {
       return error(reply, 409, 'INVALID_TRANSACTION_STATE', 'This transaction cannot be delivered yet.');
     }
 
     try {
-      const updatedStatus = await options.transactionRepository.updateStatus(
-        transaction.id,
-        'delivered',
-      );
       const updatedFulfilment = await options.transactionRepository.updateFulfilmentStatus(
         transaction.id,
         'delivered',
       );
-      const finalTransaction = updatedFulfilment ?? updatedStatus;
-      if (finalTransaction) {
+      if (updatedFulfilment) {
         options.eventBus.publish(
           {
             type: 'transaction.fulfilment_updated',
-            listingId: finalTransaction.listingId,
-            offerId: finalTransaction.offerId,
+            listingId: updatedFulfilment.listingId,
+            offerId: updatedFulfilment.offerId,
             actorUserId: user.id,
-            payload: { transaction: finalTransaction },
+            payload: { transaction: updatedFulfilment },
           },
-          [finalTransaction.buyerId, finalTransaction.sellerId],
+          [updatedFulfilment.buyerId, updatedFulfilment.sellerId],
         );
       }
-      return finalTransaction;
+      return updatedFulfilment;
     } catch (caught) {
       if (caught instanceof InvalidTransactionStateError) {
         return error(reply, 409, 'INVALID_TRANSACTION_STATE', caught.message);
@@ -249,7 +243,11 @@ export const registerTransactionRoutes = async (
     if (transaction.buyerId !== user.id) {
       return error(reply, 403, 'FORBIDDEN', 'Only the buyer can complete this transaction.');
     }
-    if (transaction.status !== 'delivered') {
+    if (
+      transaction.status !== 'paid' ||
+      transaction.paymentStatus !== 'paid' ||
+      transaction.fulfilmentStatus !== 'delivered'
+    ) {
       return error(reply, 409, 'INVALID_TRANSACTION_STATE', 'This transaction cannot be completed yet.');
     }
 
@@ -300,23 +298,17 @@ export const registerTransactionRoutes = async (
         'cancelled',
       );
       if (updated) {
-        const paymentStatus = updated.paymentStatus === 'paid' ? 'refunded' : 'pending';
-        const paymentUpdated = await options.transactionRepository.updatePaymentStatus(
-          updated.id,
-          paymentStatus,
-        );
-        const finalTransaction = paymentUpdated ?? updated;
         options.eventBus.publish(
           {
             type: 'transaction.cancelled',
-            listingId: finalTransaction.listingId,
-            offerId: finalTransaction.offerId,
+            listingId: updated.listingId,
+            offerId: updated.offerId,
             actorUserId: user.id,
-            payload: { transaction: finalTransaction },
+            payload: { transaction: updated },
           },
-          [finalTransaction.buyerId, finalTransaction.sellerId],
+          [updated.buyerId, updated.sellerId],
         );
-        return finalTransaction;
+        return updated;
       }
       return updated;
     } catch (caught) {
@@ -338,11 +330,7 @@ export const registerTransactionRoutes = async (
     if (transaction.buyerId !== user.id && transaction.sellerId !== user.id) {
       return error(reply, 403, 'FORBIDDEN', 'Only a participant can open a dispute.');
     }
-    if (
-      !['paid', 'fulfilment_pending', 'shipped', 'delivered'].includes(
-        transaction.status,
-      )
-    ) {
+    if (transaction.status !== 'paid') {
       return error(reply, 409, 'INVALID_TRANSACTION_STATE', 'This transaction cannot be disputed in its current state.');
     }
 

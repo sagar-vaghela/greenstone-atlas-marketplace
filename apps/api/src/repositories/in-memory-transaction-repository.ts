@@ -6,7 +6,12 @@ import type {
   Transaction,
   TransactionStatus,
 } from "@atlas/types";
-import { assertValidTransactionTransition } from "../domain/transaction-status.js";
+import {
+  assertValidFulfilmentTransition,
+  assertValidPaymentTransition,
+  assertValidTransactionTransition,
+  InvalidTransactionStateError,
+} from "../domain/transaction-status.js";
 import type { TransactionRepository } from "./transaction-repository.js";
 
 export class InMemoryTransactionRepository implements TransactionRepository {
@@ -83,6 +88,14 @@ export class InMemoryTransactionRepository implements TransactionRepository {
     const transaction = this.transactions.find((item) => item.id === id);
     if (!transaction) return undefined;
 
+    assertValidPaymentTransition(transaction.paymentStatus, paymentStatus);
+    if (paymentStatus === "paid" && transaction.status !== "pending_payment") {
+      throw new InvalidTransactionStateError(transaction.status, paymentStatus);
+    }
+    if (paymentStatus === "refunded" && transaction.status !== "cancelled") {
+      throw new InvalidTransactionStateError(transaction.status, paymentStatus);
+    }
+
     transaction.paymentStatus = paymentStatus;
     transaction.updatedAt = new Date().toISOString();
     transaction.version += 1;
@@ -96,6 +109,26 @@ export class InMemoryTransactionRepository implements TransactionRepository {
   ): Promise<Transaction | undefined> {
     const transaction = this.transactions.find((item) => item.id === id);
     if (!transaction) return undefined;
+
+    assertValidFulfilmentTransition(transaction.fulfilmentStatus, fulfilmentStatus);
+
+    if (
+      fulfilmentStatus === "shipped" &&
+      !(transaction.status === "paid" &&
+        transaction.paymentStatus === "paid" &&
+        transaction.fulfilmentStatus === "pending")
+    ) {
+      throw new InvalidTransactionStateError(transaction.status, fulfilmentStatus);
+    }
+
+    if (
+      fulfilmentStatus === "delivered" &&
+      !(transaction.status === "paid" &&
+        transaction.paymentStatus === "paid" &&
+        transaction.fulfilmentStatus === "shipped")
+    ) {
+      throw new InvalidTransactionStateError(transaction.status, fulfilmentStatus);
+    }
 
     transaction.fulfilmentStatus = fulfilmentStatus;
     transaction.updatedAt = new Date().toISOString();

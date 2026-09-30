@@ -33,9 +33,6 @@ import {
 const statusLabels: Record<string, string> = {
   pending_payment: "Pending payment",
   paid: "Paid",
-  fulfilment_pending: "Fulfilment pending",
-  shipped: "Shipped",
-  delivered: "Delivered",
   completed: "Completed",
   cancelled: "Cancelled",
   disputed: "Disputed",
@@ -57,12 +54,9 @@ const fulfilmentLabels: Record<string, string> = {
 const stepStatusMap: Record<string, number> = {
   pending_payment: 0,
   paid: 1,
-  fulfilment_pending: 1,
-  shipped: 2,
-  delivered: 3,
-  completed: 4,
+  completed: 2,
   cancelled: 0,
-  disputed: 2,
+  disputed: 1,
 };
 
 export function TransactionDetailsPage() {
@@ -104,20 +98,39 @@ export function TransactionDetailsPage() {
 
   const isBuyer = currentUser?.id === transaction.buyerId;
   const isSeller = currentUser?.id === transaction.sellerId;
-  const canPay = Boolean(isBuyer && transaction.status === "pending_payment");
-  const canShip = Boolean(isSeller && (transaction.status === "paid" || transaction.status === "fulfilment_pending"));
-  const canDeliver = Boolean(isBuyer && transaction.status === "shipped");
-  const canComplete = Boolean(isBuyer && transaction.status === "delivered");
+  const canPay = Boolean(
+    isBuyer &&
+      transaction.status === "pending_payment" &&
+      transaction.paymentStatus === "pending",
+  );
+  const canShip = Boolean(
+    isSeller &&
+      transaction.status === "paid" &&
+      transaction.paymentStatus === "paid" &&
+      transaction.fulfilmentStatus === "pending",
+  );
+  const canDeliver = Boolean(
+    isBuyer &&
+      transaction.status === "paid" &&
+      transaction.paymentStatus === "paid" &&
+      transaction.fulfilmentStatus === "shipped",
+  );
+  const canComplete = Boolean(
+    isBuyer &&
+      transaction.status === "paid" &&
+      transaction.paymentStatus === "paid" &&
+      transaction.fulfilmentStatus === "delivered",
+  );
   const canCancel = Boolean((isBuyer || isSeller) && transaction.status === "pending_payment");
   const canDispute = Boolean(
     (isBuyer || isSeller) &&
-      ["paid", "fulfilment_pending", "shipped", "delivered"].includes(transaction.status),
+      transaction.status === "paid" &&
+      transaction.paymentStatus === "paid",
   );
 
   const stepLabels = [
     "Payment",
-    "Seller ships",
-    "Delivered",
+    "Fulfilment",
     "Completed",
   ];
 
@@ -236,9 +249,9 @@ export function TransactionDetailsPage() {
       <Divider />
       <Typography variant="body2" color="text.secondary" role="status" aria-live="polite">
         {transaction.status === "pending_payment" && "Waiting for buyer payment."}
-        {transaction.status === "paid" && "Payment received. Waiting for seller to ship."}
-        {transaction.status === "shipped" && "Your watch is on the way."}
-        {transaction.status === "delivered" && "Delivery confirmed. Please complete the transaction."}
+        {transaction.status === "paid" && transaction.fulfilmentStatus === "pending" && "Payment received. Waiting for seller to ship."}
+        {transaction.status === "paid" && transaction.fulfilmentStatus === "shipped" && "Your watch is on the way."}
+        {transaction.status === "paid" && transaction.fulfilmentStatus === "delivered" && "Delivery confirmed. Please complete the transaction."}
         {transaction.status === "completed" && "Transaction completed."}
         {transaction.status === "cancelled" && "This transaction was cancelled."}
         {transaction.status === "disputed" && "A dispute has been opened."}

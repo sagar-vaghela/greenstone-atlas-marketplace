@@ -7,7 +7,12 @@ import type {
   TransactionStatus,
 } from "@atlas/types";
 import type { Collection, ObjectId } from "mongodb";
-import { assertValidTransactionTransition } from "../domain/transaction-status.js";
+import {
+  assertValidFulfilmentTransition,
+  assertValidPaymentTransition,
+  assertValidTransactionTransition,
+  InvalidTransactionStateError,
+} from "../domain/transaction-status.js";
 import type { TransactionRepository } from "./transaction-repository.js";
 
 interface TransactionDocument extends Transaction {
@@ -85,7 +90,7 @@ export class MongoTransactionRepository implements TransactionRepository {
 
     assertValidTransactionTransition(currentDocument.status, status);
     const nextDocument = await this.collection.findOneAndUpdate(
-      { id, status: currentDocument.status },
+      { id, version: currentDocument.version ?? 1 },
       {
         $set: {
           status,
@@ -101,7 +106,11 @@ export class MongoTransactionRepository implements TransactionRepository {
       },
     );
 
-    return nextDocument ? toTransaction(nextDocument) : undefined;
+    if (!nextDocument) {
+      throw new InvalidTransactionStateError(currentDocument.status, status);
+    }
+
+    return toTransaction(nextDocument);
   }
 
   async updatePaymentStatus(
@@ -111,8 +120,16 @@ export class MongoTransactionRepository implements TransactionRepository {
     const currentDocument = await this.collection.findOne({ id });
     if (!currentDocument) return undefined;
 
+    assertValidPaymentTransition(currentDocument.paymentStatus, paymentStatus);
+    if (paymentStatus === "paid" && currentDocument.status !== "pending_payment") {
+      throw new InvalidTransactionStateError(currentDocument.status, paymentStatus);
+    }
+    if (paymentStatus === "refunded" && currentDocument.status !== "cancelled") {
+      throw new InvalidTransactionStateError(currentDocument.status, paymentStatus);
+    }
+
     const document = await this.collection.findOneAndUpdate(
-      { id },
+      { id, version: currentDocument.version ?? 1, paymentStatus: currentDocument.paymentStatus },
       {
         $set: {
           paymentStatus,
@@ -126,7 +143,11 @@ export class MongoTransactionRepository implements TransactionRepository {
       },
     );
 
-    return document ? toTransaction(document) : undefined;
+    if (!document) {
+      throw new InvalidTransactionStateError(currentDocument.status, paymentStatus);
+    }
+
+    return toTransaction(document);
   }
 
   async updateFulfilmentStatus(
@@ -136,8 +157,26 @@ export class MongoTransactionRepository implements TransactionRepository {
     const currentDocument = await this.collection.findOne({ id });
     if (!currentDocument) return undefined;
 
+    assertValidFulfilmentTransition(currentDocument.fulfilmentStatus, fulfilmentStatus);
+    if (
+      fulfilmentStatus === "shipped" &&
+      !(currentDocument.status === "paid" &&
+        currentDocument.paymentStatus === "paid" &&
+        currentDocument.fulfilmentStatus === "pending")
+    ) {
+      throw new InvalidTransactionStateError(currentDocument.status, fulfilmentStatus);
+    }
+    if (
+      fulfilmentStatus === "delivered" &&
+      !(currentDocument.status === "paid" &&
+        currentDocument.paymentStatus === "paid" &&
+        currentDocument.fulfilmentStatus === "shipped")
+    ) {
+      throw new InvalidTransactionStateError(currentDocument.status, fulfilmentStatus);
+    }
+
     const document = await this.collection.findOneAndUpdate(
-      { id },
+      { id, version: currentDocument.version ?? 1, fulfilmentStatus: currentDocument.fulfilmentStatus },
       {
         $set: {
           fulfilmentStatus,
@@ -151,6 +190,10 @@ export class MongoTransactionRepository implements TransactionRepository {
       },
     );
 
-    return document ? toTransaction(document) : undefined;
+    if (!document) {
+      throw new InvalidTransactionStateError(currentDocument.status, fulfilmentStatus);
+    }
+
+    return toTransaction(document);
   }
 }

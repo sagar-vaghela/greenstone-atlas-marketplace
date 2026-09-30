@@ -55,9 +55,6 @@ export type OfferStatus =
 export type TransactionStatus =
   | "pending_payment"
   | "paid"
-  | "fulfilment_pending"
-  | "shipped"
-  | "delivered"
   | "completed"
   | "cancelled"
   | "disputed";
