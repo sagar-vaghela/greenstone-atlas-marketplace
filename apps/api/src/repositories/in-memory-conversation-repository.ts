@@ -92,7 +92,7 @@ export class InMemoryConversationRepository implements ConversationRepository {
 
   async countUnread(conversationId: string, userId: string): Promise<number> {
     const conversation = this.conversations.find((item) => item.id === conversationId);
-    if (!conversation) return 0;
+    if (!conversation || (conversation.buyerId !== userId && conversation.sellerId !== userId)) return 0;
     const readAt = conversation.buyerId === userId ? conversation.buyerLastReadAt : conversation.sellerLastReadAt;
     return this.messages.filter(
       (message) =>
@@ -108,7 +108,7 @@ export class InMemoryConversationRepository implements ConversationRepository {
     readAt: string,
   ): Promise<ConversationRecord | undefined> {
     const conversation = this.conversations.find((item) => item.id === conversationId);
-    if (!conversation) return undefined;
+    if (!conversation || (conversation.buyerId !== userId && conversation.sellerId !== userId)) return undefined;
     if (conversation.buyerId === userId) conversation.buyerLastReadAt = readAt;
     if (conversation.sellerId === userId) conversation.sellerLastReadAt = readAt;
     for (const message of this.messages) {
