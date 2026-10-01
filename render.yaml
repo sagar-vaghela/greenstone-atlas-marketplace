@@ -2,6 +2,7 @@ services:
   - type: web
     name: greenstone-atlas-api
     runtime: docker
+    plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /health

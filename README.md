@@ -431,7 +431,8 @@ npm run dev:api
 This staging/demo uses a Render Static Site for the Vite frontend and a Render
 Docker Web Service for the Fastify API, with MongoDB Atlas and Stripe Test Mode.
 The root `render.yaml` defines both services and prompts for secrets without
-committing values.
+committing values. The Static Site is free, and the API Blueprint explicitly
+selects Render's Free compute plan.
 
 ### Step 1 — Create Render account
 
@@ -463,7 +464,12 @@ Render supplies it.
 
 Use one API instance for this demo because the recipient-scoped event bus is
 in-memory and does not share state across instances. Render Web Services
-support WebSocket upgrades.
+support WebSocket upgrades. On the Free plan, the API spins down after 15
+minutes without inbound traffic; its next HTTP or WebSocket request can take
+about a minute to wake it. Free instances have 512 MB RAM, 0.1 CPU, ephemeral
+filesystems, and a shared 750 free-instance-hour monthly allowance per
+workspace. Keep MongoDB Atlas as persistent storage; do not store application
+data on the API filesystem. This is suitable for a demo, not production uptime.
 
 ### Step 4 — Create frontend service
 
