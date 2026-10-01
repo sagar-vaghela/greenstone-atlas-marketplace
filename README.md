@@ -251,6 +251,243 @@ npm run dev:api
 
 The API health check is available at `http://localhost:3000/health`.
 
+## CI/CD and AWS staging readiness
+
+The repository is already structured for a simple, secure AWS staging deployment without introducing unnecessary services or a second cloud provider. The target pattern is:
+
+```text
+GitHub
+  -> GitHub Actions CI
+  -> static frontend build
+  -> S3 + CloudFront
+  -> API container
+  -> ECS / Fargate
+  -> MongoDB Atlas
+  -> Stripe Test API
+```
+
+### Deployment architecture
+
+```text
+                    GitHub
+                       │
+                       ▼
+               GitHub Actions
+                       │
+                CI / Build / Test
+                       │
+          ┌────────────┴────────────┐
+          ▼                         ▼
+     Frontend static build      API container
+          │                         │
+          ▼                         ▼
+       S3 + CloudFront          ECS / Fargate
+                                    │
+                         ┌──────────┴──────────┐
+                         ▼                     ▼
+                    MongoDB Atlas           Stripe Test API
+```
+
+Responsibilities:
+
+- GitHub Actions handles CI and future staging deploys.
+- The frontend is a static Vite build served from S3 behind CloudFront.
+- The Fastify API runs as a container in ECS Fargate with an HTTP health check and environment-derived secrets.
+- MongoDB Atlas remains the authoritative data layer for production-like environments.
+- Stripe remains in test mode for staging and demo usage only.
+
+### CI pipeline
+
+The repository includes `.github/workflows/ci.yml` with the requested CI checks:
+
+```bash
+npm ci
+npm run typecheck
+npm test -- --run
+npm run build
+npm ls --workspaces --depth=0
+git diff --check
+```
+
+It runs on pull requests and on pushes to `main`. The workflow uses the minimal `contents: read` GitHub permission and no application secrets. This keeps the pipeline safe for public or internal repos while still verifying the TypeScript build, test suite, workspace integrity, and patch hygiene.
+
+### Environment strategy
+
+```text
+Local
+  -> developer machine
+  -> MongoDB Atlas test connection or in-memory demo for local-only testing
+
+Staging / Demo
+  -> GitHub Actions deploys static frontend + ECS API
+  -> MongoDB Atlas test database
+  -> Stripe Test API
+
+Production
+  -> protected deployment only
+  -> real production database and production credentials
+  -> no auto-deploy from arbitrary pull requests
+```
+
+The app is already configured to fail fast in production-like environments when `MONGODB_URI` is missing, which prevents accidental in-memory fallbacks in staging or production.
+
+### Secrets and runtime configuration
+
+The implementation uses only the environment variables it actually reads:
+
+- API server: `NODE_ENV`, `HOST`, `PORT`, `CORS_ORIGIN`, `LOG_LEVEL`, `SLOW_REQUEST_MS`, `SESSION_TTL_MS`, `PAYMENT_PROVIDER`, `MONGODB_URI`, `MONGODB_DB_NAME`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`
+- Frontend browser-safe: `VITE_API_URL`, `VITE_STRIPE_PUBLISHABLE_KEY`
+- E2E: `E2E_BASE_URL`, `E2E_API_URL`
+
+There is no `SESSION_SECRET` in the current implementation, so it is intentionally omitted from the repo template. Secrets remain server-side and should be stored in GitHub Actions secrets or AWS Secrets Manager / SSM Parameter Store, not in the repo or in the browser bundle.
+
+### MongoDB Atlas and startup behavior
+
+MongoDB is the persistence layer for staging and production, and the API intentionally throws when `MONGODB_URI` is missing in production-like environments. This is enforced by the app config and prevents a dangerous silent fallback to in-memory repositories.
+
+Required behavior:
+
+- Use a MongoDB Atlas test database for staging/demo
+- Keep the connection string in GitHub secrets or AWS Secrets Manager, never in git
+- Create indexes through the MongoDB repositories and startup seed logic as needed
+- Confirm startup by checking the server logs and the `GET /health` and `GET /ready` endpoints
+- If MongoDB is unavailable, the API should fail startup or report the dependency as not ready via `/ready` rather than pretending the app is healthy
+
+No destructive database reset or wipe should be run automatically as part of this deployment workflow.
+
+### Stripe Test Mode and webhooks
+
+This app remains on Stripe Test Mode only. The deployment architecture is intentionally:
+
+```text
+React
+  -> API
+  -> Stripe Test API
+```
+
+Implementation rules:
+
+- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` stay server-side only
+- `VITE_STRIPE_PUBLISHABLE_KEY` is the only browser-safe Stripe key
+- The browser never receives the secret key
+- The app does not switch to live payments unless a separate production authorization is explicitly added later
+- Webhook configuration uses the staging API URL and the test signing secret
+
+The current app already uses the correct separation between server secrets and browser-safe public config.
+
+### API health endpoint
+
+The existing health route is suitable for ECS health checks and load-balancer readiness checks:
+
+- `GET /health` returns a basic liveness status
+- `GET /ready` performs a MongoDB ping when MongoDB is configured and returns `503` if the dependency is unavailable
+- No secrets or sensitive deployment configuration are exposed in either endpoint
+
+This is suitable for ECS/Fargate container health checks, target group health checks, and deployment verification.
+
+### AWS setup required before deployment
+
+AWS infrastructure is not created in this repo, and actual deployment must wait for a real AWS account and credentials. The repo is prepared for the following manual setup.
+
+1. AWS account
+   - Create or use an AWS account with permissions to manage S3, CloudFront, ECS/Fargate, IAM, and Secrets Manager.
+   - Use a dedicated demo or staging environment rather than production credentials.
+
+2. Region
+   - Recommended demo region: `us-east-1`
+   - Reason: broad AWS service availability, strong CloudFront coverage, and straightforward ECS/Fargate support for a demo deployment.
+
+3. IAM / GitHub OIDC
+   - Prefer GitHub Actions OIDC over long-lived AWS access keys.
+   - Configure an IAM role that `sts:AssumeRoleWithWebIdentity` trusts the GitHub repo and branch, for example:
+     - repo: `Greenstone/atlas-marketplace`
+     - branch: `main`
+   - Add that role ARN as a GitHub Actions secret or environment variable for the deploy job.
+   - Minimal trust pattern: repo-specific OIDC with `sub` matching `repo:<owner>/<repo>:ref:refs/heads/main` and `aud` set to `sts.amazonaws.com`.
+
+4. S3
+   - Create a static website or CloudFront origin bucket for the React app.
+   - Keep public access blocked unless you explicitly want a private CloudFront distribution with signed URLs; for a typical SPA, CloudFront is the public edge front door and S3 remains private behind it.
+   - Configure the bucket for static hosting or an OAC origin connection if using CloudFront.
+
+5. CloudFront
+   - Create a distribution fronting the S3 bucket.
+   - Set the default root object to `index.html`.
+   - Add a SPA error response configuration so `/some-route` falls back to `/index.html` rather than returning a 404.
+   - Use the API as a separate origin or a second CloudFront behavior as needed for a different path prefix.
+
+6. ECS / Fargate
+   - Create an ECS cluster for the API.
+   - Define a task definition with a single container for the API image.
+   - Use an ECS service with Fargate launch type.
+   - Set CPU and memory to a small, demo-friendly baseline such as 256/512 or 512/1024 depending on the load profile.
+   - Expose port `3000` and configure the container health check to call `GET /health`.
+   - Set environment variables for runtime config and read secrets from AWS Secrets Manager or SSM Parameter Store.
+
+7. Networking
+   - Keep the interview setup simple: one public-facing frontend distribution, one API service, and basic VPC networking.
+   - Use the minimum necessary security group and route configuration for ECS/Fargate.
+   - Do not introduce more VPC complexity than the demo requires.
+
+8. Secrets Manager / SSM
+   - Store runtime environment values in AWS Secrets Manager or SSM Parameter Store.
+   - Use the following values as needed:
+     - `MONGODB_URI`
+     - `STRIPE_SECRET_KEY`
+     - `STRIPE_WEBHOOK_SECRET`
+     - `STRIPE_PUBLISHABLE_KEY` (if used by the backend or shared config)
+     - `VITE_API_URL` as a build-time or deployment-time frontend value, if the app is configured to inject it during the static build
+   - Never bake MongoDB or Stripe credentials into the Docker image.
+
+9. MongoDB Atlas network access
+   - Allow the ECS task or NAT gateway IP range to reach the Atlas cluster.
+   - Use an Atlas test database connection string rather than production credentials for the demo.
+   - Confirm that the cluster allows the AWS environment to connect securely.
+
+10. Stripe webhook URL
+   - Configure the Stripe webhook to point to the staging API endpoint, for example `https://api-staging.example.com/webhooks/stripe`.
+   - Set the test signing secret in the environment and AWS Secrets Manager.
+
+11. Required GitHub secrets
+   - These are the eventual values to add when the AWS resources exist:
+     - `AWS_REGION`
+     - `AWS_ROLE_TO_ASSUME` or the equivalent OIDC role ARN
+     - `MONGODB_URI`
+     - `STRIPE_SECRET_KEY`
+     - `STRIPE_WEBHOOK_SECRET`
+     - `STRIPE_PUBLISHABLE_KEY`
+     - `VITE_API_URL` when the frontend is built with a staging API origin
+
+### Deployment smoke test (after real AWS resources are available)
+
+When the staging deployment exists, the smoke test should verify the following sequence:
+
+```text
+Frontend loads
+  -> login works
+  -> API health works
+  -> MongoDB persistence works
+  -> marketplace listing loads
+  -> offer flow works
+  -> messaging works
+  -> notifications work
+  -> Stripe test payment works
+  -> transaction updates
+```
+
+This repository does not claim that the live AWS deployment has been executed because AWS resources and credentials are not yet available in this workspace.
+
+### Rollback approach
+
+The simplest rollback path is:
+
+1. Keep the last known-good build artifact and ECS task definition revision.
+2. Redeploy the previous task definition for the API.
+3. Revert the frontend static site to the previous S3/CloudFront artifact or previous distribution version.
+4. Validate `/health`, `/ready`, and a minimal listing fetch after rollback.
+
+Because this is a staging/demo environment, rollback should be intentionally simple and manual while the infrastructure is being created.
+
 ## Production Readiness
 
 The API uses Fastify request IDs. A validated incoming `X-Request-Id` is reused

@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+coverage
+playwright-report
+test-results
+artifacts
+.env
+.env.*
+**/.env
+**/.env.*
+.DS_Store
+*.log
+npm-debug.log*
