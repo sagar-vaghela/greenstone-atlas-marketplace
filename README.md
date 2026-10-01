@@ -28,10 +28,36 @@ Install dependencies from the repository root:
 npm install
 ```
 
-The API uses MongoDB when `MONGODB_URI` is configured. Copy `.env.example` to
-`.env` for local development and start MongoDB locally before starting the API.
-Without `MONGODB_URI`, the API uses its in-memory repository for lightweight
-local development and tests.
+MongoDB Atlas is the production persistence layer. In local development you may
+still run the API with the in-memory repository when you intentionally opt out,
+but production-like environments must fail fast when `MONGODB_URI` is missing.
+
+Add your Atlas connection locally to `apps/api/.env` and set:
+
+```bash
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
+MONGODB_DB_NAME=atlas_marketplace
+```
+
+Do not commit secrets. Keep the actual connection string in your local environment
+only. To seed the demo marketplace data after the Atlas connection string is set,
+run:
+
+```bash
+npm run seed --workspace @atlas/api
+```
+
+For an explicit reset of the seeded collections (only when you intend to wipe the
+local demo data), run:
+
+```bash
+npm run seed:reset --workspace @atlas/api
+```
+
+Verify that the database is reachable by starting the API and checking the startup
+logs for a successful MongoDB connection. If you need to run a startup check in a
+local shell without changing the app state, use a direct MongoDB ping command with
+your Atlas connection URI after replacing the credentials locally.
 
 ## Authentication and ownership
 

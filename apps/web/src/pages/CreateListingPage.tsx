@@ -18,7 +18,13 @@ import {
 
 const initialValues: ListingFormValues = {
   title: "",
+  brand: "",
+  model: "",
+  referenceNumber: "",
   description: "",
+  condition: "",
+  year: "",
+  location: "",
   price: "",
   currency: "AED",
   category: "",

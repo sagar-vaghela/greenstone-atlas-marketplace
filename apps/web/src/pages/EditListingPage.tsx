@@ -87,7 +87,13 @@ export function EditListingPage() {
 
   const initialValues: ListingFormValues = {
     title: listing.title,
+    brand: listing.brand ?? "",
+    model: listing.model ?? "",
+    referenceNumber: listing.referenceNumber ?? "",
     description: listing.description,
+    condition: listing.condition ?? "",
+    year: listing.year === undefined ? "" : String(listing.year),
+    location: listing.location ?? "",
     price: String(listing.price),
     currency: listing.currency,
     category: listing.category,

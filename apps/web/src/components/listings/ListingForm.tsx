@@ -99,6 +99,64 @@ export function ListingForm<T extends ListingFormData>({
         />
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
+            label="Brand"
+            value={values.brand}
+            onChange={(event) => updateField("brand", event.target.value)}
+            error={Boolean(fieldErrors.brand)}
+            helperText={fieldErrors.brand}
+            fullWidth
+          />
+          <TextField
+            label="Model"
+            value={values.model}
+            onChange={(event) => updateField("model", event.target.value)}
+            error={Boolean(fieldErrors.model)}
+            helperText={fieldErrors.model}
+            fullWidth
+          />
+        </Stack>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <TextField
+            label="Reference number"
+            value={values.referenceNumber}
+            onChange={(event) =>
+              updateField("referenceNumber", event.target.value)
+            }
+            error={Boolean(fieldErrors.referenceNumber)}
+            helperText={fieldErrors.referenceNumber}
+            fullWidth
+          />
+          <TextField
+            label="Condition"
+            value={values.condition}
+            onChange={(event) => updateField("condition", event.target.value)}
+            error={Boolean(fieldErrors.condition)}
+            helperText={fieldErrors.condition}
+            fullWidth
+          />
+        </Stack>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <TextField
+            label="Year"
+            value={values.year}
+            onChange={(event) => updateField("year", event.target.value)}
+            error={Boolean(fieldErrors.year)}
+            helperText={fieldErrors.year}
+            type="number"
+            slotProps={{ htmlInput: { min: 1900, max: 2100, step: 1 } }}
+            fullWidth
+          />
+          <TextField
+            label="Location"
+            value={values.location}
+            onChange={(event) => updateField("location", event.target.value)}
+            error={Boolean(fieldErrors.location)}
+            helperText={fieldErrors.location}
+            fullWidth
+          />
+        </Stack>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <TextField
             label="Price"
             value={values.price}
             onChange={(event) => updateField("price", event.target.value)}

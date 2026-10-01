@@ -32,7 +32,14 @@ export class MongoListingRepository implements ListingRepository {
     if (query.search) {
       const escapedSearch = query.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const searchPattern = new RegExp(escapedSearch, "i");
-      filter.$or = [{ title: searchPattern }, { description: searchPattern }];
+      filter.$or = [
+        { title: searchPattern },
+        { brand: searchPattern },
+        { model: searchPattern },
+        { referenceNumber: searchPattern },
+        { description: searchPattern },
+        { location: searchPattern },
+      ];
     }
     if (query.category) {
       filter.category = query.category;

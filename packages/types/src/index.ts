@@ -114,7 +114,13 @@ export interface Listing {
   id: string;
   sellerId: string;
   title: string;
+  brand?: string;
+  model?: string;
+  referenceNumber?: string;
   description: string;
+  condition?: string;
+  year?: number;
+  location?: string;
   price: number;
   currency: string;
   category: string;
@@ -221,7 +227,13 @@ export interface CreateOfferInput {
 
 export interface CreateListingInput {
   title: string;
+  brand?: string;
+  model?: string;
+  referenceNumber?: string;
   description: string;
+  condition?: string;
+  year?: number;
+  location?: string;
   price: number;
   currency: string;
   category: string;

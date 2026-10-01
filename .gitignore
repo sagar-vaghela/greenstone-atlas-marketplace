@@ -4,8 +4,10 @@ build/
 coverage/
 
 .env
+apps/api/.env
 .env.local
 .env.*.local
+apps/api/.env.*
 
 .DS_Store
 Thumbs.db

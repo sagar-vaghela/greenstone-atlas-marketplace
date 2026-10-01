@@ -9,10 +9,18 @@ export const connectMongoDB = async (
   uri: string,
   databaseName: string,
 ): Promise<MongoConnection> => {
-  const client = new MongoClient(uri);
+  const client = new MongoClient(uri, {
+    serverSelectionTimeoutMS: 15_000,
+    connectTimeoutMS: 10_000,
+    socketTimeoutMS: 20_000,
+    retryWrites: true,
+    maxPoolSize: 25,
+    minPoolSize: 1,
+  });
 
   try {
     await client.connect();
+    await client.db(databaseName).command({ ping: 1 });
     const db = client.db(databaseName);
     const listings = db.collection("listings");
     const offers = db.collection("offers");
@@ -22,47 +30,85 @@ export const connectMongoDB = async (
     const conversations = db.collection("conversations");
     const messages = db.collection("messages");
     const notifications = db.collection("notifications");
+
     await listings.createIndex({ id: 1 }, { unique: true });
-    await listings.createIndex({ category: 1 });
-    await listings.createIndex({ price: 1 });
+    await listings.createIndex({ status: 1, updatedAt: -1 });
+    await listings.createIndex({ sellerId: 1, status: 1, createdAt: -1 });
+    await listings.createIndex({ category: 1, status: 1, price: 1 });
+    await listings.createIndex({ brand: 1, model: 1, status: 1 });
+    await listings.createIndex({ location: 1, status: 1, createdAt: -1 });
+    await listings.createIndex({ price: 1, status: 1 });
+    await listings.createIndex({ createdAt: -1 });
     await listings.createIndex({ updatedAt: -1 });
+    await listings.createIndex({ title: "text", description: "text" });
+
     await offers.createIndex({ id: 1 }, { unique: true });
-    await offers.createIndex({ listingId: 1, createdAt: 1 });
-    await offers.createIndex({ buyerId: 1 });
-    await offers.createIndex({ sellerId: 1, status: 1 });
+    await offers.createIndex({ listingId: 1, createdAt: -1 });
+    await offers.createIndex({ buyerId: 1, createdAt: -1 });
+    await offers.createIndex({ sellerId: 1, status: 1, createdAt: -1 });
+    await offers.createIndex({ sellerId: 1, listingId: 1, status: 1 });
+
     await transactions.createIndex({ id: 1 }, { unique: true });
     await transactions.createIndex({ listingId: 1 }, { unique: true });
     await transactions.createIndex({ offerId: 1 }, { unique: true });
-    await transactions.createIndex({ buyerId: 1, status: 1 });
-    await transactions.createIndex({ sellerId: 1, status: 1 });
+    await transactions.createIndex({ buyerId: 1, status: 1, createdAt: -1 });
+    await transactions.createIndex({ sellerId: 1, status: 1, createdAt: -1 });
+    await transactions.createIndex({
+      status: 1,
+      paymentStatus: 1,
+      fulfilmentStatus: 1,
+    });
+
     await users.createIndex({ id: 1 }, { unique: true });
     await users.createIndex({ email: 1 }, { unique: true });
+    await users.createIndex({ role: 1, createdAt: -1 });
+
     await sessions.createIndex({ id: 1 }, { unique: true });
     await sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+    await sessions.createIndex({ userId: 1, createdAt: -1 });
+
     await conversations.createIndex({ id: 1 }, { unique: true });
-    await conversations.createIndex({ buyerId: 1 });
-    await conversations.createIndex({ sellerId: 1 });
-    await conversations.createIndex({ listingId: 1 });
+    await conversations.createIndex({ buyerId: 1, updatedAt: -1 });
+    await conversations.createIndex({ sellerId: 1, updatedAt: -1 });
+    await conversations.createIndex({ listingId: 1, updatedAt: -1 });
     await conversations.createIndex(
       { buyerId: 1, sellerId: 1, listingId: 1 },
       { unique: true },
     );
-    await conversations.createIndex({ lastMessageAt: -1 });
+    await conversations.createIndex({ updatedAt: -1 });
+
     await messages.createIndex({ id: 1 }, { unique: true });
-    await messages.createIndex({ conversationId: 1, createdAt: 1 });
-    await messages.createIndex({ senderId: 1 });
+    await messages.createIndex({ conversationId: 1, createdAt: -1 });
+    await messages.createIndex({ senderId: 1, createdAt: -1 });
+
     await notifications.createIndex({ id: 1 }, { unique: true });
     await notifications.createIndex({ userId: 1, createdAt: -1, id: -1 });
-    await notifications.createIndex({ userId: 1, readAt: 1 });
-    await notifications.createIndex({ userId: 1, createdAt: -1, readAt: 1 });
-    await notifications.createIndex({ userId: 1, sourceEventId: 1 }, { unique: true });
+    await notifications.createIndex({ userId: 1, readAt: 1, createdAt: -1 });
+    await notifications.createIndex(
+      { userId: 1, sourceEventId: 1 },
+      { unique: true },
+    );
 
     return {
       db,
-      close: () => client.close(),
+      close: async () => {
+        try {
+          await client.close();
+        } catch {
+          // The client may already be disconnected during shutdown.
+        }
+      },
     };
   } catch (error) {
     await client.close();
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "MongoDB connection failed. Connection details are redacted.";
+    console.error(
+      "MongoDB connection failed: connection details are redacted.",
+    );
+    console.error(message);
     throw new Error("Unable to connect to MongoDB", { cause: error });
   }
 };

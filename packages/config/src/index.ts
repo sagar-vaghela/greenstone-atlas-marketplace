@@ -1,6 +1,8 @@
 const DEFAULT_HOST = "0.0.0.0";
 const DEFAULT_PORT = 3000;
-const DEFAULT_CORS_PORTS = [5173, 5174, 5175, 5176, 5177, 5178, 4173, 4174, 4175];
+const DEFAULT_CORS_PORTS = [
+  5173, 5174, 5175, 5176, 5177, 5178, 4173, 4174, 4175,
+];
 const DEFAULT_CORS_ORIGIN = [
   ...DEFAULT_CORS_PORTS.flatMap((port) => [
     `http://localhost:${port}`,
@@ -60,6 +62,8 @@ export const getApiConfig = (
   env: NodeJS.ProcessEnv = process.env,
 ): ApiConfig => {
   const mongodbUri = env.MONGODB_URI?.trim() || undefined;
+  const productionLike =
+    env.NODE_ENV === "production" || env.NODE_ENV === "staging";
 
   const sessionTtlMs = Number(env.SESSION_TTL_MS);
   const slowRequestMs = Number(env.SLOW_REQUEST_MS);
@@ -67,6 +71,17 @@ export const getApiConfig = (
   const stripeSecretKey = env.STRIPE_SECRET_KEY?.trim() || undefined;
   const stripeWebhookSecret = env.STRIPE_WEBHOOK_SECRET?.trim() || undefined;
   const stripePublishableKey = env.STRIPE_PUBLISHABLE_KEY?.trim() || undefined;
+
+  if (mongodbUri && !/^mongodb(?:\+srv)?:\/\//i.test(mongodbUri)) {
+    throw new Error("MONGODB_URI must start with mongodb:// or mongodb+srv://");
+  }
+
+  if (!mongodbUri && productionLike) {
+    throw new Error(
+      "MONGODB_URI is required in production-like environments. Add it to apps/api/.env as MONGODB_URI=mongodb+srv://... and keep MONGODB_DB_NAME=atlas_marketplace.",
+    );
+  }
+
   if (
     paymentProvider === "stripe" &&
     (!stripeSecretKey || !stripeWebhookSecret)
