@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -7,15 +7,6 @@ import {
   useLocation,
 } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
-import { CreateListingPage } from "./pages/CreateListingPage";
-import { EditListingPage } from "./pages/EditListingPage";
-import { ListingDetailsPage } from "./pages/ListingDetailsPage";
-import { MarketplacePage } from "./pages/MarketplacePage";
-import { NotFoundPage } from "./pages/NotFoundPage";
-import { LoginPage } from "./pages/LoginPage";
-import { RegisterPage } from "./pages/RegisterPage";
-import { SellerProfilePage } from "./pages/SellerProfilePage";
-import { ProfilePage } from "./pages/ProfilePage";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
 import { fetchCurrentUser, selectAuth } from "./features/auth/authSlice";
 import { CircularProgress, Box } from "@mui/material";
@@ -24,13 +15,31 @@ import { connectionStatusChanged, eventReceived, selectRealtime } from "./featur
 import {
   transactionEventReceived,
 } from "./features/transactions/transactionsSlice";
-import { TransactionsPage } from "./pages/TransactionsPage";
-import { TransactionDetailsPage } from "./pages/TransactionDetailsPage";
-import { MessagesPage } from "./pages/MessagesPage";
-import { ConversationPage } from "./pages/ConversationPage";
 import { messageEventReceived } from "./features/messaging/messagingSlice";
 import { fetchNotifications, fetchUnreadCount, notificationEventReceived } from "./features/notifications/notificationsSlice";
-import { NotificationsPage } from "./pages/NotificationsPage";
+
+const MarketplacePage = lazy(() => import("./pages/MarketplacePage").then((module) => ({ default: module.MarketplacePage })));
+const CreateListingPage = lazy(() => import("./pages/CreateListingPage").then((module) => ({ default: module.CreateListingPage })));
+const EditListingPage = lazy(() => import("./pages/EditListingPage").then((module) => ({ default: module.EditListingPage })));
+const ListingDetailsPage = lazy(() => import("./pages/ListingDetailsPage").then((module) => ({ default: module.ListingDetailsPage })));
+const SellerProfilePage = lazy(() => import("./pages/SellerProfilePage").then((module) => ({ default: module.SellerProfilePage })));
+const ProfilePage = lazy(() => import("./pages/ProfilePage").then((module) => ({ default: module.ProfilePage })));
+const TransactionsPage = lazy(() => import("./pages/TransactionsPage").then((module) => ({ default: module.TransactionsPage })));
+const TransactionDetailsPage = lazy(() => import("./pages/TransactionDetailsPage").then((module) => ({ default: module.TransactionDetailsPage })));
+const MessagesPage = lazy(() => import("./pages/MessagesPage").then((module) => ({ default: module.MessagesPage })));
+const ConversationPage = lazy(() => import("./pages/ConversationPage").then((module) => ({ default: module.ConversationPage })));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage").then((module) => ({ default: module.NotificationsPage })));
+const LoginPage = lazy(() => import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })));
+const RegisterPage = lazy(() => import("./pages/RegisterPage").then((module) => ({ default: module.RegisterPage })));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })));
+
+function RouteLoadingFallback() {
+  return (
+    <Box sx={{ display: "grid", placeItems: "center", minHeight: "50vh" }}>
+      <CircularProgress aria-label="Loading marketplace route" />
+    </Box>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -87,65 +96,67 @@ export function App() {
   }, [connectionStatus, dispatch, user]);
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<MarketplacePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/listings/new"
-            element={
-              <ProtectedRoute>
-                <CreateListingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/listings/:id/edit"
-            element={
-              <ProtectedRoute>
-                <EditListingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/listings/:id" element={<ListingDetailsPage />} />
-          <Route path="/sellers/:sellerId" element={<SellerProfilePage />} />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/transactions"
-            element={
-              <ProtectedRoute>
-                <TransactionsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/transactions/:id"
-            element={
-              <ProtectedRoute>
-                <TransactionDetailsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/messages"
-            element={<ProtectedRoute><MessagesPage /></ProtectedRoute>}
-          />
-          <Route
-            path="/messages/:conversationId"
-            element={<ProtectedRoute><ConversationPage /></ProtectedRoute>}
-          />
-          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<MarketplacePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route
+              path="/listings/new"
+              element={
+                <ProtectedRoute>
+                  <CreateListingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/listings/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <EditListingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/listings/:id" element={<ListingDetailsPage />} />
+            <Route path="/sellers/:sellerId" element={<SellerProfilePage />} />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/transactions"
+              element={
+                <ProtectedRoute>
+                  <TransactionsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/transactions/:id"
+              element={
+                <ProtectedRoute>
+                  <TransactionDetailsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages"
+              element={<ProtectedRoute><MessagesPage /></ProtectedRoute>}
+            />
+            <Route
+              path="/messages/:conversationId"
+              element={<ProtectedRoute><ConversationPage /></ProtectedRoute>}
+            />
+            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

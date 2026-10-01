@@ -11,6 +11,10 @@ export type ApiErrorKind =
   | "network"
   | "unknown";
 
+export type RequestOptions = RequestInit & {
+  timeoutMs?: number;
+};
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -22,6 +26,10 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
   }
+}
+
+export function isApiError(value: unknown): value is ApiError {
+  return value instanceof ApiError;
 }
 
 function classifyErrorKind(status: number): ApiErrorKind {
@@ -36,10 +44,46 @@ function classifyErrorKind(status: number): ApiErrorKind {
   return "unknown";
 }
 
+function withTimeoutSignal(signal: AbortSignal | null | undefined, timeoutMs?: number) {
+  if (timeoutMs === undefined || timeoutMs <= 0) return signal ?? undefined;
+
+  const controller = new AbortController();
+  const timer = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+
+  const abortListener = () => {
+    controller.abort();
+    globalThis.clearTimeout(timer);
+    signal?.removeEventListener("abort", abortListener);
+  };
+
+  signal?.addEventListener("abort", abortListener, { once: true });
+
+  const cleanup = () => {
+    globalThis.clearTimeout(timer);
+    signal?.removeEventListener("abort", abortListener);
+  };
+
+  return {
+    signal: controller.signal,
+    cleanup,
+  };
+}
+
 export async function request<T>(
   path: string,
-  options?: RequestInit,
+  options?: RequestOptions,
 ): Promise<T> {
+  const timeoutConfig = withTimeoutSignal(options?.signal, options?.timeoutMs);
+  const requestSignal = timeoutConfig && "signal" in timeoutConfig ? timeoutConfig.signal : options?.signal;
+  const normalizedBody =
+    options?.body &&
+    typeof options.body !== "string" &&
+    !(options.body instanceof Blob) &&
+    !(options.body instanceof FormData) &&
+    !(options.body instanceof URLSearchParams)
+      ? JSON.stringify(options.body)
+      : options?.body;
+
   let response: Response;
 
   try {
@@ -47,14 +91,22 @@ export async function request<T>(
       credentials: "include",
       headers: {
         Accept: "application/json",
-        ...(options?.body ? { "Content-Type": "application/json" } : {}),
+        ...(normalizedBody && !(normalizedBody instanceof FormData) && !(normalizedBody instanceof Blob) && !(normalizedBody instanceof URLSearchParams) ? { "Content-Type": "application/json" } : {}),
         ...options?.headers,
       },
       ...options,
+      body: normalizedBody,
+      signal: requestSignal,
     });
-  } catch {
+  } catch (error) {
+    if (timeoutConfig && "cleanup" in timeoutConfig) timeoutConfig.cleanup();
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ApiError("The request took too long and was cancelled.", 0, "REQUEST_TIMEOUT");
+    }
     throw new ApiError("Unable to reach the marketplace service.", 0, "NETWORK_ERROR");
   }
+
+  if (timeoutConfig && "cleanup" in timeoutConfig) timeoutConfig.cleanup();
 
   let body: unknown;
   try {
@@ -81,8 +133,24 @@ export async function request<T>(
         ? errorBody.code
         : undefined;
 
-    throw new ApiError(message, response.status, code, classifyErrorKind(response.status), response.headers.get("x-request-id") ?? (errorBody && "requestId" in errorBody && typeof errorBody.requestId === "string" ? errorBody.requestId : undefined));
+    throw new ApiError(
+      message,
+      response.status,
+      code,
+      classifyErrorKind(response.status),
+      response.headers.get("x-request-id") ??
+        (errorBody && "requestId" in errorBody && typeof errorBody.requestId === "string"
+          ? errorBody.requestId
+          : undefined),
+    );
   }
 
   return body as T;
 }
+
+export const apiClient = {
+  get: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "GET" }),
+  post: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "POST" }),
+  patch: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "PATCH" }),
+  delete: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "DELETE" }),
+};

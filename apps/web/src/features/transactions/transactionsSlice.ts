@@ -1,5 +1,6 @@
 import {
   createAsyncThunk,
+  createSelector,
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
@@ -295,12 +296,13 @@ const transactionsSlice = createSlice({
 
 export const { transactionEventReceived, clearTransactionError } =
   transactionsSlice.actions;
-export const selectTransactions = (state: {
-  transactions: TransactionsState;
-}) =>
-  Object.values(state.transactions.items).sort((left, right) =>
-    right.updatedAt.localeCompare(left.updatedAt),
-  );
+export const selectTransactions = createSelector(
+  (state: { transactions: TransactionsState }) => state.transactions.items,
+  (items) =>
+    Object.values(items).sort((left, right) =>
+      right.updatedAt.localeCompare(left.updatedAt),
+    ),
+);
 export const selectTransactionDetail = (state: {
   transactions: TransactionsState;
 }) =>
