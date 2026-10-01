@@ -7,10 +7,15 @@ test-results/
 .auth/
 
 .env
+.env.*
+**/.env
+**/.env.*
 apps/api/.env
 .env.local
 .env.*.local
 apps/api/.env.*
+!.env.example
+!**/.env.example
 
 .DS_Store
 Thumbs.db

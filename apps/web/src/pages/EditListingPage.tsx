@@ -104,6 +104,7 @@ export function EditListingPage() {
     const result = updateListingSchema.safeParse({
       ...values,
       price: values.price === "" ? Number.NaN : Number(values.price),
+      year: values.year === "" ? undefined : Number(values.year),
     });
     const errors: ListingFormFieldErrors = {};
     if (!result.success) {

@@ -34,6 +34,7 @@ import type { PaymentProvider } from "./payments/payment-provider.js";
 import { DemoPaymentProvider } from "./payments/payment-provider.js";
 import { StripePaymentProvider } from "./payments/stripe-payment-provider.js";
 import { registerPaymentRoutes } from "./routes/payments.js";
+import { isOriginAllowed } from "./http/origin.js";
 
 interface BuildAppOptions {
   repository?: ListingRepository;
@@ -85,37 +86,8 @@ export const buildApp = (options: BuildAppOptions = {}) => {
 
   app.register(cors, {
     origin: (origin, callback) => {
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-
-      const allowedOrigins = Array.isArray(config.corsOrigin)
-        ? config.corsOrigin
-        : [config.corsOrigin];
-
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-
-      try {
-        const parsedOrigin = new URL(origin);
-        const isLocalDevOrigin =
-          (parsedOrigin.hostname === "localhost" ||
-            parsedOrigin.hostname === "127.0.0.1" ||
-            parsedOrigin.hostname === "::1") &&
-          (Number(parsedOrigin.port) >= 5173 || Number(parsedOrigin.port) === 4173 || Number(parsedOrigin.port) === 4174 || Number(parsedOrigin.port) === 4175);
-
-        if (isLocalDevOrigin) {
-          callback(null, true);
-          return;
-        }
-      } catch {
-        // The request origin is malformed, so the browser will reject it anyway.
-      }
-
-      callback(new Error("CORS origin not allowed"), false);
+      const allowed = isOriginAllowed(origin, config);
+      callback(allowed ? null : new Error("CORS origin not allowed"), allowed);
     },
     credentials: true,
     methods: ["GET", "POST", "PATCH", "OPTIONS"],

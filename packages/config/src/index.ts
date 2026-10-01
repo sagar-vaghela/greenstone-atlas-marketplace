@@ -33,6 +33,7 @@ export interface ApiConfig {
   host: string;
   port: number;
   corsOrigin: string | string[];
+  allowLocalOrigins: boolean;
   mongodbUri?: string;
   mongodbDbName: string;
   sessionTtlMs: number;
@@ -78,7 +79,7 @@ export const getApiConfig = (
 
   if (!mongodbUri && productionLike) {
     throw new Error(
-      "MONGODB_URI is required in production-like environments. Add it to apps/api/.env as MONGODB_URI=mongodb+srv://... and keep MONGODB_DB_NAME=atlas_marketplace.",
+      "MONGODB_URI is required in production-like environments. Set it in the API runtime environment; MONGODB_DB_NAME defaults to atlas_marketplace.",
     );
   }
 
@@ -91,23 +92,33 @@ export const getApiConfig = (
     );
   }
   if (
-    env.NODE_ENV === "production" &&
+    paymentProvider === "stripe" &&
+    productionLike &&
+    !/^(?:sk|rk)_test_/.test(stripeSecretKey ?? "")
+  ) {
+    throw new Error(
+      "Production-like environments require a Stripe Test Mode secret key (sk_test_ or rk_test_)",
+    );
+  }
+  if (
+    productionLike &&
     (!env.CORS_ORIGIN || parseCorsOrigin(env.CORS_ORIGIN).length === 0)
   ) {
-    throw new Error("CORS_ORIGIN is required in production");
+    throw new Error("CORS_ORIGIN is required in production-like environments");
   }
 
   return {
     host: env.HOST?.trim() || DEFAULT_HOST,
     port: parsePort(env.PORT),
     corsOrigin: parseCorsOrigin(env.CORS_ORIGIN),
+    allowLocalOrigins: !productionLike,
     mongodbUri,
     mongodbDbName: env.MONGODB_DB_NAME?.trim() || DEFAULT_MONGODB_DB_NAME,
     sessionTtlMs:
       Number.isFinite(sessionTtlMs) && sessionTtlMs > 0
         ? sessionTtlMs
         : DEFAULT_SESSION_TTL_MS,
-    secureCookies: env.NODE_ENV === "production",
+    secureCookies: productionLike,
     logLevel: env.LOG_LEVEL?.trim() || "info",
     slowRequestMs:
       Number.isFinite(slowRequestMs) && slowRequestMs > 0

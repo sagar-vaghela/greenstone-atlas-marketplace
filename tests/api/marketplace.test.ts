@@ -108,6 +108,63 @@ describe("authentication and listings", () => {
     ).toBe(401);
   });
 
+  it("uses cross-site secure cookies in production and rejects foreign origins", async () => {
+    const developmentLogin = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: "buyer@example.com", password: "buyer123" },
+    });
+    const developmentCookie = String(developmentLogin.headers["set-cookie"]);
+    expect(developmentCookie).toContain("SameSite=Lax");
+    expect(developmentCookie).not.toContain("Secure");
+
+    const secureApp = buildApp({ secureCookies: true });
+    await secureApp.ready();
+
+    try {
+      const login = await secureApp.inject({
+        method: "POST",
+        url: "/auth/login",
+        payload: { email: "buyer@example.com", password: "buyer123" },
+      });
+      const setCookie = String(login.headers["set-cookie"]);
+      const cookie = setCookie.split(";")[0];
+
+      expect(setCookie).toContain("HttpOnly");
+      expect(setCookie).toContain("SameSite=None");
+      expect(setCookie).toContain("Secure");
+
+      const deniedLogout = await secureApp.inject({
+        method: "POST",
+        url: "/auth/logout",
+        headers: { cookie, origin: "https://attacker.example" },
+      });
+      expect(deniedLogout.statusCode).not.toBe(200);
+      expect(
+        (
+          await secureApp.inject({
+            method: "GET",
+            url: "/auth/me",
+            headers: { cookie },
+          })
+        ).statusCode,
+      ).toBe(200);
+
+      const logout = await secureApp.inject({
+        method: "POST",
+        url: "/auth/logout",
+        headers: { cookie, origin: "http://localhost:5173" },
+      });
+      const clearedCookie = String(logout.headers["set-cookie"]);
+      expect(logout.statusCode).toBe(200);
+      expect(clearedCookie).toContain("SameSite=None");
+      expect(clearedCookie).toContain("Secure");
+      expect(clearedCookie).toContain("Max-Age=0");
+    } finally {
+      await secureApp.close();
+    }
+  });
+
   it("correlates responses and separates liveness from readiness", async () => {
     const health = await app.inject({
       method: "GET",
@@ -502,11 +559,7 @@ describe("messaging and notifications", () => {
     expect(readConversation.json().notificationUnreadCount).toBe(0);
     expect(
       (
-        await inject(
-          app,
-          { method: "GET", url: "/notifications" },
-          seller,
-        )
+        await inject(app, { method: "GET", url: "/notifications" }, seller)
       ).json().items[0].readAt,
     ).toBeTruthy();
 
@@ -526,10 +579,12 @@ describe("messaging and notifications", () => {
     );
     expect(notificationsAfterRead.json().items).toHaveLength(2);
     expect(
-      notificationsAfterRead.json().items.filter(
-        (item: { type: string; readAt?: string }) =>
-          item.type === "message_received" && !item.readAt,
-      ),
+      notificationsAfterRead
+        .json()
+        .items.filter(
+          (item: { type: string; readAt?: string }) =>
+            item.type === "message_received" && !item.readAt,
+        ),
     ).toHaveLength(1);
     expect(
       (

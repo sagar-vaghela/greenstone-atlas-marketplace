@@ -22,6 +22,15 @@ export const connectMongoDB = async (
     await client.connect();
     await client.db(databaseName).command({ ping: 1 });
     const db = client.db(databaseName);
+    const existingCollections = await db
+      .listCollections({}, { nameOnly: true })
+      .toArray();
+    if (existingCollections.length === 0) {
+      throw new Error(
+        `MongoDB database "${databaseName}" must be created in Atlas before API startup.`,
+      );
+    }
+
     const listings = db.collection("listings");
     const offers = db.collection("offers");
     const users = db.collection("users");

@@ -47,6 +47,10 @@ test("authenticated shoppers are redirected to the login flow", async ({
   await page.getByLabel("Password").fill("buyer123");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/transactions/);
+  await page.reload();
+  await expect(page).toHaveURL(/\/transactions/);
+  await page.getByRole("button", { name: "Open account menu" }).click();
+  await expect(page.getByRole("menuitem", { name: "Log out" })).toBeVisible();
 });
 
 test("chat shows live typing and sends on Enter while Shift+Enter inserts a newline", async ({
@@ -85,9 +89,8 @@ test("chat shows live typing and sends on Enter while Shift+Enter inserts a newl
     const notificationButton = page.getByRole("button", {
       name: /Notifications,/,
     });
-    const notificationLabelBefore = await notificationButton.getAttribute(
-      "aria-label",
-    );
+    const notificationLabelBefore =
+      await notificationButton.getAttribute("aria-label");
     const messagesLink = page.getByRole("link", {
       name: /^Messages(?:,|$)/,
     });

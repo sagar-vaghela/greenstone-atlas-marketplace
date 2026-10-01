@@ -45,14 +45,12 @@ export const requireAuthenticatedUser = (
   reply: FastifyReply,
 ): User | undefined => {
   if (!request.user) {
-    void reply
-      .status(401)
-      .send({
-        error: {
-          code: "AUTHENTICATION_REQUIRED",
-          message: "Please sign in to continue.",
-        },
-      });
+    void reply.status(401).send({
+      error: {
+        code: "AUTHENTICATION_REQUIRED",
+        message: "Please sign in to continue.",
+      },
+    });
     return undefined;
   }
   return request.user;
@@ -63,15 +61,20 @@ export const setSessionCookie = (
   sessionId: string,
   secure: boolean,
 ): void => {
+  const sameSite = secure ? "None" : "Lax";
   reply.header(
     "Set-Cookie",
-    `${SESSION_COOKIE}=${encodeURIComponent(sessionId)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800${secure ? "; Secure" : ""}`,
+    `${SESSION_COOKIE}=${encodeURIComponent(sessionId)}; Path=/; HttpOnly; SameSite=${sameSite}; Max-Age=604800${secure ? "; Secure" : ""}`,
   );
 };
 
-export const clearSessionCookie = (reply: FastifyReply): void => {
+export const clearSessionCookie = (
+  reply: FastifyReply,
+  secure: boolean,
+): void => {
+  const sameSite = secure ? "None" : "Lax";
   reply.header(
     "Set-Cookie",
-    `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
+    `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=${sameSite}; Max-Age=0${secure ? "; Secure" : ""}`,
   );
 };

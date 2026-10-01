@@ -3,6 +3,7 @@ import { expect, type Page } from "@playwright/test";
 export const seededUsers = {
   buyer: { email: "buyer@example.com", password: "buyer123" },
   seller: { email: "seller@example.com", password: "seller123" },
+  seller2: { email: "seller2@example.com", password: "seller123" },
 } as const;
 
 export async function signIn(page: Page, role: keyof typeof seededUsers) {

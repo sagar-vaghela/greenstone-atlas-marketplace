@@ -3,27 +3,7 @@ import type { MarketplaceEvent } from "@atlas/types";
 import { config } from "../config/index.js";
 import { requireAuthenticatedUser } from "../auth/middleware.js";
 import type { MarketplaceEventBus } from "../events/marketplace-event-bus.js";
-
-const isAllowedOrigin = (origin: string | undefined): boolean => {
-  if (!origin) return true;
-  const allowedOrigins = Array.isArray(config.corsOrigin)
-    ? config.corsOrigin
-    : [config.corsOrigin];
-  if (allowedOrigins.includes(origin)) return true;
-
-  try {
-    const parsedOrigin = new URL(origin);
-    return (
-      (parsedOrigin.hostname === "localhost" ||
-        parsedOrigin.hostname === "127.0.0.1" ||
-        parsedOrigin.hostname === "::1") &&
-      (Number(parsedOrigin.port) >= 5173 ||
-        [4173, 4174, 4175].includes(Number(parsedOrigin.port)))
-    );
-  } catch {
-    return false;
-  }
-};
+import { isOriginAllowed } from "../http/origin.js";
 
 export const registerEventRoutes = async (
   app: FastifyInstance,
@@ -35,7 +15,7 @@ export const registerEventRoutes = async (
       websocket: true,
       preValidation: async (request, reply) => {
         if (!requireAuthenticatedUser(request, reply)) return;
-        if (!isAllowedOrigin(request.headers.origin)) {
+        if (!isOriginAllowed(request.headers.origin, config)) {
           return reply.status(403).send({
             error: {
               code: "ORIGIN_NOT_ALLOWED",

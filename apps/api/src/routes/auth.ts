@@ -84,7 +84,7 @@ export const registerAuthRoutes = async (
   });
   app.post("/auth/logout", async (request, reply) => {
     if (request.sessionId) await options.sessions.delete(request.sessionId);
-    clearSessionCookie(reply);
+    clearSessionCookie(reply, options.secureCookies);
     return { ok: true };
   });
   app.get("/auth/me", async (request, reply) => {
