@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   Card,
-  CardActionArea,
   CardContent,
   CircularProgress,
   Stack,
@@ -12,6 +11,7 @@ import {
 } from "@mui/material";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
+import { ListingCard } from "../components/listings/ListingCard";
 import {
   fetchSellerListings,
   fetchSellerProfile,
@@ -54,7 +54,7 @@ export function SellerProfilePage() {
   return (
     <Stack
       spacing={4}
-      component="main"
+      component="section"
       aria-labelledby="seller-profile-heading"
     >
       <Stack spacing={1}>
@@ -134,23 +134,7 @@ export function SellerProfilePage() {
           }}
         >
           {state.sellerListings.map((listing) => (
-            <Card key={listing.id} variant="outlined">
-              <CardActionArea
-                component={RouterLink}
-                to={`/listings/${listing.id}`}
-              >
-                <CardContent>
-                  <Typography variant="h6">{listing.title}</Typography>
-                  <Typography color="text.secondary">
-                    {new Intl.NumberFormat("en-AE", {
-                      style: "currency",
-                      currency: listing.currency,
-                      maximumFractionDigits: 0,
-                    }).format(listing.price)}
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
-            </Card>
+            <ListingCard key={listing.id} listing={listing} />
           ))}
         </Box>
       </Stack>

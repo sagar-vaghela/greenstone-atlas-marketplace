@@ -470,6 +470,7 @@ export function TransactionDetailsPage() {
             clientSecret={stripeClientSecret}
             amount={transaction.amount}
             currency={transaction.currency}
+            fullScreen={compactTimeline}
             onClose={() => setStripeDialogOpen(false)}
             onConfirmed={() => {
               setStripeDialogOpen(false);
@@ -488,6 +489,7 @@ function StripePaymentDialog({
   clientSecret,
   amount,
   currency,
+  fullScreen,
   onClose,
   onConfirmed,
 }: {
@@ -495,6 +497,7 @@ function StripePaymentDialog({
   clientSecret: string;
   amount: number;
   currency: string;
+  fullScreen: boolean;
   onClose: () => void;
   onConfirmed: () => void;
 }) {
@@ -525,6 +528,7 @@ function StripePaymentDialog({
     <Dialog
       open={open}
       onClose={processing ? undefined : onClose}
+      fullScreen={fullScreen}
       fullWidth
       maxWidth="sm"
     >

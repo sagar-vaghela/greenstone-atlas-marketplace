@@ -289,6 +289,8 @@ export function OfferPanel({ listing, onAccepted }: Props) {
       <Dialog
         open={Boolean(acceptTarget)}
         onClose={() => setAcceptTarget(null)}
+        fullWidth
+        maxWidth="xs"
         aria-labelledby="accept-offer-title"
       >
         <DialogTitle id="accept-offer-title">Accept this offer?</DialogTitle>
@@ -304,7 +306,14 @@ export function OfferPanel({ listing, onAccepted }: Props) {
             marks the watch as sold and closes competing offers.
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions
+          sx={{
+            flexDirection: { xs: "column-reverse", sm: "row" },
+            alignItems: { xs: "stretch", sm: "center" },
+            gap: 1,
+            "& > :not(style) ~ :not(style)": { ml: 0 },
+          }}
+        >
           <Button onClick={() => setAcceptTarget(null)}>Cancel</Button>
           <Button
             variant="contained"
@@ -335,7 +344,14 @@ export function OfferPanel({ listing, onAccepted }: Props) {
               sx={{ mt: 1 }}
             />
           </DialogContent>
-          <DialogActions>
+          <DialogActions
+            sx={{
+              flexDirection: { xs: "column-reverse", sm: "row" },
+              alignItems: { xs: "stretch", sm: "center" },
+              gap: 1,
+              "& > :not(style) ~ :not(style)": { ml: 0 },
+            }}
+          >
             <Button onClick={() => setCounterTarget(null)}>Cancel</Button>
             <Button
               type="submit"

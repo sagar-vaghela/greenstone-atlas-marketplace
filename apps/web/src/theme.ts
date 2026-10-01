@@ -1,46 +1,46 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme } from "@mui/material/styles";
 
 export const theme = createTheme({
   palette: {
-    mode: 'light',
+    mode: "light",
     primary: {
-      main: '#183b3b',
-      light: '#2f5b58',
-      dark: '#102c2c',
-      contrastText: '#fffdf8',
+      main: "#183b3b",
+      light: "#2f5b58",
+      dark: "#102c2c",
+      contrastText: "#fffdf8",
     },
     secondary: {
-      main: '#b08a4a',
-      light: '#d0ad70',
-      dark: '#765a2e',
-      contrastText: '#fffdf8',
+      main: "#b08a4a",
+      light: "#d0ad70",
+      dark: "#765a2e",
+      contrastText: "#fffdf8",
     },
     background: {
-      default: '#f7f5f0',
-      paper: '#fffdf8',
+      default: "#f7f5f0",
+      paper: "#fffdf8",
     },
     text: {
-      primary: '#1e2928',
-      secondary: '#64706c',
+      primary: "#1e2928",
+      secondary: "#64706c",
     },
-    divider: 'rgba(30, 41, 40, 0.13)',
+    divider: "rgba(30, 41, 40, 0.13)",
     success: {
-      main: '#3f765c',
+      main: "#3f765c",
     },
     warning: {
-      main: '#ad752d',
+      main: "#ad752d",
     },
     error: {
-      main: '#a94c43',
+      main: "#a94c43",
     },
   },
   typography: {
     fontFamily: '"Avenir Next", "Helvetica Neue", sans-serif',
     h1: {
       fontFamily: 'Georgia, "Times New Roman", serif',
-      fontSize: 'clamp(2.15rem, 5vw, 3.7rem)',
+      fontSize: "2.75rem",
       fontWeight: 400,
-      lineHeight: 1.05,
+      lineHeight: 1.08,
       letterSpacing: 0,
     },
     h2: {
@@ -68,7 +68,7 @@ export const theme = createTheme({
     },
     button: {
       fontWeight: 600,
-      letterSpacing: '0.02em',
+      letterSpacing: "0.02em",
     },
   },
   shape: {
@@ -80,10 +80,10 @@ export const theme = createTheme({
       styleOverrides: {
         body: {
           margin: 0,
-          backgroundColor: '#f7f5f0',
+          backgroundColor: "#f7f5f0",
         },
-        '*:focus-visible': {
-          outline: '3px solid #d0ad70',
+        "*:focus-visible": {
+          outline: "3px solid #d0ad70",
           outlineOffset: 2,
         },
       },
@@ -91,17 +91,32 @@ export const theme = createTheme({
     MuiAppBar: {
       defaultProps: { elevation: 0 },
       styleOverrides: {
-        root: { backgroundImage: 'none' },
+        root: { backgroundImage: "none" },
       },
     },
     MuiCard: {
       styleOverrides: {
-        root: { boxShadow: '0 8px 24px rgba(30, 41, 40, 0.06)' },
+        root: {
+          borderRadius: 10,
+          boxShadow: "0 4px 18px rgba(30, 41, 40, 0.06)",
+        },
+      },
+    },
+    MuiTypography: {
+      styleOverrides: {
+        h1: ({ theme }) => ({
+          [theme.breakpoints.down("sm")]: { fontSize: "2rem" },
+        }),
       },
     },
     MuiButton: {
       styleOverrides: {
-        root: { borderRadius: 7, minHeight: 42 },
+        root: {
+          borderRadius: 7,
+          minHeight: 42,
+          textTransform: "none",
+          letterSpacing: 0,
+        },
       },
     },
     MuiChip: {

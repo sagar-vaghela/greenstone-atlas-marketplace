@@ -3,11 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardActionArea,
-  CardContent,
-  CardMedia,
-  Chip,
   CircularProgress,
   FormControl,
   InputLabel,
@@ -21,7 +16,7 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import TuneIcon from "@mui/icons-material/Tune";
 import type { Listing, ListingQuery, ListingSort } from "@atlas/types";
-import { Link as RouterLink, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { useDebouncedValue } from "../app/useDebouncedValue";
 import {
@@ -34,8 +29,7 @@ import { EmptyState } from "../components/common/EmptyState";
 import { ErrorState } from "../components/common/ErrorState";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageHeader } from "../components/common/PageHeader";
-import { PriceDisplay } from "../components/common/PriceDisplay";
-import { StatusChip } from "../components/common/StatusChip";
+import { ListingCard } from "../components/listings/ListingCard";
 
 export function MarketplacePage() {
   const dispatch = useAppDispatch();
@@ -49,7 +43,6 @@ export function MarketplacePage() {
   const listStatus = useAppSelector(selectListStatus);
   const error = useAppSelector(selectListingsError);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
-  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   const query = useMemo<ListingQuery>(() => {
     const minPriceValue = searchParams.get("minPrice");
@@ -125,7 +118,9 @@ export function MarketplacePage() {
 
   return (
     <Stack spacing={4}>
-      <Box sx={{ borderBottom: 1, borderColor: "divider", pb: { xs: 4, md: 6 } }}>
+      <Box
+        sx={{ borderBottom: 1, borderColor: "divider", pb: { xs: 4, md: 6 } }}
+      >
         <PageHeader
           eyebrow="The considered collection"
           title="Find the watch that stays with you."
@@ -136,7 +131,15 @@ export function MarketplacePage() {
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
           fullWidth
-          slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon color="action" /></InputAdornment> } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            },
+          }}
         />
       </Box>
 
@@ -148,7 +151,11 @@ export function MarketplacePage() {
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", sm: "repeat(4, 1fr)" },
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, minmax(0, 1fr))",
+              lg: "repeat(4, minmax(0, 1fr))",
+            },
             gap: 2,
           }}
         >
@@ -208,68 +215,43 @@ export function MarketplacePage() {
         )}
       </Stack>
 
-      {listStatus === "loading" && <LoadingState label="Loading listings" skeleton={listings.length === 0} />}
+      {listStatus === "loading" && (
+        <LoadingState
+          label="Loading listings"
+          skeleton={listings.length === 0}
+        />
+      )}
 
       {listStatus === "failed" && (
-        <ErrorState message={error ?? "Unable to load listings."} onRetry={loadListings} />
+        <ErrorState
+          message={error ?? "Unable to load listings."}
+          onRetry={loadListings}
+        />
       )}
 
       {listStatus === "succeeded" && listings.length === 0 && (
-        <EmptyState title="No watches found" description="Try adjusting your search or filters." action={hasFilters ? <Button onClick={clearFilters}>Clear filters</Button> : undefined} />
+        <EmptyState
+          title="No watches found"
+          description="Try adjusting your search or filters."
+          action={
+            hasFilters ? (
+              <Button onClick={clearFilters}>Clear filters</Button>
+            ) : undefined
+          }
+        />
       )}
 
       {listings.length > 0 && listStatus !== "idle" && (
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" }, gap: 2.5 }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" },
+            gap: 2.5,
+            alignItems: "stretch",
+          }}
+        >
           {listings.map((listing) => (
-            <Card key={listing.id} variant="outlined" sx={{ overflow: "hidden", bgcolor: "background.paper", transition: "transform 180ms ease, box-shadow 180ms ease", "&:hover": { transform: "translateY(-3px)", boxShadow: 5 } }}>
-              <CardActionArea
-                component={RouterLink}
-                to={`/listings/${listing.id}`}
-              >
-                {listing.images?.[0] &&
-                !failedImages.has(listing.images[0].url) ? (
-                  <CardMedia
-                    component="img"
-                    image={listing.images[0].url}
-                    alt={listing.images[0].alt || listing.title}
-                    onError={() =>
-                      setFailedImages((current) =>
-                        new Set(current).add(listing.images[0].url),
-                      )
-                    }
-                    sx={{ aspectRatio: "16 / 9", objectFit: "cover" }}
-                  />
-                ) : (
-                  <Box
-                    sx={{
-                      aspectRatio: "16 / 9",
-                      display: "grid",
-                      placeItems: "center",
-                      bgcolor: "action.hover",
-                      color: "text.secondary",
-                    }}
-                  >
-                    <Typography variant="body2">No image available</Typography>
-                  </Box>
-                )}
-                <CardContent>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
-                  >
-                    <Typography variant="h5" component="h2" sx={{ flex: 1 }}>
-                      {listing.title}
-                    </Typography>
-                    <StatusChip status={listing.status} />
-                  </Stack>
-                  <PriceDisplay amount={listing.price} currency={listing.currency} variant="h6" sx={{ mt: 1, color: "primary.main" }} />
-                  <Typography color="text.secondary" sx={{ mt: 1 }}>
-                    {listing.category}
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
-            </Card>
+            <ListingCard key={listing.id} listing={listing} />
           ))}
         </Box>
       )}

@@ -107,7 +107,11 @@ export function ListingImageManager({
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)" },
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, minmax(0, 1fr))",
+              md: "repeat(3, minmax(0, 1fr))",
+            },
             gap: 2,
           }}
         >
@@ -141,9 +145,9 @@ export function ListingImageManager({
                 />
               )}
               <Stack
-                direction="row"
+                direction={{ xs: "column", sm: "row" }}
                 spacing={1}
-                sx={{ p: 1, alignItems: "center" }}
+                sx={{ p: 1, alignItems: { xs: "stretch", sm: "center" } }}
               >
                 <Chip
                   label={index === 0 ? "Cover" : `Image ${index + 1}`}

@@ -5,16 +5,16 @@ import {
   Button,
   CardMedia,
   CircularProgress,
-  Divider,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Chip,
   Stack,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import type { ListingStatus } from "@atlas/types";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
@@ -41,12 +41,6 @@ const statusLabels: Record<ListingStatus, string> = {
   sold: "Sold",
 };
 
-const statusColors: Record<ListingStatus, "default" | "success" | "info"> = {
-  draft: "default",
-  active: "success",
-  sold: "info",
-};
-
 export function ListingDetailsPage() {
   const { id } = useParams();
   const dispatch = useAppDispatch();
@@ -58,6 +52,8 @@ export function ListingDetailsPage() {
   const statusUpdateStatus = useAppSelector(selectStatusUpdateStatus);
   const statusUpdateError = useAppSelector(selectStatusUpdateError);
   const [isSoldDialogOpen, setIsSoldDialogOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -146,207 +142,281 @@ export function ListingDetailsPage() {
   const markImageFailed = (url: string) => {
     setFailedImages((current) => new Set(current).add(url));
   };
+  const gallery =
+    images.length === 0 ? (
+      <Box
+        sx={{
+          aspectRatio: "4 / 3",
+          display: "grid",
+          placeItems: "center",
+          bgcolor: "action.hover",
+          color: "text.secondary",
+        }}
+      >
+        <Typography>No images available for this listing.</Typography>
+      </Box>
+    ) : (
+      <Stack spacing={2} sx={{ minWidth: 0 }}>
+        <Button
+          onClick={() => setIsLightboxOpen(true)}
+          aria-label={`Open ${imageAlt} in full screen`}
+          sx={{ p: 0, display: "block", textTransform: "none", minWidth: 0 }}
+        >
+          {failedImages.has(selectedImage.url) ? (
+            <Box
+              sx={{
+                aspectRatio: "4 / 3",
+                display: "grid",
+                placeItems: "center",
+                bgcolor: "action.hover",
+                color: "text.secondary",
+              }}
+            >
+              <Typography>Image preview unavailable</Typography>
+            </Box>
+          ) : (
+            <CardMedia
+              component="img"
+              image={selectedImage.url}
+              alt={imageAlt}
+              onError={() => markImageFailed(selectedImage.url)}
+              sx={{
+                aspectRatio: "4 / 3",
+                objectFit: "contain",
+                bgcolor: "action.hover",
+              }}
+            />
+          )}
+        </Button>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ overflowX: "auto", pb: 1, maxWidth: "100%" }}
+        >
+          {images.map((image, index) => (
+            <Button
+              key={image.url}
+              onClick={() => setSelectedImageIndex(index)}
+              aria-label={`Show ${image.alt || `${listing.title} image ${index + 1}`}`}
+              aria-current={index === selectedImageIndex ? "true" : undefined}
+              sx={{
+                flex: "0 0 88px",
+                minWidth: 88,
+                width: 88,
+                p: 0.5,
+                border: 2,
+                borderColor:
+                  index === selectedImageIndex ? "primary.main" : "divider",
+                bgcolor: "background.paper",
+              }}
+            >
+              {failedImages.has(image.url) ? (
+                <Box
+                  sx={{
+                    aspectRatio: "1",
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  <Typography variant="caption">Unavailable</Typography>
+                </Box>
+              ) : (
+                <CardMedia
+                  component="img"
+                  image={image.url}
+                  alt={image.alt || `${listing.title} thumbnail ${index + 1}`}
+                  onError={() => markImageFailed(image.url)}
+                  sx={{ aspectRatio: "1", objectFit: "cover" }}
+                />
+              )}
+            </Button>
+          ))}
+        </Stack>
+      </Stack>
+    );
 
   return (
     <Stack spacing={3}>
       <Button component={RouterLink} to="/" sx={{ alignSelf: "flex-start" }}>
         Back to marketplace
       </Button>
-      <Stack spacing={1}>
-        <Typography variant="h1">{listing.title}</Typography>
-        <Typography color="text.secondary">{listing.category}</Typography>
-        <Box>
-          <StatusChip status={listing.status} />
-        </Box>
-      </Stack>
-      <SellerCard sellerId={listing.sellerId} />
-      {currentUser && currentUser.id !== listing.sellerId && (
-        <Button
-          variant="outlined"
-          onClick={() => {
-            void dispatch(createConversationAction(listing.id)).then(
-              (result) => {
-                if (createConversationAction.fulfilled.match(result)) {
-                  void navigate(`/messages/${result.payload.id}`);
-                }
-              },
-            );
-          }}
-        >
-          Message seller
-        </Button>
-      )}
-      {currentUser ? (
-        <OfferPanel
-          listing={listing}
-          onAccepted={() => void dispatch(fetchListingById(listing.id))}
-        />
-      ) : (
-        <Alert
-          severity="info"
-          action={
-            <Button
-              component={RouterLink}
-              to={`/login?returnTo=${encodeURIComponent(`/listings/${listing.id}`)}`}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "minmax(0, 1fr)",
+            md: "minmax(0, 1.35fr) minmax(300px, 0.75fr)",
+          },
+          gap: { xs: 3, md: 5 },
+          alignItems: "start",
+        }}
+      >
+        <Stack spacing={3} sx={{ minWidth: 0 }}>
+          {gallery}
+          <Box
+            component="section"
+            aria-labelledby="listing-description-heading"
+          >
+            <Typography
+              id="listing-description-heading"
+              variant="h5"
+              component="h2"
+              sx={{ mb: 1 }}
             >
-              Sign in
-            </Button>
-          }
-        >
-          Please sign in to make or manage offers.
-        </Alert>
-      )}
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-        {currentUser?.id === listing.sellerId && (
-          <Button
-            component={RouterLink}
-            to={`/listings/${listing.id}/edit`}
-            variant="contained"
-            disabled={statusUpdateStatus === "loading"}
-          >
-            Edit listing
-          </Button>
-        )}
-        {currentUser?.id === listing.sellerId && listing.status !== "sold" && (
-          <Button
-            variant="outlined"
-            onClick={() => {
-              if (listing.status === "active") {
-                setIsSoldDialogOpen(true);
-              } else {
-                handleStatusUpdate();
-              }
-            }}
-            disabled={statusUpdateStatus === "loading"}
-            startIcon={
-              statusUpdateStatus === "loading" ? (
-                <CircularProgress size={18} />
-              ) : undefined
-            }
-          >
-            {statusUpdateStatus === "loading" ? "Updating..." : actionLabel}
-          </Button>
-        )}
-      </Stack>
-      {statusUpdateStatus === "succeeded" && (
-        <Alert severity="success">
-          Listing status updated to {statusLabels[listing.status].toLowerCase()}
-          .
-        </Alert>
-      )}
-      {statusUpdateStatus === "failed" && statusUpdateError && (
-        <Alert severity="error">{statusUpdateError}</Alert>
-      )}
-      <Divider />
-      {images.length === 0 ? (
-        <Box
-          sx={{
-            aspectRatio: { xs: "4 / 3", sm: "16 / 9" },
-            display: "grid",
-            placeItems: "center",
-            bgcolor: "action.hover",
-            color: "text.secondary",
-          }}
-        >
-          <Typography>No images available for this listing.</Typography>
-        </Box>
-      ) : (
-        <Stack spacing={2}>
-          <Button
-            onClick={() => setIsLightboxOpen(true)}
-            aria-label={`Open ${imageAlt} in full screen`}
-            sx={{ p: 0, display: "block", textTransform: "none" }}
-          >
-            {failedImages.has(selectedImage.url) ? (
-              <Box
-                sx={{
-                  aspectRatio: { xs: "4 / 3", sm: "16 / 9" },
-                  display: "grid",
-                  placeItems: "center",
-                  bgcolor: "action.hover",
-                  color: "text.secondary",
-                }}
-              >
-                <Typography>Image preview unavailable</Typography>
-              </Box>
-            ) : (
-              <CardMedia
-                component="img"
-                image={selectedImage.url}
-                alt={imageAlt}
-                onError={() => markImageFailed(selectedImage.url)}
-                sx={{
-                  aspectRatio: { xs: "4 / 3", sm: "16 / 9" },
-                  objectFit: "contain",
-                  bgcolor: "action.hover",
-                }}
-              />
-            )}
-          </Button>
-          <Stack direction="row" spacing={1} sx={{ overflowX: "auto", pb: 1 }}>
-            {images.map((image, index) => (
-              <Button
-                key={image.url}
-                onClick={() => setSelectedImageIndex(index)}
-                aria-label={`Show ${image.alt || `${listing.title} image ${index + 1}`}`}
-                aria-current={index === selectedImageIndex ? "true" : undefined}
-                sx={{
-                  minWidth: 88,
-                  width: 88,
-                  p: 0.5,
-                  border: 2,
-                  borderColor:
-                    index === selectedImageIndex ? "primary.main" : "divider",
-                  bgcolor: "background.paper",
-                }}
-              >
-                {failedImages.has(image.url) ? (
-                  <Box
-                    sx={{
-                      aspectRatio: "1",
-                      display: "grid",
-                      placeItems: "center",
-                    }}
-                  >
-                    <Typography variant="caption">Unavailable</Typography>
-                  </Box>
-                ) : (
-                  <CardMedia
-                    component="img"
-                    image={image.url}
-                    alt={image.alt || `${listing.title} thumbnail ${index + 1}`}
-                    onError={() => markImageFailed(image.url)}
-                    sx={{ aspectRatio: "1", objectFit: "cover" }}
-                  />
-                )}
-              </Button>
-            ))}
-          </Stack>
+              Details
+            </Typography>
+            <Typography
+              sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+            >
+              {listing.description}
+            </Typography>
+          </Box>
         </Stack>
-      )}
-      <Typography>{listing.description}</Typography>
-      <Stack spacing={1}>
-        <Typography variant="h4">
-          {new Intl.NumberFormat("en-AE", {
-            style: "currency",
-            currency: listing.currency,
-            maximumFractionDigits: 0,
-          }).format(listing.price)}
-        </Typography>
-        <Typography>
-          <strong>Currency:</strong> {listing.currency}
-        </Typography>
-        <Typography>
-          <strong>Status:</strong> {statusLabels[listing.status]}
-        </Typography>
-      </Stack>
+        <Stack
+          spacing={2.5}
+          sx={{ minWidth: 0, position: { md: "sticky" }, top: { md: 3 } }}
+        >
+          <Stack spacing={1}>
+            <Typography variant="body2" color="text.secondary">
+              {listing.category}
+            </Typography>
+            <Typography
+              variant="h1"
+              component="h1"
+              sx={{ overflowWrap: "anywhere" }}
+            >
+              {listing.title}
+            </Typography>
+            <PriceDisplay
+              amount={listing.price}
+              currency={listing.currency}
+              variant="h4"
+              sx={{ color: "primary.main" }}
+            />
+            <Box>
+              <StatusChip status={listing.status} />
+            </Box>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              useFlexGap
+              sx={{ pt: 0.5, flexWrap: "wrap" }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Currency: {listing.currency}
+              </Typography>
+              {listing.condition && (
+                <Typography variant="body2" color="text.secondary">
+                  Condition: {listing.condition}
+                </Typography>
+              )}
+              {listing.year && (
+                <Typography variant="body2" color="text.secondary">
+                  Year: {listing.year}
+                </Typography>
+              )}
+              {listing.location && (
+                <Typography variant="body2" color="text.secondary">
+                  Location: {listing.location}
+                </Typography>
+              )}
+            </Stack>
+          </Stack>
+          <SellerCard sellerId={listing.sellerId} />
+          {currentUser && currentUser.id !== listing.sellerId && (
+            <Button
+              variant="outlined"
+              onClick={() => {
+                void dispatch(createConversationAction(listing.id)).then(
+                  (result) => {
+                    if (createConversationAction.fulfilled.match(result)) {
+                      void navigate(`/messages/${result.payload.id}`);
+                    }
+                  },
+                );
+              }}
+            >
+              Message seller
+            </Button>
+          )}
+          {currentUser ? (
+            <OfferPanel
+              listing={listing}
+              onAccepted={() => void dispatch(fetchListingById(listing.id))}
+            />
+          ) : (
+            <Alert
+              severity="info"
+              action={
+                <Button
+                  component={RouterLink}
+                  to={`/login?returnTo=${encodeURIComponent(`/listings/${listing.id}`)}`}
+                >
+                  Sign in
+                </Button>
+              }
+            >
+              Please sign in to make or manage offers.
+            </Alert>
+          )}
+          {(currentUser?.id === listing.sellerId ||
+            statusUpdateStatus === "succeeded" ||
+            statusUpdateError) && (
+            <Stack spacing={1}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                {currentUser?.id === listing.sellerId && (
+                  <Button
+                    component={RouterLink}
+                    to={`/listings/${listing.id}/edit`}
+                    variant="contained"
+                    disabled={statusUpdateStatus === "loading"}
+                  >
+                    Edit listing
+                  </Button>
+                )}
+                {currentUser?.id === listing.sellerId &&
+                  listing.status !== "sold" && (
+                    <Button
+                      variant="outlined"
+                      onClick={() =>
+                        listing.status === "active"
+                          ? setIsSoldDialogOpen(true)
+                          : handleStatusUpdate()
+                      }
+                      disabled={statusUpdateStatus === "loading"}
+                      startIcon={
+                        statusUpdateStatus === "loading" ? (
+                          <CircularProgress size={18} />
+                        ) : undefined
+                      }
+                    >
+                      {statusUpdateStatus === "loading"
+                        ? "Updating..."
+                        : actionLabel}
+                    </Button>
+                  )}
+              </Stack>
+              {statusUpdateStatus === "succeeded" && (
+                <Alert severity="success">
+                  Listing status updated to{" "}
+                  {statusLabels[listing.status].toLowerCase()}.
+                </Alert>
+              )}
+              {statusUpdateStatus === "failed" && statusUpdateError && (
+                <Alert severity="error">{statusUpdateError}</Alert>
+              )}
+            </Stack>
+          )}
+        </Stack>
+      </Box>
       <Dialog
         open={isLightboxOpen}
         onClose={() => setIsLightboxOpen(false)}
+        fullScreen={isMobile}
         fullWidth
         maxWidth="lg"
       >
-        <DialogTitle>{imageAlt}</DialogTitle>
+        <DialogTitle sx={{ overflowWrap: "anywhere" }}>{imageAlt}</DialogTitle>
         <DialogContent>
           {selectedImage && !failedImages.has(selectedImage.url) && (
             <CardMedia

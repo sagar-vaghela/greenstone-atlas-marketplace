@@ -195,7 +195,14 @@ export function ListingForm<T extends ListingFormData>({
           error={fieldErrors.images}
           disabled={isSubmitting}
         />
-        <Stack direction="row" spacing={2} sx={{ justifyContent: "flex-end" }}>
+        <Stack
+          direction={{ xs: "column-reverse", sm: "row" }}
+          spacing={2}
+          sx={{
+            alignItems: { xs: "stretch", sm: "center" },
+            justifyContent: "flex-end",
+          }}
+        >
           <Button component={RouterLink} to={cancelTo} disabled={isSubmitting}>
             Cancel
           </Button>
