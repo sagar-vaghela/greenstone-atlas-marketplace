@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Transaction } from "@atlas/types";
 import { apiClient } from "../../api/client";
 import { selectTransactions } from "./transactionsSlice";
 
@@ -11,7 +12,7 @@ describe("frontend hardening regressions", () => {
   });
 
   it("keeps transaction selector results stable for identical state", () => {
-    const transaction = {
+    const transaction: Transaction = {
       id: "txn-1",
       listingId: "listing-1",
       offerId: "offer-1",
@@ -21,13 +22,13 @@ describe("frontend hardening regressions", () => {
       currency: "USD",
       status: "pending_payment",
       paymentStatus: "pending",
-      fulfilmentStatus: "not_started",
+      fulfilmentStatus: "pending",
       version: 1,
       createdAt: "2025-01-01T00:00:00.000Z",
       updatedAt: "2025-01-01T00:00:00.000Z",
     };
 
-    const state: any = {
+    const state: Parameters<typeof selectTransactions>[0] = {
       transactions: {
         items: { [transaction.id]: transaction },
         selectedId: transaction.id,

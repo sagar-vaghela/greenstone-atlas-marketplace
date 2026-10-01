@@ -37,9 +37,9 @@ describe("api config", () => {
     expect(isOriginAllowed("http://localhost:5173", productionConfig)).toBe(
       false,
     );
-    expect(
-      isOriginAllowed("https://untrusted.example", productionConfig),
-    ).toBe(false);
+    expect(isOriginAllowed("https://untrusted.example", productionConfig)).toBe(
+      false,
+    );
   });
 
   it("keeps HTTPS cookies enabled for staging", () => {
@@ -51,9 +51,7 @@ describe("api config", () => {
 
     expect(stagingConfig.secureCookies).toBe(true);
     expect(stagingConfig.allowLocalOrigins).toBe(false);
-    expect(isOriginAllowed("http://localhost:5173", stagingConfig)).toBe(
-      false,
-    );
+    expect(isOriginAllowed("http://localhost:5173", stagingConfig)).toBe(false);
   });
 
   it("rejects Stripe live secret keys in production-like environments", () => {

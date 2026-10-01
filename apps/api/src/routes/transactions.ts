@@ -26,23 +26,6 @@ const error = (
   message: string,
 ) => reply.status(status).send({ error: { code, message } });
 
-const publishTransactionUpdate = (
-  eventBus: MarketplaceEventBus,
-  type: "transaction.created" | "transaction.payment_updated" | "transaction.fulfilment_updated" | "transaction.completed" | "transaction.cancelled" | "transaction.disputed",
-  transaction: { id: string; buyerId: string; sellerId: string; listingId: string; offerId: string; },
-): void => {
-  eventBus.publish(
-    {
-      type,
-      listingId: transaction.listingId,
-      offerId: transaction.offerId,
-      actorUserId: transaction.buyerId,
-      payload: { transaction: transaction as any },
-    },
-    [transaction.buyerId, transaction.sellerId],
-  );
-};
-
 export const registerTransactionRoutes = async (
   app: FastifyInstance,
   options: Options,
@@ -74,34 +57,6 @@ export const registerTransactionRoutes = async (
     const transactions = await options.transactionRepository.findForUser(user.id);
     return { items: transactions };
   });
-
-  const transitionOrError = async (
-    reply: any,
-    transaction: Awaited<ReturnType<TransactionRepository['findById']>>,
-    targetStatus: any,
-    unit: 'payment' | 'fulfilment' | 'status',
-  ) => {
-    if (!transaction) {
-      return error(reply, 404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
-    }
-    if (transaction.buyerId !== reply.request?.user?.id && transaction.sellerId !== reply.request?.user?.id) {
-      return error(reply, 403, 'FORBIDDEN', 'You do not have access to this transaction.');
-    }
-    try {
-      const updated =
-        unit === 'status'
-          ? await options.transactionRepository.updateStatus(transaction.id, targetStatus)
-          : unit === 'payment'
-            ? await options.transactionRepository.updatePaymentStatus(transaction.id, targetStatus)
-            : await options.transactionRepository.updateFulfilmentStatus(transaction.id, targetStatus);
-      return updated;
-    } catch (caught) {
-      if (caught instanceof InvalidTransactionStateError) {
-        return error(reply, 409, 'INVALID_TRANSACTION_STATE', caught.message);
-      }
-      throw caught;
-    }
-  };
 
   app.post<{ Params: IdParams; Body: PaymentBody }>('/transactions/:id/payment', async (request, reply) => {
     const user = requireAuthenticatedUser(request, reply);
