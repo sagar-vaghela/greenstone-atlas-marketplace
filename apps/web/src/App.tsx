@@ -51,19 +51,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-const hasActiveSessionCookie = () =>
-  document.cookie
-    .split(";")
-    .some((cookie) => cookie.trim().startsWith("atlas_session="));
-
 export function App() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   const connectionStatus = useAppSelector(selectRealtime).connectionStatus;
   useEffect(() => {
-    if (!hasActiveSessionCookie()) {
-      return;
-    }
     void dispatch(fetchCurrentUser());
   }, [dispatch]);
   useEffect(() => {
