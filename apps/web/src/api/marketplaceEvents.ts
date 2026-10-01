@@ -1,24 +1,5 @@
-import type { MarketplaceEvent, MarketplaceEventType } from "@atlas/types";
+import type { MarketplaceEvent } from "@atlas/types";
 import { API_BASE_URL } from "./client";
-
-const eventTypes: MarketplaceEventType[] = [
-  "offer.created",
-  "offer.countered",
-  "offer.accepted",
-  "offer.rejected",
-  "offer.withdrawn",
-  "listing.status_changed",
-  "transaction.created",
-  "transaction.payment_updated",
-  "transaction.fulfilment_updated",
-  "transaction.completed",
-  "transaction.cancelled",
-  "transaction.disputed",
-  "message.created",
-  "conversation.read",
-  "conversation.typing",
-  "notification.created",
-];
 
 export type EventConnectionStatus =
   | "connecting"
@@ -31,26 +12,47 @@ export const connectMarketplaceEvents = (
   onStatus: (status: EventConnectionStatus) => void,
 ): (() => void) => {
   onStatus("connecting");
-  const source = new EventSource(`${API_BASE_URL}/events`, {
-    withCredentials: true,
-  });
+  const eventUrl = new URL(`${API_BASE_URL}/events`);
+  eventUrl.protocol = eventUrl.protocol === "https:" ? "wss:" : "ws:";
+
   let closed = false;
-  source.onopen = () => onStatus("connected");
-  source.onerror = () => {
-    if (!closed) onStatus("reconnecting");
-  };
-  for (const type of eventTypes) {
-    source.addEventListener(type, (message) => {
+  let reconnectAttempts = 0;
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  let activeSocket: WebSocket | undefined;
+
+  const connect = () => {
+    if (closed) return;
+    const connection = new WebSocket(eventUrl);
+    activeSocket = connection;
+    connection.addEventListener("open", () => {
+      reconnectAttempts = 0;
+      onStatus("connected");
+    });
+    connection.addEventListener("message", (message) => {
+      if (typeof message.data !== "string") return;
       try {
-        onEvent(JSON.parse((message as MessageEvent).data) as MarketplaceEvent);
+        onEvent(JSON.parse(message.data) as MarketplaceEvent);
       } catch {
         // Ignore malformed events; REST remains authoritative.
       }
     });
-  }
+    connection.addEventListener("error", () => connection.close());
+    connection.addEventListener("close", () => {
+      if (activeSocket === connection) activeSocket = undefined;
+      if (closed) return;
+      onStatus("reconnecting");
+      const delay = Math.min(500 * 2 ** reconnectAttempts, 10_000);
+      reconnectAttempts += 1;
+      reconnectTimer = setTimeout(connect, delay);
+    });
+  };
+
+  connect();
   return () => {
     closed = true;
-    source.close();
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    activeSocket?.close();
+    activeSocket = undefined;
     onStatus("disconnected");
   };
 };

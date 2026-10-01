@@ -93,6 +93,11 @@ export function ConversationPage() {
   }, [conversationId, dispatch, typingIndicator]);
 
   useLayoutEffect(() => {
+    const history = historyRef.current;
+    if (history) history.scrollTop = history.scrollHeight;
+  }, [messages[messages.length - 1]?.id]);
+
+  useLayoutEffect(() => {
     if (!typingIndicator || typingIndicator.userId === user?.id) return;
     const history = historyRef.current;
     if (history) history.scrollTop = history.scrollHeight;

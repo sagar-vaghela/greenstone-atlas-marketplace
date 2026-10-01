@@ -196,33 +196,36 @@ Cross-state rules are enforced server-side:
 
 Offer commands remain REST requests. After a successful repository mutation, the
 API publishes a recipient-scoped `MarketplaceEvent` to an in-memory
-`MarketplaceEventBus`; authenticated clients receive those events through
-`GET /events` using Server-Sent Events, and Redux applies version-aware updates.
+`MarketplaceEventBus`; authenticated clients receive those events through the
+WebSocket upgrade at `GET /events`, and Redux applies version-aware updates.
 
 ```text
-REST command -> Repository -> Event Bus -> Authenticated SSE -> Redux -> React
+REST command -> Repository -> Event Bus -> Authenticated WebSocket -> Redux -> React
 ```
 
-SSE fits this interview implementation because traffic is primarily
-server-to-client, commands already use REST, and the browser provides a native
-reconnecting client without a WebSocket dependency. The HTTP-only session cookie
-authenticates the stream. The bus maps user ids to listeners, so sellers receive
+WebSockets fit this implementation because updates flow primarily from server
+to client while commands continue to use REST. The browser uses its native
+WebSocket client with explicit exponential-backoff reconnection. The HTTP-only
+session cookie authenticates the connection, and the API validates the request
+origin. The bus maps user ids to listeners, so sellers receive
 their listing offers and buyers receive only their own offer and listing events;
 unrelated users are not subscribed to those events. Event payloads contain no
 passwords, sessions, emails, or competing buyers' private negotiations.
 
 Each event has a unique id and server timestamp. Offers and listings have a
 server-controlled version; Redux ignores an event older than the state it already
-holds. REST remains authoritative, and the client refetches offers when the SSE
-connection is established or restored. SSE ordering is per connection only, so a
-production replay-capable transport should use event ids and a shared log.
+holds. REST remains authoritative, and the client refreshes connection-dependent
+unread notification counts after the WebSocket connects or reconnects. WebSocket
+frames are ordered within a connection, but events sent while disconnected are
+not replayed; other missed data must be refetched through REST. A production
+replay-capable transport should use event ids and a shared log.
 
 The current in-memory bus is reliable only for a single API instance. A scaled
 deployment would publish domain events to a shared broker and deliver them from a
 real-time gateway:
 
 ```text
-API instances -> EventBridge / SNS / SQS / Redis -> Real-time gateway -> WebSocket or SSE
+API instances -> EventBridge / SNS / SQS / Redis -> Real-time gateway -> WebSocket
 ```
 
 Possible managed choices include AWS EventBridge, SNS/SQS, API Gateway WebSocket,
@@ -272,8 +275,8 @@ provider secrets remain server-only.
 The frontend normalizes network and HTTP failures into `ApiError`, preserves
 the request ID for support diagnostics, clears expired sessions through the
 existing centralized auth restore flow, and provides a recovery boundary for
-unexpected React errors. SSE exposes connecting, connected, reconnecting and
-disconnected states, cleans up listeners and heartbeats, and never logs event
+unexpected React errors. WebSockets expose connecting, connected, reconnecting and
+disconnected states, clean up the socket and retry timer, and never log event
 contents. REST remains authoritative after reconnects.
 
 Intentional limitations: the demo uses an in-process event bus, so multiple
@@ -291,7 +294,7 @@ Commit 20 persists actionable user activity separately from transport events:
 
 ```text
 Domain action -> MarketplaceEvent -> NotificationService -> repository
-             -> recipient-scoped SSE -> Redux -> badge / Snackbar / activity center
+             -> recipient-scoped WebSocket -> Redux -> badge / Snackbar / activity center
 ```
 
 `Notification` records are lightweight and contain a server-derived recipient,
@@ -309,10 +312,10 @@ uses unique `id` and `userId + sourceEventId` indexes, plus user/time and
 unread query indexes, to prevent duplicate projections and keep inbox queries
 bounded. The in-memory repository follows the same contract for local runs.
 
-`notification.created` is an additional recipient-scoped SSE event; existing
+`notification.created` is an additional recipient-scoped WebSocket event; existing
 offer, message, transaction, and listing events continue to synchronize their
-feature slices. Redux hydrates through REST, prepends and deduplicates SSE
-notifications, reconciles unread counts after SSE reconnect, and marks read
+feature slices. Redux hydrates through REST, prepends and deduplicates WebSocket
+notifications, reconciles unread counts after WebSocket reconnect, and marks read
 state only when a notification is opened or the explicit mark-all action is
 used. The activity center supports cursor pagination and navigates through the
 existing listing, conversation, offer, and transaction routes without embedding
@@ -341,7 +344,7 @@ listing, buyer and seller; offer and transaction ids remain optional so a buyer
 can ask a question before negotiating or purchasing.
 
 ```text
-Conversation -> Messages -> REST persistence -> recipient-scoped SSE -> Redux synchronization
+Conversation -> Messages -> REST persistence -> recipient-scoped WebSocket -> Redux synchronization
 ```
 
 The API derives buyer, seller and sender identity from the authenticated session.
@@ -363,13 +366,11 @@ indexes. Messages have unique id, conversation/created-time, and sender indexes.
 Read state is stored as participant-specific last-read timestamps and unread
 counts are calculated server-side.
 
-New `message.created` and `conversation.read` events use the existing SSE event
+New `message.created` and `conversation.read` events use the existing WebSocket event
 bus and are published only to the other participant. Redux deduplicates message
 ids, preserves chronological order, updates previews and unread counts, and
-continues to use REST as the source of truth after reconnects. SSE was chosen
-because this workflow already uses REST commands and primarily needs
-server-to-client notifications; a shared broker plus WebSocket or replayable
-SSE gateway should be considered if scale requires it.
+continues to use REST as the source of truth after reconnects. A shared broker
+plus replay-capable WebSocket gateway should be considered if scale requires it.
 
 Attachments, typing indicators, message editing/deletion, moderation, abuse
 reporting, notification preferences, email/push notifications, and a brokered
@@ -392,7 +393,7 @@ The payment boundary is:
 React + Redux -> POST /transactions/:id/payment-intent
   -> PaymentProvider -> Stripe PaymentIntent
   -> POST /webhooks/stripe -> signature verification
-  -> idempotent transaction reconciliation -> notification/SSE -> Redux
+  -> idempotent transaction reconciliation -> notification/WebSocket -> Redux
 ````
 
 The API derives the amount and buyer authorization from the transaction. Existing
@@ -411,7 +412,7 @@ browser confirmation response, changes the Atlas transaction to paid.
 PaymentIntent creation reuses the stored provider reference and sends an
 idempotency key to Stripe. Webhook event ids are also used as Atlas payment
 attempt keys, so replayed events do not duplicate transaction mutations,
-notifications, or SSE updates. The DemoPaymentProvider remains available for
+notifications, or WebSocket updates. The DemoPaymentProvider remains available for
 offline development and regression tests.
 
 For the automated browser journey, place fresh rotated Stripe Test Mode keys in

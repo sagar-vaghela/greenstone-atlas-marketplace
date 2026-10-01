@@ -18,6 +18,71 @@ describe("development CORS defaults", () => {
   });
 });
 
+describe("websocket marketplace events", () => {
+  let app: FastifyInstance;
+  let eventBus: MarketplaceEventBus;
+
+  beforeEach(async () => {
+    eventBus = new MarketplaceEventBus();
+    app = buildApp({ eventBus, secureCookies: false });
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it("delivers JSON events only through the authenticated user connection", async () => {
+    const cookie = await login(app, "buyer@example.com", "buyer123");
+    const socket = await app.injectWS("/events", {
+      headers: { cookie, origin: "http://localhost:5173" },
+    });
+    const receivedEvent = new Promise<MarketplaceEvent>((resolve, reject) => {
+      socket.once("message", (message) => {
+        resolve(JSON.parse(message.toString()) as MarketplaceEvent);
+      });
+      socket.once("error", reject);
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    eventBus.publish(
+      {
+        type: "notification.created",
+        listingId: "listing-1",
+        actorUserId: "demo-seller",
+        recipientUserId: "demo-buyer",
+        payload: {
+          notification: {
+            id: "notification-1",
+            userId: "demo-buyer",
+            type: "message",
+            title: "New message",
+            body: "You have a new message.",
+            resource: { type: "conversation", id: "conversation-1" },
+            readAt: null,
+            createdAt: new Date().toISOString(),
+          },
+        },
+      },
+      ["demo-buyer"],
+    );
+
+    await expect(receivedEvent).resolves.toMatchObject({
+      type: "notification.created",
+      recipientUserId: "demo-buyer",
+    });
+    socket.terminate();
+  });
+
+  it("rejects websocket upgrades without a session", async () => {
+    await expect(
+      app.injectWS("/events", {
+        headers: { origin: "http://localhost:5173" },
+      }),
+    ).rejects.toThrow("Unexpected server response: 401");
+  });
+});
+
 describe("authentication and listings", () => {
   let app: FastifyInstance;
   beforeEach(async () => {

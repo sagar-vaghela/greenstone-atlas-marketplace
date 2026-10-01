@@ -1,4 +1,5 @@
 import cors from "@fastify/cors";
+import websocket from "@fastify/websocket";
 import Fastify from "fastify";
 import { config } from "./config/index.js";
 import { InMemoryListingRepository } from "./repositories/in-memory-listing-repository.js";
@@ -202,6 +203,8 @@ export const buildApp = (options: BuildAppOptions = {}) => {
       },
     });
   });
+
+  app.register(websocket);
 
   const listingRepository =
     options.repository ?? new InMemoryListingRepository();

@@ -207,6 +207,24 @@ test("chat shows live typing and sends on Enter while Shift+Enter inserts a newl
       messageHistory.getByText(`${firstLine}\nsecond line`),
     ).toBeVisible();
     await expect(typingBubble).toBeHidden();
+
+    const buyerComposer = page.getByRole("textbox", { name: "Message" });
+    const ownMessageText = `own message ${Date.now()}`;
+    await messageHistory.evaluate((history) => {
+      history.scrollTop = 0;
+    });
+    await buyerComposer.fill(ownMessageText);
+    await buyerComposer.press("Enter");
+    await expect(messageHistory.getByText(ownMessageText)).toBeVisible();
+    await expect
+      .poll(() =>
+        messageHistory.evaluate(
+          (history) =>
+            history.scrollTop + history.clientHeight >=
+            history.scrollHeight - 1,
+        ),
+      )
+      .toBe(true);
   } finally {
     await sellerContext.close();
   }
