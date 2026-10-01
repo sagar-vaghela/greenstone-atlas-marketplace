@@ -1,4 +1,5 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 export type ApiErrorKind =
   | "validation"
@@ -44,7 +45,10 @@ function classifyErrorKind(status: number): ApiErrorKind {
   return "unknown";
 }
 
-function withTimeoutSignal(signal: AbortSignal | null | undefined, timeoutMs?: number) {
+function withTimeoutSignal(
+  signal: AbortSignal | null | undefined,
+  timeoutMs?: number,
+) {
   if (timeoutMs === undefined || timeoutMs <= 0) return signal ?? undefined;
 
   const controller = new AbortController();
@@ -74,7 +78,10 @@ export async function request<T>(
   options?: RequestOptions,
 ): Promise<T> {
   const timeoutConfig = withTimeoutSignal(options?.signal, options?.timeoutMs);
-  const requestSignal = timeoutConfig && "signal" in timeoutConfig ? timeoutConfig.signal : options?.signal;
+  const requestSignal =
+    timeoutConfig && "signal" in timeoutConfig
+      ? timeoutConfig.signal
+      : options?.signal;
   const normalizedBody =
     options?.body &&
     typeof options.body !== "string" &&
@@ -91,7 +98,12 @@ export async function request<T>(
       credentials: "include",
       headers: {
         Accept: "application/json",
-        ...(normalizedBody && !(normalizedBody instanceof FormData) && !(normalizedBody instanceof Blob) && !(normalizedBody instanceof URLSearchParams) ? { "Content-Type": "application/json" } : {}),
+        ...(normalizedBody &&
+        !(normalizedBody instanceof FormData) &&
+        !(normalizedBody instanceof Blob) &&
+        !(normalizedBody instanceof URLSearchParams)
+          ? { "Content-Type": "application/json" }
+          : {}),
         ...options?.headers,
       },
       ...options,
@@ -101,9 +113,17 @@ export async function request<T>(
   } catch (error) {
     if (timeoutConfig && "cleanup" in timeoutConfig) timeoutConfig.cleanup();
     if (error instanceof Error && error.name === "AbortError") {
-      throw new ApiError("The request took too long and was cancelled.", 0, "REQUEST_TIMEOUT");
+      throw new ApiError(
+        "The request took too long and was cancelled.",
+        0,
+        "REQUEST_TIMEOUT",
+      );
     }
-    throw new ApiError("Unable to reach the marketplace service.", 0, "NETWORK_ERROR");
+    throw new ApiError(
+      "Unable to reach the marketplace service.",
+      0,
+      "NETWORK_ERROR",
+    );
   }
 
   if (timeoutConfig && "cleanup" in timeoutConfig) timeoutConfig.cleanup();
@@ -125,7 +145,9 @@ export async function request<T>(
         ? body.error
         : undefined;
     const message =
-      errorBody && "message" in errorBody && typeof errorBody.message === "string"
+      errorBody &&
+      "message" in errorBody &&
+      typeof errorBody.message === "string"
         ? errorBody.message
         : "The marketplace service returned an error.";
     const code =
@@ -139,7 +161,9 @@ export async function request<T>(
       code,
       classifyErrorKind(response.status),
       response.headers.get("x-request-id") ??
-        (errorBody && "requestId" in errorBody && typeof errorBody.requestId === "string"
+        (errorBody &&
+        "requestId" in errorBody &&
+        typeof errorBody.requestId === "string"
           ? errorBody.requestId
           : undefined),
     );
@@ -149,8 +173,12 @@ export async function request<T>(
 }
 
 export const apiClient = {
-  get: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "GET" }),
-  post: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "POST" }),
-  patch: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "PATCH" }),
-  delete: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "DELETE" }),
+  get: <T>(path: string, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: "GET" }),
+  post: <T>(path: string, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: "POST" }),
+  patch: <T>(path: string, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: "PATCH" }),
+  delete: <T>(path: string, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: "DELETE" }),
 };

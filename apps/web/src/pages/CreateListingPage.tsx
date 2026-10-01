@@ -47,6 +47,7 @@ export function CreateListingPage() {
     const result = createListingSchema.safeParse({
       ...values,
       price: values.price === "" ? Number.NaN : Number(values.price),
+      year: values.year === "" ? undefined : Number(values.year),
     });
     const errors: ListingFormFieldErrors = {};
     if (!result.success) {
