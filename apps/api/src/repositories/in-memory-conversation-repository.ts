@@ -93,12 +93,11 @@ export class InMemoryConversationRepository implements ConversationRepository {
   async countUnread(conversationId: string, userId: string): Promise<number> {
     const conversation = this.conversations.find((item) => item.id === conversationId);
     if (!conversation || (conversation.buyerId !== userId && conversation.sellerId !== userId)) return 0;
-    const readAt = conversation.buyerId === userId ? conversation.buyerLastReadAt : conversation.sellerLastReadAt;
     return this.messages.filter(
       (message) =>
         message.conversationId === conversationId &&
         message.senderId !== userId &&
-        (!readAt || message.createdAt > readAt),
+        !message.readAt,
     ).length;
   }
 

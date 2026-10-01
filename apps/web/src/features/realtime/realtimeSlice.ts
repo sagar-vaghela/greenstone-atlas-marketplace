@@ -20,7 +20,10 @@ const realtimeSlice = createSlice({
   name: "realtime",
   initialState,
   reducers: {
-    connectionStatusChanged: (state, action: PayloadAction<RealtimeState["connectionStatus"]>) => {
+    connectionStatusChanged: (
+      state,
+      action: PayloadAction<RealtimeState["connectionStatus"]>,
+    ) => {
       state.connectionStatus = action.payload;
     },
     eventReceived: (
@@ -28,9 +31,11 @@ const realtimeSlice = createSlice({
       action: PayloadAction<{ event: MarketplaceEvent; userId: string }>,
     ) => {
       const { event, userId } = action.payload;
+      if (event.type === "conversation.typing") return;
       state.lastEventAt = event.timestamp;
       state.lastEventId = event.id;
-      if (event.actorUserId === userId && event.type === "offer.created") return;
+      if (event.actorUserId === userId && event.type === "offer.created")
+        return;
       const messages: Record<MarketplaceEvent["type"], string> = {
         "offer.created": "New offer received for this listing.",
         "offer.countered": "Seller sent you a counter-offer.",
@@ -40,18 +45,22 @@ const realtimeSlice = createSlice({
         "listing.status_changed": "Listing status changed.",
         "transaction.created": "A transaction has been created.",
         "transaction.payment_updated": "Transaction payment status updated.",
-        "transaction.fulfilment_updated": "Transaction fulfilment status updated.",
+        "transaction.fulfilment_updated":
+          "Transaction fulfilment status updated.",
         "transaction.completed": "Transaction completed.",
         "transaction.cancelled": "Transaction cancelled.",
         "transaction.disputed": "A dispute has been opened.",
         "message.created": "You have a new message.",
         "conversation.read": "Conversation read status updated.",
+        "conversation.typing": "",
         "notification.created": "You have a new notification.",
       };
       state.notification = {
-        message: event.type === "notification.created" && "notification" in event.payload
-          ? event.payload.notification.title
-          : messages[event.type],
+        message:
+          event.type === "notification.created" &&
+          "notification" in event.payload
+            ? event.payload.notification.title
+            : messages[event.type],
         severity: event.type === "offer.accepted" ? "success" : "info",
       };
     },
@@ -61,6 +70,8 @@ const realtimeSlice = createSlice({
   },
 });
 
-export const { connectionStatusChanged, eventReceived, notificationClosed } = realtimeSlice.actions;
-export const selectRealtime = (state: { realtime: RealtimeState }) => state.realtime;
+export const { connectionStatusChanged, eventReceived, notificationClosed } =
+  realtimeSlice.actions;
+export const selectRealtime = (state: { realtime: RealtimeState }) =>
+  state.realtime;
 export default realtimeSlice.reducer;

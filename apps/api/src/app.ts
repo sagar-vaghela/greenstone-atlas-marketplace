@@ -261,6 +261,7 @@ export const buildApp = (options: BuildAppOptions = {}) => {
   app.register(registerConversationRoutes, {
     conversations: conversationRepository,
     listings: listingRepository,
+    notifications: notificationRepository,
     users: userRepository,
     eventBus,
   });

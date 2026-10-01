@@ -92,11 +92,10 @@ export class MongoConversationRepository implements ConversationRepository {
   async countUnread(conversationId: string, userId: string): Promise<number> {
     const conversation = await this.findById(conversationId);
     if (!conversation) return 0;
-    const readAt = conversation.buyerId === userId ? conversation.buyerLastReadAt : conversation.sellerLastReadAt;
     return this.messages.countDocuments({
       conversationId,
       senderId: { $ne: userId },
-      ...(readAt ? { createdAt: { $gt: readAt } } : {}),
+      readAt: { $exists: false },
     });
   }
 

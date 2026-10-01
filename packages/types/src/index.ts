@@ -160,6 +160,7 @@ export type MarketplaceEventType =
   | "transaction.disputed"
   | "message.created"
   | "conversation.read"
+  | "conversation.typing"
   | "notification.created";
 
 export type NotificationType =
@@ -202,7 +203,8 @@ export type MarketplaceEventPayload =
   | { transaction: Transaction }
   | { message: Message }
   | { notification: Notification }
-  | { conversationId: string; readAt: string };
+  | { conversationId: string; readAt: string }
+  | { conversationId: string; isTyping: boolean };
 
 export interface MarketplaceEvent {
   id: string;

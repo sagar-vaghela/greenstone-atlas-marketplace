@@ -88,6 +88,13 @@ export const connectMongoDB = async (
       { userId: 1, sourceEventId: 1 },
       { unique: true },
     );
+    await notifications.createIndex(
+      { userId: 1, dedupeKey: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { dedupeKey: { $exists: true } },
+      },
+    );
 
     return {
       db,

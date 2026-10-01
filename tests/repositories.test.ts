@@ -81,8 +81,26 @@ describe("in-memory repositories", () => {
       sourceEventId: "event-1",
     };
     const notification = await repository.create(input);
+    const messageInput = {
+      ...input,
+      type: "message_received",
+      title: "New message",
+      resourceType: "conversation",
+      resourceId: "conversation-1",
+      sourceEventId: "event-2",
+    } as const;
+    const messageNotification = await repository.createMessageNotification(
+      messageInput,
+    );
+    expect(messageNotification).toBeDefined();
+    expect(
+      await repository.createMessageNotification({
+        ...messageInput,
+        sourceEventId: "event-3",
+      }),
+    ).toBeUndefined();
     expect(await repository.create(input)).toBeUndefined();
-    expect(await repository.countUnread("buyer-1")).toBe(1);
+    expect(await repository.countUnread("buyer-1")).toBe(2);
     expect(await repository.countUnread("buyer-2")).toBe(0);
     expect(
       await repository.markRead(
@@ -96,7 +114,22 @@ describe("in-memory repositories", () => {
       "buyer-1",
       new Date().toISOString(),
     );
+    expect(await repository.countUnread("buyer-1")).toBe(1);
+    expect(
+      await repository.markConversationRead(
+        "buyer-1",
+        "conversation-1",
+        new Date().toISOString(),
+      ),
+    ).toBe(1);
     expect(await repository.countUnread("buyer-1")).toBe(0);
+    expect(
+      await repository.createMessageNotification({
+        ...messageInput,
+        sourceEventId: "event-4",
+      }),
+    ).toBeDefined();
+    expect(await repository.countUnread("buyer-1")).toBe(1);
   });
 
   it("prevents message leakage and tracks read state", async () => {

@@ -3,6 +3,26 @@ import { MarketplaceEventBus } from "../apps/api/src/events/marketplace-event-bu
 import transactionReducer, {
   transactionEventReceived,
 } from "../apps/web/src/features/transactions/transactionsSlice";
+import type { MarketplaceEvent } from "@atlas/types";
+import messagingReducer, {
+  clearTypingIndicator,
+  typingEventReceived,
+} from "../apps/web/src/features/messaging/messagingSlice";
+
+const typingEvent = (
+  isTyping: boolean,
+  timestamp: string,
+  actorUserId = "seller-1",
+  recipientUserId = "buyer-1",
+): MarketplaceEvent => ({
+  id: `event-${timestamp}`,
+  type: "conversation.typing",
+  timestamp,
+  listingId: "listing-1",
+  actorUserId,
+  recipientUserId,
+  payload: { conversationId: "conversation-1", isTyping },
+});
 
 describe("marketplace realtime events", () => {
   it("publishes only to authenticated recipients and de-duplicates recipients", () => {
@@ -66,5 +86,71 @@ describe("marketplace realtime events", () => {
       transactionEventReceived({ transaction: stale }),
     );
     expect(next.items["tx-1"]).toMatchObject({ status: "paid", version: 2 });
+  });
+
+  it("tracks typing only for the recipient and ignores stale or unrelated stops", () => {
+    const firstTimestamp = "2026-10-01T12:00:00.000Z";
+    const refreshedTimestamp = "2026-10-01T12:00:02.000Z";
+    const active = messagingReducer(
+      undefined,
+      typingEventReceived({
+        event: typingEvent(true, firstTimestamp),
+        userId: "buyer-1",
+      }),
+    );
+    expect(active.typingByConversation["conversation-1"]).toEqual({
+      userId: "seller-1",
+      updatedAt: firstTimestamp,
+    });
+
+    const ignoredRecipient = messagingReducer(
+      active,
+      typingEventReceived({
+        event: typingEvent(true, refreshedTimestamp),
+        userId: "buyer-2",
+      }),
+    );
+    expect(
+      ignoredRecipient.typingByConversation["conversation-1"]?.updatedAt,
+    ).toBe(firstTimestamp);
+
+    const refreshed = messagingReducer(
+      active,
+      typingEventReceived({
+        event: typingEvent(true, refreshedTimestamp),
+        userId: "buyer-1",
+      }),
+    );
+    const staleClear = messagingReducer(
+      refreshed,
+      clearTypingIndicator({
+        conversationId: "conversation-1",
+        userId: "seller-1",
+        updatedAt: firstTimestamp,
+      }),
+    );
+    expect(staleClear.typingByConversation["conversation-1"]?.updatedAt).toBe(
+      refreshedTimestamp,
+    );
+
+    const unrelatedStop = messagingReducer(
+      staleClear,
+      typingEventReceived({
+        event: typingEvent(false, refreshedTimestamp, "seller-2"),
+        userId: "buyer-1",
+      }),
+    );
+    expect(unrelatedStop.typingByConversation["conversation-1"]?.userId).toBe(
+      "seller-1",
+    );
+
+    const stopped = messagingReducer(
+      unrelatedStop,
+      typingEventReceived({
+        event: typingEvent(false, refreshedTimestamp),
+        userId: "buyer-1",
+      }),
+    );
+    expect(stopped.typingByConversation["conversation-1"]).toBeUndefined();
   });
 });

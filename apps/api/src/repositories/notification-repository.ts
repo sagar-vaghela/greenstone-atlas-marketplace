@@ -18,9 +18,11 @@ export interface NotificationPage {
 
 export interface NotificationRepository {
   create(input: CreateNotificationInput): Promise<Notification | undefined>;
+  createMessageNotification(input: CreateNotificationInput): Promise<Notification | undefined>;
   findById(id: string): Promise<Notification | undefined>;
   listForUser(userId: string, limit: number, before?: string): Promise<NotificationPage>;
   countUnread(userId: string): Promise<number>;
+  markConversationRead(userId: string, conversationId: string, readAt: string): Promise<number>;
   markRead(id: string, userId: string, readAt: string): Promise<Notification | undefined>;
   markAllRead(userId: string, readAt: string): Promise<number>;
   delete(id: string, userId: string): Promise<boolean>;

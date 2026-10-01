@@ -22,6 +22,22 @@ export class InMemoryNotificationRepository implements NotificationRepository {
     return { ...notification };
   }
 
+  async createMessageNotification(
+    input: CreateNotificationInput,
+  ): Promise<Notification | undefined> {
+    if (
+      this.items.some(
+        (item) =>
+          item.userId === input.userId &&
+          item.type === "message_received" &&
+          item.resourceId === input.resourceId &&
+          !item.readAt,
+      )
+    )
+      return undefined;
+    return this.create(input);
+  }
+
   async findById(id: string): Promise<Notification | undefined> {
     const item = this.items.find((notification) => notification.id === id);
     return item ? { ...item } : undefined;
@@ -39,7 +55,36 @@ export class InMemoryNotificationRepository implements NotificationRepository {
   }
 
   async countUnread(userId: string): Promise<number> {
-    return this.items.filter((item) => item.userId === userId && !item.readAt).length;
+    const unread = this.items.filter(
+      (item) => item.userId === userId && !item.readAt,
+    );
+    const messageConversations = new Set(
+      unread
+        .filter((item) => item.type === "message_received")
+        .map((item) => item.resourceId),
+    );
+    return unread.filter((item) => item.type !== "message_received").length +
+      messageConversations.size;
+  }
+
+  async markConversationRead(
+    userId: string,
+    conversationId: string,
+    readAt: string,
+  ): Promise<number> {
+    let updated = 0;
+    for (const item of this.items) {
+      if (
+        item.userId === userId &&
+        item.type === "message_received" &&
+        item.resourceId === conversationId &&
+        !item.readAt
+      ) {
+        item.readAt = readAt;
+        updated += 1;
+      }
+    }
+    return updated;
   }
 
   async markRead(id: string, userId: string, readAt: string): Promise<Notification | undefined> {

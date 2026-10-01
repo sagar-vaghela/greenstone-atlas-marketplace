@@ -11,27 +11,94 @@ import { useAppDispatch, useAppSelector } from "./app/hooks";
 import { fetchCurrentUser, selectAuth } from "./features/auth/authSlice";
 import { CircularProgress, Box } from "@mui/material";
 import { connectMarketplaceEvents } from "./api/marketplaceEvents";
-import { connectionStatusChanged, eventReceived, selectRealtime } from "./features/realtime/realtimeSlice";
 import {
-  transactionEventReceived,
-} from "./features/transactions/transactionsSlice";
-import { messageEventReceived } from "./features/messaging/messagingSlice";
-import { fetchNotifications, fetchUnreadCount, notificationEventReceived } from "./features/notifications/notificationsSlice";
+  connectionStatusChanged,
+  eventReceived,
+  selectRealtime,
+} from "./features/realtime/realtimeSlice";
+import { transactionEventReceived } from "./features/transactions/transactionsSlice";
+import {
+  fetchConversations,
+  markConversationReadAction,
+  messageEventReceived,
+  resetMessaging,
+  typingEventReceived,
+} from "./features/messaging/messagingSlice";
+import {
+  fetchNotifications,
+  fetchUnreadCount,
+  conversationMessagesRead,
+  notificationEventReceived,
+} from "./features/notifications/notificationsSlice";
 
-const MarketplacePage = lazy(() => import("./pages/MarketplacePage").then((module) => ({ default: module.MarketplacePage })));
-const CreateListingPage = lazy(() => import("./pages/CreateListingPage").then((module) => ({ default: module.CreateListingPage })));
-const EditListingPage = lazy(() => import("./pages/EditListingPage").then((module) => ({ default: module.EditListingPage })));
-const ListingDetailsPage = lazy(() => import("./pages/ListingDetailsPage").then((module) => ({ default: module.ListingDetailsPage })));
-const SellerProfilePage = lazy(() => import("./pages/SellerProfilePage").then((module) => ({ default: module.SellerProfilePage })));
-const ProfilePage = lazy(() => import("./pages/ProfilePage").then((module) => ({ default: module.ProfilePage })));
-const TransactionsPage = lazy(() => import("./pages/TransactionsPage").then((module) => ({ default: module.TransactionsPage })));
-const TransactionDetailsPage = lazy(() => import("./pages/TransactionDetailsPage").then((module) => ({ default: module.TransactionDetailsPage })));
-const MessagesPage = lazy(() => import("./pages/MessagesPage").then((module) => ({ default: module.MessagesPage })));
-const ConversationPage = lazy(() => import("./pages/ConversationPage").then((module) => ({ default: module.ConversationPage })));
-const NotificationsPage = lazy(() => import("./pages/NotificationsPage").then((module) => ({ default: module.NotificationsPage })));
-const LoginPage = lazy(() => import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })));
-const RegisterPage = lazy(() => import("./pages/RegisterPage").then((module) => ({ default: module.RegisterPage })));
-const NotFoundPage = lazy(() => import("./pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })));
+const MarketplacePage = lazy(() =>
+  import("./pages/MarketplacePage").then((module) => ({
+    default: module.MarketplacePage,
+  })),
+);
+const CreateListingPage = lazy(() =>
+  import("./pages/CreateListingPage").then((module) => ({
+    default: module.CreateListingPage,
+  })),
+);
+const EditListingPage = lazy(() =>
+  import("./pages/EditListingPage").then((module) => ({
+    default: module.EditListingPage,
+  })),
+);
+const ListingDetailsPage = lazy(() =>
+  import("./pages/ListingDetailsPage").then((module) => ({
+    default: module.ListingDetailsPage,
+  })),
+);
+const SellerProfilePage = lazy(() =>
+  import("./pages/SellerProfilePage").then((module) => ({
+    default: module.SellerProfilePage,
+  })),
+);
+const ProfilePage = lazy(() =>
+  import("./pages/ProfilePage").then((module) => ({
+    default: module.ProfilePage,
+  })),
+);
+const TransactionsPage = lazy(() =>
+  import("./pages/TransactionsPage").then((module) => ({
+    default: module.TransactionsPage,
+  })),
+);
+const TransactionDetailsPage = lazy(() =>
+  import("./pages/TransactionDetailsPage").then((module) => ({
+    default: module.TransactionDetailsPage,
+  })),
+);
+const MessagesPage = lazy(() =>
+  import("./pages/MessagesPage").then((module) => ({
+    default: module.MessagesPage,
+  })),
+);
+const ConversationPage = lazy(() =>
+  import("./pages/ConversationPage").then((module) => ({
+    default: module.ConversationPage,
+  })),
+);
+const NotificationsPage = lazy(() =>
+  import("./pages/NotificationsPage").then((module) => ({
+    default: module.NotificationsPage,
+  })),
+);
+const LoginPage = lazy(() =>
+  import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })),
+);
+const RegisterPage = lazy(() =>
+  import("./pages/RegisterPage").then((module) => ({
+    default: module.RegisterPage,
+  })),
+);
+const NotFoundPage = lazy(() =>
+  import("./pages/NotFoundPage").then((module) => ({
+    default: module.NotFoundPage,
+  })),
+);
 
 function RouteLoadingFallback() {
   return (
@@ -70,17 +137,60 @@ export function App() {
   useEffect(() => {
     if (!user) {
       dispatch(connectionStatusChanged("disconnected"));
+      dispatch(resetMessaging());
       return;
     }
     return connectMarketplaceEvents(
       (event) => {
         dispatch(eventReceived({ event, userId: user.id }));
-        if (event.type === "notification.created") dispatch(notificationEventReceived({ event }));
-        if (event.type.startsWith("transaction.") && "transaction" in event.payload) {
-          dispatch(transactionEventReceived({ transaction: event.payload.transaction }));
+        if (event.type === "notification.created")
+          dispatch(notificationEventReceived({ event }));
+        if (
+          event.type.startsWith("transaction.") &&
+          "transaction" in event.payload
+        ) {
+          dispatch(
+            transactionEventReceived({
+              transaction: event.payload.transaction,
+            }),
+          );
         }
-        if (event.type === "message.created" || event.type === "conversation.read") {
-          dispatch(messageEventReceived({ event, userId: user.id }));
+        if (
+          event.type === "message.created" ||
+          event.type === "conversation.read"
+        ) {
+          const activeConversationId =
+            window.location.pathname.match(/^\/messages\/([^/]+)\/?$/)?.[1];
+          dispatch(
+            messageEventReceived({
+              event,
+              userId: user.id,
+              activeConversationId,
+            }),
+          );
+          if (
+            event.type === "message.created" &&
+            "message" in event.payload &&
+            event.recipientUserId === user.id &&
+            activeConversationId === event.payload.message.conversationId
+          ) {
+            void dispatch(markConversationReadAction(activeConversationId)).then(
+              (result) => {
+                if (markConversationReadAction.fulfilled.match(result)) {
+                  dispatch(
+                    conversationMessagesRead({
+                      conversationId: result.payload.conversationId,
+                      notificationReadAt: result.payload.notificationReadAt,
+                      unreadCount: result.payload.notificationUnreadCount,
+                    }),
+                  );
+                }
+              },
+            );
+          }
+        }
+        if (event.type === "conversation.typing") {
+          dispatch(typingEventReceived({ event, userId: user.id }));
         }
       },
       (status) => dispatch(connectionStatusChanged(status)),
@@ -88,11 +198,13 @@ export function App() {
   }, [dispatch, user]);
   useEffect(() => {
     if (!user) return;
+    void dispatch(fetchConversations());
     void dispatch(fetchNotifications());
     void dispatch(fetchUnreadCount());
   }, [dispatch, user]);
   useEffect(() => {
-    if (user && connectionStatus === "connected") void dispatch(fetchUnreadCount());
+    if (user && connectionStatus === "connected")
+      void dispatch(fetchUnreadCount());
   }, [connectionStatus, dispatch, user]);
   return (
     <BrowserRouter>
@@ -146,13 +258,28 @@ export function App() {
             />
             <Route
               path="/messages"
-              element={<ProtectedRoute><MessagesPage /></ProtectedRoute>}
+              element={
+                <ProtectedRoute>
+                  <MessagesPage />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/messages/:conversationId"
-              element={<ProtectedRoute><ConversationPage /></ProtectedRoute>}
+              element={
+                <ProtectedRoute>
+                  <ConversationPage />
+                </ProtectedRoute>
+              }
             />
-            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <NotificationsPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>

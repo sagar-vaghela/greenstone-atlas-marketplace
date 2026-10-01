@@ -37,6 +37,24 @@ const notificationsSlice = createSlice({
       upsert(state, notification);
       if (!notification.readAt) state.unreadCount += 1;
     },
+    conversationMessagesRead: (
+      state,
+      action: PayloadAction<{
+        conversationId: string;
+        notificationReadAt: string;
+        unreadCount: number;
+      }>,
+    ) => {
+      state.unreadCount = Math.max(0, action.payload.unreadCount);
+      for (const item of state.items) {
+        if (
+          item.type === "message_received" &&
+          item.resourceId === action.payload.conversationId
+        ) {
+          item.readAt ??= action.payload.notificationReadAt;
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -52,7 +70,10 @@ const notificationsSlice = createSlice({
       .addCase(markAllNotificationsReadAction.rejected, (state, action) => { state.error = action.payload ?? "Unable to mark notifications as read."; });
   },
 });
-export const { notificationEventReceived } = notificationsSlice.actions;
+export const {
+  notificationEventReceived,
+  conversationMessagesRead,
+} = notificationsSlice.actions;
 export const selectNotifications = (state: { notifications: NotificationsState }) => state.notifications.items;
 export const selectNotificationState = (state: { notifications: NotificationsState }) => state.notifications;
 export default notificationsSlice.reducer;

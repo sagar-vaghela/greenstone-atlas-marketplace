@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getApiConfig } from "@atlas/config";
 import { InMemoryNotificationRepository } from "../../apps/api/src/repositories/in-memory-notification-repository.js";
 import { MarketplaceEventBus } from "../../apps/api/src/events/marketplace-event-bus.js";
+import { buildApp } from "../../apps/api/src/app.js";
 import { makeApp, inject, login, register } from "./helpers.js";
 import type { FastifyInstance } from "fastify";
 
@@ -359,6 +360,7 @@ describe("messaging and notifications", () => {
 
   it("prevents unrelated conversation access and derives sender identity", async () => {
     const buyer = await login(app, "buyer@example.com", "buyer123");
+    const seller = await login(app, "seller@example.com", "seller123");
     const other = await login(app, "buyer2@example.com", "buyer123");
     const created = await inject(
       app,
@@ -371,19 +373,124 @@ describe("messaging and notifications", () => {
     );
     expect(created.statusCode).toBe(201);
     const id = created.json().id;
+    const sentMessage = await inject(
+      app,
+      {
+        method: "POST",
+        url: `/conversations/${id}/messages`,
+        payload: { senderId: "demo-seller", body: "hello" },
+      },
+      buyer,
+    );
+    expect(sentMessage.json().senderId).toBe("demo-buyer");
+    const firstNotifications = await inject(
+      app,
+      { method: "GET", url: "/notifications" },
+      seller,
+    );
+    expect(firstNotifications.json().items).toHaveLength(1);
+    expect(firstNotifications.json().items[0]).toMatchObject({
+      type: "message_received",
+      resourceId: id,
+    });
+    expect(firstNotifications.json().items[0].readAt).toBeUndefined();
     expect(
       (
         await inject(
           app,
-          {
-            method: "POST",
-            url: `/conversations/${id}/messages`,
-            payload: { senderId: "demo-seller", body: "hello" },
-          },
-          buyer,
+          { method: "GET", url: "/notifications/unread-count" },
+          seller,
         )
-      ).json().senderId,
-    ).toBe("demo-buyer");
+      ).json().unreadCount,
+    ).toBe(1);
+
+    await inject(
+      app,
+      {
+        method: "POST",
+        url: `/conversations/${id}/messages`,
+        payload: { body: "another message while unread" },
+      },
+      buyer,
+    );
+    const notificationsWhileUnread = await inject(
+      app,
+      { method: "GET", url: "/notifications" },
+      seller,
+    );
+    expect(notificationsWhileUnread.json().items).toHaveLength(1);
+    expect(
+      (
+        await inject(
+          app,
+          { method: "GET", url: "/notifications/unread-count" },
+          seller,
+        )
+      ).json().unreadCount,
+    ).toBe(1);
+
+    const readConversation = await inject(
+      app,
+      { method: "POST", url: `/conversations/${id}/read` },
+      seller,
+    );
+    expect(readConversation.json().notificationUnreadCount).toBe(0);
+    expect(
+      (
+        await inject(
+          app,
+          { method: "GET", url: "/notifications" },
+          seller,
+        )
+      ).json().items[0].readAt,
+    ).toBeTruthy();
+
+    await inject(
+      app,
+      {
+        method: "POST",
+        url: `/conversations/${id}/messages`,
+        payload: { body: "a new unread period" },
+      },
+      buyer,
+    );
+    const notificationsAfterRead = await inject(
+      app,
+      { method: "GET", url: "/notifications" },
+      seller,
+    );
+    expect(notificationsAfterRead.json().items).toHaveLength(2);
+    expect(
+      notificationsAfterRead.json().items.filter(
+        (item: { type: string; readAt?: string }) =>
+          item.type === "message_received" && !item.readAt,
+      ),
+    ).toHaveLength(1);
+    expect(
+      (
+        await inject(
+          app,
+          { method: "GET", url: "/notifications/unread-count" },
+          seller,
+        )
+      ).json().unreadCount,
+    ).toBe(1);
+    const sellerConversations = await inject(
+      app,
+      { method: "GET", url: "/conversations" },
+      seller,
+    );
+    expect(
+      sellerConversations
+        .json()
+        .items.find((item: { id: string }) => item.id === id).unreadCount,
+    ).toBe(1);
+    const sellerNotifications = await inject(
+      app,
+      { method: "GET", url: "/notifications" },
+      seller,
+    );
+    expect(sellerNotifications.json().items).toHaveLength(2);
     expect(
       (await inject(app, { method: "GET", url: `/conversations/${id}` }, other))
         .statusCode,
@@ -414,6 +521,109 @@ describe("messaging and notifications", () => {
         )
       ).statusCode,
     ).toBe(200);
+  });
+
+  it("broadcasts typing status only to the other conversation participant", async () => {
+    const eventBus = new MarketplaceEventBus();
+    const typingApp = buildApp({ secureCookies: false, eventBus });
+    await typingApp.ready();
+    try {
+      const buyer = await login(typingApp, "buyer@example.com", "buyer123");
+      const unrelatedBuyer = await login(
+        typingApp,
+        "buyer2@example.com",
+        "buyer123",
+      );
+      const created = await inject(
+        typingApp,
+        {
+          method: "POST",
+          url: "/conversations",
+          payload: { listingId: "listing-1" },
+        },
+        buyer,
+      );
+      const conversation = created.json();
+      const events: unknown[] = [];
+      const unsubscribe = eventBus.subscribe(
+        conversation.otherParticipant.id,
+        (event) => events.push(event),
+      );
+
+      const started = await inject(
+        typingApp,
+        {
+          method: "POST",
+          url: `/conversations/${conversation.id}/typing`,
+          payload: { isTyping: true },
+        },
+        buyer,
+      );
+      expect(started.statusCode).toBe(204);
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        type: "conversation.typing",
+        actorUserId: "demo-buyer",
+        recipientUserId: conversation.otherParticipant.id,
+        payload: { conversationId: conversation.id, isTyping: true },
+      });
+
+      const stopped = await inject(
+        typingApp,
+        {
+          method: "POST",
+          url: `/conversations/${conversation.id}/typing`,
+          payload: { isTyping: false },
+        },
+        buyer,
+      );
+      expect(stopped.statusCode).toBe(204);
+      expect(events).toHaveLength(2);
+      expect(events[1]).toMatchObject({
+        type: "conversation.typing",
+        payload: { conversationId: conversation.id, isTyping: false },
+      });
+
+      expect(
+        (
+          await inject(
+            typingApp,
+            {
+              method: "POST",
+              url: `/conversations/${conversation.id}/typing`,
+              payload: { isTyping: false },
+            },
+            unrelatedBuyer,
+          )
+        ).statusCode,
+      ).toBe(403);
+      expect(
+        (
+          await inject(typingApp, {
+            method: "POST",
+            url: `/conversations/${conversation.id}/typing`,
+            payload: { isTyping: true },
+          })
+        ).statusCode,
+      ).toBe(401);
+      expect(
+        (
+          await inject(
+            typingApp,
+            {
+              method: "POST",
+              url: `/conversations/${conversation.id}/typing`,
+              payload: {},
+            },
+            buyer,
+          )
+        ).statusCode,
+      ).toBe(400);
+      expect(events).toHaveLength(2);
+      unsubscribe();
+    } finally {
+      await typingApp.close();
+    }
   });
 
   it("scopes notifications and supports idempotent projection/read state", async () => {

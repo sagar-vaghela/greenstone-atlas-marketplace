@@ -16,17 +16,24 @@ const eventTypes: MarketplaceEventType[] = [
   "transaction.disputed",
   "message.created",
   "conversation.read",
+  "conversation.typing",
   "notification.created",
 ];
 
-export type EventConnectionStatus = "connecting" | "connected" | "reconnecting" | "disconnected";
+export type EventConnectionStatus =
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "disconnected";
 
 export const connectMarketplaceEvents = (
   onEvent: (event: MarketplaceEvent) => void,
   onStatus: (status: EventConnectionStatus) => void,
 ): (() => void) => {
   onStatus("connecting");
-  const source = new EventSource(`${API_BASE_URL}/events`, { withCredentials: true });
+  const source = new EventSource(`${API_BASE_URL}/events`, {
+    withCredentials: true,
+  });
   let closed = false;
   source.onopen = () => onStatus("connected");
   source.onerror = () => {

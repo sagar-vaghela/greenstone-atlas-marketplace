@@ -41,6 +41,7 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { logout, selectCurrentUser } from "../../features/auth/authSlice";
+import { selectConversations } from "../../features/messaging/messagingSlice";
 import {
   notificationClosed,
   selectRealtime,
@@ -54,15 +55,11 @@ import {
 
 const navigationGroups = [
   {
-    label: "Primary",
+    label: "Browse",
     items: [{ label: "Marketplace", to: "/", icon: <StorefrontIcon /> }],
   },
   {
-    label: "Selling",
-    items: [{ label: "List a watch", to: "/listings/new", icon: <AddIcon /> }],
-  },
-  {
-    label: "Activity",
+    label: "Workspace",
     items: [
       { label: "Messages", to: "/messages", icon: <MessageOutlinedIcon /> },
       {
@@ -73,6 +70,10 @@ const navigationGroups = [
       { label: "Transactions", to: "/transactions", icon: <ReceiptLongIcon /> },
     ],
   },
+  {
+    label: "Selling",
+    items: [{ label: "List a watch", to: "/listings/new", icon: <AddIcon /> }],
+  },
 ] as const;
 
 export function AppLayout() {
@@ -81,6 +82,12 @@ export function AppLayout() {
   const realtime = useAppSelector(selectRealtime);
   const notifications = useAppSelector(selectNotificationState);
   const latest = useAppSelector(selectNotifications).slice(0, 4);
+  const unreadMessagesCount = useAppSelector((state) =>
+    selectConversations(state).reduce(
+      (total, conversation) => total + conversation.unreadCount,
+      0,
+    ),
+  );
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -97,13 +104,31 @@ export function AppLayout() {
     path === "/"
       ? location.pathname === "/"
       : location.pathname.startsWith(path);
+  const headerControlStyle = {
+    borderRadius: 1,
+    transition: theme.transitions.create("background-color", {
+      duration: theme.transitions.duration.short,
+    }),
+    "&:hover": { bgcolor: "rgba(255, 255, 255, 0.12)" },
+  };
   const desktopLinkStyle = (path: string) => ({
-    borderRadius: 0,
+    ...headerControlStyle,
     borderBottom: 2,
     borderColor: isActive(path) ? "secondary.light" : "transparent",
+    "&:hover": {
+      bgcolor: "rgba(255, 255, 255, 0.12)",
+      borderColor: isActive(path)
+        ? "secondary.light"
+        : "rgba(255, 255, 255, 0.45)",
+    },
   });
   const unreadCount =
     notifications.unreadCount > 99 ? "99+" : notifications.unreadCount;
+  const unreadMessagesBadge =
+    unreadMessagesCount > 99 ? "99+" : unreadMessagesCount;
+  const visibleNavigationGroups = navigationGroups.filter(
+    (group) => group.label === "Browse" || Boolean(user),
+  );
 
   const renderDrawerItems = () => (
     <Box
@@ -112,7 +137,7 @@ export function AppLayout() {
       sx={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}
     >
       <Box sx={{ flex: 1, overflowY: "auto", px: 1.5, py: 1 }}>
-        {navigationGroups.map((group) => (
+        {visibleNavigationGroups.map((group) => (
           <Box
             component="section"
             key={group.label}
@@ -134,6 +159,11 @@ export function AppLayout() {
                   to={item.to}
                   selected={isActive(item.to)}
                   aria-current={isActive(item.to) ? "page" : undefined}
+                  aria-label={
+                    item.to === "/messages" && unreadMessagesCount > 0
+                      ? `Messages, ${unreadMessagesBadge} unread ${unreadMessagesCount === 1 ? "message" : "messages"}`
+                      : undefined
+                  }
                   onClick={closeDrawer}
                   sx={{
                     borderRadius: 1,
@@ -165,6 +195,15 @@ export function AppLayout() {
                         {unreadCount}
                       </Typography>
                     )}
+                  {item.to === "/messages" && unreadMessagesCount > 0 && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      aria-hidden="true"
+                    >
+                      {unreadMessagesBadge}
+                    </Typography>
+                  )}
                 </ListItemButton>
               ))}
             </List>
@@ -255,6 +294,7 @@ export function AppLayout() {
                 aria-label="Open navigation menu"
                 aria-expanded={drawerOpen}
                 onClick={() => setDrawerOpen(true)}
+                sx={headerControlStyle}
               >
                 <MenuIcon />
               </IconButton>
@@ -264,7 +304,13 @@ export function AppLayout() {
               to="/"
               color="inherit"
               underline="none"
-              sx={{ flexShrink: 0 }}
+              sx={{
+                flexShrink: 0,
+                px: 1,
+                py: 0.5,
+                ml: -1,
+                ...headerControlStyle,
+              }}
             >
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <StorefrontIcon fontSize="small" />
@@ -279,41 +325,61 @@ export function AppLayout() {
             </Link>
             {isDesktop ? (
               <>
-                <Stack direction="row" spacing={0.5} sx={{ ml: 2, flex: 1 }}>
-                  <Button
-                    component={RouterLink}
-                    to="/"
-                    color="inherit"
-                    aria-current={isActive("/") ? "page" : undefined}
-                    sx={desktopLinkStyle("/")}
-                  >
-                    Marketplace
-                  </Button>
-                  {user && (
+                <Box
+                  component="nav"
+                  aria-label="Primary navigation"
+                  sx={{ ml: 2, flex: 1 }}
+                >
+                  <Stack direction="row" spacing={0.5}>
                     <Button
                       component={RouterLink}
-                      to="/messages"
+                      to="/"
                       color="inherit"
-                      aria-current={isActive("/messages") ? "page" : undefined}
-                      sx={desktopLinkStyle("/messages")}
+                      aria-current={isActive("/") ? "page" : undefined}
+                      sx={desktopLinkStyle("/")}
                     >
-                      Messages
+                      Marketplace
                     </Button>
-                  )}
-                  {user && (
-                    <Button
-                      component={RouterLink}
-                      to="/transactions"
-                      color="inherit"
-                      aria-current={
-                        isActive("/transactions") ? "page" : undefined
-                      }
-                      sx={desktopLinkStyle("/transactions")}
-                    >
-                      Transactions
-                    </Button>
-                  )}
-                </Stack>
+                    {user && (
+                      <Button
+                        component={RouterLink}
+                        to="/messages"
+                        color="inherit"
+                        aria-label={
+                          unreadMessagesCount > 0
+                            ? `Messages, ${unreadMessagesBadge} unread ${unreadMessagesCount === 1 ? "message" : "messages"}`
+                            : "Messages"
+                        }
+                        aria-current={
+                          isActive("/messages") ? "page" : undefined
+                        }
+                        sx={desktopLinkStyle("/messages")}
+                      >
+                        <Badge
+                          badgeContent={unreadMessagesBadge}
+                          color="secondary"
+                          invisible={unreadMessagesCount === 0}
+                          sx={{ "& .MuiBadge-badge": { right: -16, top: 2 } }}
+                        >
+                          Messages
+                        </Badge>
+                      </Button>
+                    )}
+                    {user && (
+                      <Button
+                        component={RouterLink}
+                        to="/transactions"
+                        color="inherit"
+                        aria-current={
+                          isActive("/transactions") ? "page" : undefined
+                        }
+                        sx={desktopLinkStyle("/transactions")}
+                      >
+                        Transactions
+                      </Button>
+                    )}
+                  </Stack>
+                </Box>
                 {user ? (
                   <>
                     <Button
@@ -344,6 +410,7 @@ export function AppLayout() {
                         isActive("/notifications") ? "page" : undefined
                       }
                       sx={{
+                        ...headerControlStyle,
                         bgcolor: isActive("/notifications")
                           ? "rgba(255,255,255,0.12)"
                           : "transparent",
@@ -359,6 +426,7 @@ export function AppLayout() {
                       aria-label="Open account menu"
                       aria-haspopup="menu"
                       aria-expanded={Boolean(profileAnchor)}
+                      sx={headerControlStyle}
                     >
                       <Avatar
                         sx={{
@@ -439,7 +507,12 @@ export function AppLayout() {
                   </>
                 ) : (
                   <Stack direction="row" spacing={1} sx={{ ml: "auto" }}>
-                    <Button component={RouterLink} to="/login" color="inherit">
+                    <Button
+                      component={RouterLink}
+                      to="/login"
+                      color="inherit"
+                      sx={headerControlStyle}
+                    >
                       Sign in
                     </Button>
                     <Button
@@ -468,6 +541,7 @@ export function AppLayout() {
                     component={RouterLink}
                     to="/notifications"
                     aria-label={`Notifications, ${notifications.unreadCount} unread`}
+                    sx={headerControlStyle}
                   >
                     <Badge badgeContent={unreadCount} color="secondary">
                       <NotificationsNoneIcon />
@@ -475,7 +549,12 @@ export function AppLayout() {
                   </IconButton>
                 )}
                 {!user && (
-                  <Button component={RouterLink} to="/login" color="inherit">
+                  <Button
+                    component={RouterLink}
+                    to="/login"
+                    color="inherit"
+                    sx={headerControlStyle}
+                  >
                     Sign in
                   </Button>
                 )}
