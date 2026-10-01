@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
 COPY apps/api/package.json ./apps/api/package.json
+COPY apps/web/package.json ./apps/web/package.json
 COPY packages/config/package.json ./packages/config/package.json
 COPY packages/types/package.json ./packages/types/package.json
 COPY packages/validation/package.json ./packages/validation/package.json
@@ -14,7 +15,7 @@ RUN npm ci --include-workspace-root
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
