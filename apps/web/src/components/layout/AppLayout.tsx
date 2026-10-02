@@ -233,7 +233,7 @@ export function AppLayout() {
                   <AccountCircleOutlinedIcon />
                 </ListItemIcon>
                 <ListItemText
-                  primary="Seller profile"
+                  primary="Profile"
                   slotProps={{ primary: { sx: { whiteSpace: "normal" } } }}
                 />
               </ListItemButton>
@@ -355,14 +355,35 @@ export function AppLayout() {
                         }
                         sx={desktopLinkStyle("/messages")}
                       >
-                        <Badge
-                          badgeContent={unreadMessagesBadge}
-                          color="secondary"
-                          invisible={unreadMessagesCount === 0}
-                          sx={{ "& .MuiBadge-badge": { right: -16, top: 2 } }}
+                        <Stack
+                          component="span"
+                          direction="row"
+                          spacing={0.75}
+                          sx={{ alignItems: "center" }}
                         >
-                          Messages
-                        </Badge>
+                          <span>Messages</span>
+                          {unreadMessagesCount > 0 && (
+                            <Box
+                              component="span"
+                              sx={{
+                                minWidth: 18,
+                                height: 18,
+                                px: 0.5,
+                                borderRadius: 9,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                bgcolor: "secondary.main",
+                                color: "primary.dark",
+                                fontSize: "0.7rem",
+                                fontWeight: 700,
+                                lineHeight: 1,
+                              }}
+                            >
+                              {unreadMessagesBadge}
+                            </Box>
+                          )}
+                        </Stack>
                       </Button>
                     )}
                     {user && (
@@ -451,7 +472,7 @@ export function AppLayout() {
                         selected={isActive("/profile")}
                         onClick={() => setProfileAnchor(null)}
                       >
-                        Seller profile
+                        Profile
                       </MenuItem>
                       <MenuItem
                         onClick={() => {

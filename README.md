@@ -47,8 +47,12 @@ run:
 npm run seed --workspace @atlas/api
 ```
 
-For an explicit reset of the seeded collections (only when you intend to wipe the
-local demo data), run:
+For an explicit full marketplace reset, run the following only when the API is
+idle and `MONGODB_URI` points to the dedicated staging/test database. It deletes
+all documents in the app-owned `users`, `sessions`, `sellerProfiles`, `listings`,
+`offers`, `transactions`, `conversations`, `messages`, and `notifications`
+collections, then reseeds demo users, seller profiles, and listings. This logs
+out every user and deletes all marketplace activity:
 
 ```bash
 npm run seed:reset --workspace @atlas/api

@@ -128,7 +128,9 @@ describe("authentication and listings", () => {
         payload: { email: "buyer@example.com", password: "buyer123" },
       });
       const setCookies = login.headers["set-cookie"];
-      const cookieHeaders = Array.isArray(setCookies) ? setCookies : [setCookies];
+      const cookieHeaders = Array.isArray(setCookies)
+        ? setCookies
+        : [setCookies];
       const setCookie = cookieHeaders.find((header) =>
         header?.startsWith("atlas_session_partitioned="),
       );

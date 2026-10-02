@@ -4,6 +4,17 @@ import { connectMongoDB } from "./db/mongodb.js";
 import { hashPassword } from "./auth/password.js";
 
 const reset = process.argv.includes("--reset");
+const marketplaceCollections = [
+  "users",
+  "sessions",
+  "sellerProfiles",
+  "listings",
+  "offers",
+  "transactions",
+  "conversations",
+  "messages",
+  "notifications",
+] as const;
 
 const demoUsers = [
   {
@@ -659,10 +670,13 @@ async function main() {
     const listingsCollection = db.collection("listings");
 
     if (reset) {
+      console.log(
+        `Resetting marketplace collections in "${config.mongodbDbName}": ${marketplaceCollections.join(", ")}`,
+      );
       await Promise.all([
-        usersCollection.deleteMany({}),
-        sellerProfilesCollection.deleteMany({}),
-        listingsCollection.deleteMany({}),
+        ...marketplaceCollections.map((name) =>
+          db.collection(name).deleteMany({}),
+        ),
       ]);
     }
 

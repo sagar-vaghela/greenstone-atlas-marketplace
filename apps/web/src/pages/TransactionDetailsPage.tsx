@@ -25,6 +25,7 @@ import {
   useElements,
   useStripe,
 } from "@stripe/react-stripe-js";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { loadStripe } from "@stripe/stripe-js";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
@@ -107,7 +108,13 @@ export function TransactionDetailsPage() {
     return (
       <Stack spacing={2}>
         <Alert severity="error">{error ?? "Transaction not found."}</Alert>
-        <Button component={RouterLink} to="/transactions" variant="outlined">
+        <Button
+          component={RouterLink}
+          to="/transactions"
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          sx={{ alignSelf: "flex-start", borderColor: "divider" }}
+        >
           Back to transactions
         </Button>
       </Stack>
@@ -196,7 +203,18 @@ export function TransactionDetailsPage() {
       <Button
         component={RouterLink}
         to="/transactions"
-        sx={{ alignSelf: "flex-start" }}
+        variant="outlined"
+        startIcon={<ArrowBackIcon />}
+        sx={{
+          alignSelf: "flex-start",
+          borderColor: "divider",
+          color: "text.secondary",
+          "&:hover": {
+            borderColor: "primary.main",
+            color: "primary.main",
+            bgcolor: "action.hover",
+          },
+        }}
       >
         Back to transactions
       </Button>

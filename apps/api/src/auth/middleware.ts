@@ -9,9 +9,7 @@ import {
 export const SESSION_COOKIE = "atlas_session";
 const PARTITIONED_SESSION_COOKIE = `${SESSION_COOKIE}_partitioned`;
 const readCookie = (request: FastifyRequest): string | undefined => {
-  const cookies = request.headers.cookie
-    ?.split(";")
-    .map((item) => item.trim());
+  const cookies = request.headers.cookie?.split(";").map((item) => item.trim());
   const partitionedCookie = cookies?.find((item) =>
     item.startsWith(`${PARTITIONED_SESSION_COOKIE}=`),
   );
