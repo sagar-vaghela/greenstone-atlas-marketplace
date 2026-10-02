@@ -42,48 +42,54 @@ MONGODB_DB_NAME=atlas_marketplace
 Do not commit secrets. Keep the actual connection string in your local environment
 only.
 
-### Seed and reset marketplace test data
+### Seed and reset marketplace demo data
 
 The seed runner uses the database already configured by `MONGODB_URI` and
-`MONGODB_DB_NAME`; the default name is `atlas_marketplace`. No additional
-database-name setting is required. Before resetting, point these settings at
-the database you intend to use for testing and stop the API.
+`MONGODB_DB_NAME`; the default name is `atlas_marketplace`. No separate QA
+database or additional database-name setting is required. Before resetting,
+stop the API.
 
-There is one seed runner and one canonical fixture dataset, shared by seeding,
-resetting, and fixture integrity tests. From the repository root, clear and
-recreate the fixtures with:
+There is one seed runner and one canonical demo dataset, shared by seeding,
+resetting, and data integrity tests. From the repository root, clear and
+recreate the demo data with:
 
 ```bash
 npm run seed:reset --workspace @atlas/api
 ```
 
-To add or update the fixtures without clearing test activity, run:
+To add or update demo records without clearing marketplace activity, run:
 
 ```bash
 npm run seed --workspace @atlas/api
 ```
 
-Reset clears the app collections in the configured database, then recreates the
-test accounts and scenarios. Reset is blocked when `NODE_ENV` is `production`
-or `staging`; never point a development process at a production database.
+Reset clears the app collections in the configured database, then recreates
+the demo accounts and scenarios. Reset is blocked when `NODE_ENV` is
+`production` or `staging`; never point a development process at a production
+database.
 
-All test accounts use the password `QaTest123!`:
+The main demo accounts are the original seller and buyer logins:
 
-| Role | Email |
-| --- | --- |
-| Verified seller | `seller.one@atlas-marketplace.test` |
-| Pending-verification seller | `seller.two@atlas-marketplace.test` |
-| Primary buyer | `buyer.one@atlas-marketplace.test` |
-| Second buyer | `buyer.two@atlas-marketplace.test` |
-| Unrelated buyer for access checks | `buyer.outsider@atlas-marketplace.test` |
+| Role | Email | Password |
+| --- | --- | --- |
+| Seller | `seller@example.com` | `seller123` |
+| Buyer | `buyer@example.com` | `buyer123` |
+| Second seller | `seller2@example.com` | `seller123` |
+| Second buyer | `buyer2@example.com` | `buyer123` |
 
-The test marketplace includes active listings with competing and countered
-offers, an offer-free active listing, a draft listing, and sold listings for
-pending/failed payment, shipping, delivery, completion, cancellation, and dispute
-states. It also includes read and unread conversations and notifications. Use
-the API connected to the configured test database to exercise these scenarios.
-This data supports manual end-to-end workflows but does not replace automated
-tests for authorization failures, invalid input, and other edge cases.
+The listings describe real watch models and use public Unsplash watch
+photography. Images are illustrative rather than representations of the
+specific item for sale; ask the seller to verify the actual watch, accessories
+and condition before purchase. Active listings, negotiation history, existing
+conversations, unread notifications and transaction lifecycle examples are
+provided in this same marketplace dataset.
+
+To test live updates, sign in as `buyer@example.com` in one browser and
+`seller@example.com` in another, then open the active Omega Speedmaster listing.
+Submit an offer as the buyer and counter or respond as the seller. The offer
+and negotiation events, messages, typing status and notification updates are
+sent over the authenticated WebSocket while both users are online. Seeded
+history gives each account context; new actions are what exercise live delivery.
 
 Verify that the database is reachable by starting the API and checking the startup
 logs for a successful MongoDB connection. If you need to run a startup check in a

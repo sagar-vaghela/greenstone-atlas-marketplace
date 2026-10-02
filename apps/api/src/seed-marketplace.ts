@@ -4,15 +4,15 @@ import { hashPassword } from "./auth/password.js";
 import { config } from "./config/index.js";
 import { connectMongoDB } from "./db/mongodb.js";
 import {
-  qaConversations,
-  qaListings,
-  qaMessages,
-  qaNotifications,
-  qaOffers,
-  qaSellerProfiles,
-  qaTestPassword,
-  qaTransactions,
-  qaUsers,
+  demoConversations,
+  demoListings,
+  demoMessages,
+  demoNotifications,
+  demoOffers,
+  demoPassword,
+  demoSellerProfiles,
+  demoTransactions,
+  demoUsers,
 } from "./seed-marketplace-data.js";
 
 const args = process.argv.slice(2);
@@ -64,7 +64,7 @@ async function main() {
 
     const seedTime = "2026-10-01T12:00:00.000Z";
     const users = db.collection("users");
-    for (const user of qaUsers) {
+    for (const user of demoUsers) {
       const { password, ...publicFields } = user;
       await users.updateOne(
         { id: user.id },
@@ -81,7 +81,7 @@ async function main() {
     }
 
     const profiles = db.collection("sellerProfiles");
-    for (const profile of qaSellerProfiles) {
+    for (const profile of demoSellerProfiles) {
       await profiles.updateOne(
         { userId: profile.userId },
         {
@@ -92,17 +92,19 @@ async function main() {
       );
     }
 
-    await upsertById(db.collection("listings"), qaListings);
-    await upsertById(db.collection("offers"), qaOffers);
-    await upsertById(db.collection("transactions"), qaTransactions);
-    await upsertById(db.collection("conversations"), qaConversations);
-    await upsertById(db.collection("messages"), qaMessages);
-    await upsertById(db.collection("notifications"), qaNotifications);
+    await upsertById(db.collection("listings"), demoListings);
+    await upsertById(db.collection("offers"), demoOffers);
+    await upsertById(db.collection("transactions"), demoTransactions);
+    await upsertById(db.collection("conversations"), demoConversations);
+    await upsertById(db.collection("messages"), demoMessages);
+    await upsertById(db.collection("notifications"), demoNotifications);
 
     console.log(
-      `Seeded test database "${config.mongodbDbName}": ${qaUsers.length} users, ${qaListings.length} listings, ${qaOffers.length} offers, ${qaTransactions.length} transactions, ${qaConversations.length} conversations, ${qaMessages.length} messages, ${qaNotifications.length} notifications.`,
+      `Seeded "${config.mongodbDbName}" with ${demoUsers.length} demo users, ${demoListings.length} listings, ${demoOffers.length} offers, ${demoTransactions.length} transactions, ${demoConversations.length} conversations, ${demoMessages.length} messages, and ${demoNotifications.length} notifications.`,
     );
-    console.log(`Test account password for all fixture accounts: ${qaTestPassword}`);
+    console.log(
+      `Demo logins: seller@example.com / ${demoPassword.seller}, buyer@example.com / ${demoPassword.buyer}.`,
+    );
   } finally {
     await connection.close();
   }
@@ -122,7 +124,7 @@ async function upsertById<T extends { id: string }>(
 }
 
 void main().catch((error: unknown) => {
-  console.error("Marketplace test data seed failed.");
+  console.error("Marketplace demo data seed failed.");
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
