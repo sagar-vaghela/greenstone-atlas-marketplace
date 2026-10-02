@@ -485,12 +485,12 @@ exact frontend origin and redeploy the API; rebuild the Static Site after
 setting its `VITE_API_URL`.
 
 The API allows credentials and, in production, only the configured frontend
-origin. Frontend API requests use `credentials: include`. The session cookie is
-host-only, `HttpOnly`, `Secure`, and `SameSite=None` in production; locally it
-uses `SameSite=Lax`. Default `onrender.com` frontend and API hosts are
-cross-site, so browser third-party-cookie rules can block sessions. For reliable
-browser support, use custom frontend and API domains under the same
-registrable domain. Do not expose session IDs to JavaScript or weaken `Secure`.
+origin. Frontend API requests use `credentials: include`. The production
+session cookie is host-only, `HttpOnly`, `Secure`, `SameSite=None`, and
+`Partitioned` for browser support across the default cross-site Render hosts;
+locally it uses `SameSite=Lax`. Custom frontend and API domains under the same
+registrable domain remain the most compatible option. Do not expose session IDs
+to JavaScript or weaken `Secure`.
 
 ### Step 5 — Configure MongoDB Atlas
 

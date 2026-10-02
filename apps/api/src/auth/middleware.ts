@@ -7,12 +7,23 @@ import {
 } from "../repositories/user-repository.js";
 
 export const SESSION_COOKIE = "atlas_session";
-const readCookie = (request: FastifyRequest): string | undefined =>
-  request.headers.cookie
+const PARTITIONED_SESSION_COOKIE = `${SESSION_COOKIE}_partitioned`;
+const readCookie = (request: FastifyRequest): string | undefined => {
+  const cookies = request.headers.cookie
     ?.split(";")
-    .map((item) => item.trim())
-    .find((item) => item.startsWith(`${SESSION_COOKIE}=`))
-    ?.slice(SESSION_COOKIE.length + 1);
+    .map((item) => item.trim());
+  const partitionedCookie = cookies?.find((item) =>
+    item.startsWith(`${PARTITIONED_SESSION_COOKIE}=`),
+  );
+  const legacyCookie = cookies?.find((item) =>
+    item.startsWith(`${SESSION_COOKIE}=`),
+  );
+  const cookie = partitionedCookie ?? legacyCookie;
+  const cookieName = partitionedCookie
+    ? PARTITIONED_SESSION_COOKIE
+    : SESSION_COOKIE;
+  return cookie?.slice(cookieName.length + 1);
+};
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -62,9 +73,10 @@ export const setSessionCookie = (
   secure: boolean,
 ): void => {
   const sameSite = secure ? "None" : "Lax";
+  const cookieName = secure ? PARTITIONED_SESSION_COOKIE : SESSION_COOKIE;
   reply.header(
     "Set-Cookie",
-    `${SESSION_COOKIE}=${encodeURIComponent(sessionId)}; Path=/; HttpOnly; SameSite=${sameSite}; Max-Age=604800${secure ? "; Secure" : ""}`,
+    `${cookieName}=${encodeURIComponent(sessionId)}; Path=/; HttpOnly; SameSite=${sameSite}; Max-Age=604800${secure ? "; Secure; Partitioned" : ""}`,
   );
 };
 
@@ -73,8 +85,15 @@ export const clearSessionCookie = (
   secure: boolean,
 ): void => {
   const sameSite = secure ? "None" : "Lax";
+  const expiredCookie = (cookieName: string) =>
+    `${cookieName}=; Path=/; HttpOnly; SameSite=${sameSite}; Max-Age=0${secure ? "; Secure" : ""}`;
   reply.header(
     "Set-Cookie",
-    `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=${sameSite}; Max-Age=0${secure ? "; Secure" : ""}`,
+    secure
+      ? [
+          `${expiredCookie(PARTITIONED_SESSION_COOKIE)}; Partitioned`,
+          expiredCookie(SESSION_COOKIE),
+        ]
+      : expiredCookie(SESSION_COOKIE),
   );
 };

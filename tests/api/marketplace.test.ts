@@ -127,12 +127,18 @@ describe("authentication and listings", () => {
         url: "/auth/login",
         payload: { email: "buyer@example.com", password: "buyer123" },
       });
-      const setCookie = String(login.headers["set-cookie"]);
-      const cookie = setCookie.split(";")[0];
+      const setCookies = login.headers["set-cookie"];
+      const cookieHeaders = Array.isArray(setCookies) ? setCookies : [setCookies];
+      const setCookie = cookieHeaders.find((header) =>
+        header?.startsWith("atlas_session_partitioned="),
+      );
+      expect(setCookie).toBeTruthy();
+      const cookie = String(setCookie).split(";")[0];
 
       expect(setCookie).toContain("HttpOnly");
       expect(setCookie).toContain("SameSite=None");
       expect(setCookie).toContain("Secure");
+      expect(setCookie).toContain("Partitioned");
 
       const deniedLogout = await secureApp.inject({
         method: "POST",
@@ -159,6 +165,7 @@ describe("authentication and listings", () => {
       expect(logout.statusCode).toBe(200);
       expect(clearedCookie).toContain("SameSite=None");
       expect(clearedCookie).toContain("Secure");
+      expect(clearedCookie).toContain("Partitioned");
       expect(clearedCookie).toContain("Max-Age=0");
     } finally {
       await secureApp.close();
