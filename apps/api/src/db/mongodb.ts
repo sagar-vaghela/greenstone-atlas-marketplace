@@ -8,6 +8,7 @@ export interface MongoConnection {
 export const connectMongoDB = async (
   uri: string,
   databaseName: string,
+  options: { allowEmptyDatabase?: boolean } = {},
 ): Promise<MongoConnection> => {
   const client = new MongoClient(uri, {
     serverSelectionTimeoutMS: 15_000,
@@ -25,7 +26,7 @@ export const connectMongoDB = async (
     const existingCollections = await db
       .listCollections({}, { nameOnly: true })
       .toArray();
-    if (existingCollections.length === 0) {
+    if (existingCollections.length === 0 && !options.allowEmptyDatabase) {
       throw new Error(
         `MongoDB database "${databaseName}" must be created in Atlas before API startup.`,
       );
