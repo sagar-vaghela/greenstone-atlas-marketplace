@@ -410,7 +410,7 @@ Cross-state rules are enforced server-side:
 - Completion requires `transaction.status === paid`, `paymentStatus === paid`, and `fulfilmentStatus === delivered`.
 - Shipping and delivery are represented in `fulfilmentStatus`; they do not change `TransactionStatus`.
 - The API rejects invalid transaction lifecycle transitions with a `409` conflict. Payment completion is reconciled only from verified Stripe webhooks.
-- Disputes require a reason and a 20–2000 character description. The case reference and submission details are saved with the transaction and shared with both participants; the demo support contact is `support@example.com`.
+- Disputes require a reason and a 10–2000 character description. The case reference and submission details are saved with the transaction and shared with both participants; the demo support contact is `support@example.com`.
 
 ## Real-time offer updates
 

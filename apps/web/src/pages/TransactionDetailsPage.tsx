@@ -109,6 +109,8 @@ export function TransactionDetailsPage() {
   const [disputeDialogOpen, setDisputeDialogOpen] = useState(false);
   const [disputeReason, setDisputeReason] = useState<DisputeReason | "">("");
   const [disputeDescription, setDisputeDescription] = useState("");
+  const disputeDescriptionLength = disputeDescription.trim().length;
+  const disputeCharactersRemaining = Math.max(0, 10 - disputeDescriptionLength);
 
   useEffect(() => {
     if (id) {
@@ -634,7 +636,15 @@ export function TransactionDetailsPage() {
                 minRows={4}
                 maxRows={8}
                 required
-                helperText={`${disputeDescription.length}/2000 characters (minimum 20)`}
+                error={
+                  disputeDescriptionLength > 0 &&
+                  disputeDescriptionLength < 10
+                }
+                helperText={
+                  disputeDescriptionLength < 10
+                    ? `${disputeCharactersRemaining} more ${disputeCharactersRemaining === 1 ? "character" : "characters"} needed · ${disputeDescription.length}/2000`
+                    : `${disputeDescription.length}/2000 characters`
+                }
                 slotProps={{ htmlInput: { maxLength: 2000 } }}
               />
               <Typography variant="body2" color="text.secondary">
@@ -663,7 +673,7 @@ export function TransactionDetailsPage() {
                 disabled={
                   mutationStatus === "loading" ||
                   !disputeReason ||
-                  disputeDescription.trim().length < 20
+                  disputeDescriptionLength < 10
                 }
                 startIcon={
                   mutationStatus === "loading" ? (

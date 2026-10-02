@@ -259,14 +259,14 @@ export const registerTransactionRoutes = async (
     if (
       !isDisputeReason(reason) ||
       !description ||
-      description.length < 20 ||
+      description.length < 10 ||
       description.length > 2000
     ) {
       return error(
         reply,
         400,
         'INVALID_DISPUTE_REQUEST',
-        'Choose a valid reason and provide a description between 20 and 2000 characters.',
+        'Choose a valid reason and provide a description between 10 and 2000 characters.',
       );
     }
 

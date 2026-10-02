@@ -62,9 +62,8 @@ describe("transaction dispute cases", () => {
         method: "POST",
         url: `/transactions/${transactionId}/dispute`,
         payload: {
-          reason: "item_not_as_described",
-          description:
-            "The item's condition differs from the listing description.",
+          reason: "other",
+          description: "Make it easy",
         },
       },
       buyer,
@@ -73,8 +72,8 @@ describe("transaction dispute cases", () => {
     expect(opened.json()).toMatchObject({
       status: "disputed",
       dispute: {
-        reason: "item_not_as_described",
-        description: "The item's condition differs from the listing description.",
+        reason: "other",
+        description: "Make it easy",
         openedBy: "demo-buyer",
       },
     });
