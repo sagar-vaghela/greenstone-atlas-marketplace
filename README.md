@@ -8,7 +8,7 @@ Atlas Marketplace is a marketplace concept for authenticated luxury and collecti
 - **API:** Fastify + TypeScript with a centralized browser API client.
 - **Persistence:** MongoDB Atlas through repository interfaces.
 - **Payments:** Stripe Test Mode behind a server-side provider abstraction.
-- **Realtime:** Authenticated event delivery over WebSocket/SSE-compatible marketplace events, with REST remaining authoritative after reconnects.
+- **Realtime:** Authenticated, recipient-scoped WebSocket event delivery with Redux synchronization; REST remains authoritative after reconnects.
 - **Deployment:** Render Static Site for the frontend and a Render Docker service for the API.
 - **CI/CD:** GitHub Actions is the quality gate: lint, typecheck, unit tests, coverage, build, Playwright, workspace validation, and optional deployed smoke checks.
 - **Testing:** Vitest for domain/API/UI logic and Playwright for real user journeys and responsive navigation.
@@ -16,6 +16,12 @@ Atlas Marketplace is a marketplace concept for authenticated luxury and collecti
 Render is used instead of AWS for this interview deployment because it keeps the release path small and reproducible while still exercising Docker, managed hosting, environment configuration, and health checks. GitHub Actions is the source of truth for quality; Render remains the deployment host rather than a competing test runner. A future AWS migration could map the static site to S3/CloudFront, the API container to ECS/Fargate, secrets to Secrets Manager, and the event bus to a shared broker. The current single API instance is intentional because the in-process event bus is not a cross-instance broker.
 
 Redux Toolkit keeps client workflow state explicit and testable without introducing another state library. MongoDB fits the prototype's document-shaped marketplace data and repository boundaries. Stripe is isolated behind a provider interface so test-mode payment behavior and webhook reconciliation remain replaceable. Transaction, offer, and payment versions are checked server-side to protect against stale concurrent updates. CI blocks downstream checks and deployment smoke verification when a quality gate fails.
+
+The Mongo-backed API seeds predictable demo users and profiles only when
+`DEMO_SEED_ENABLED=true` is explicitly configured. Keep it enabled for a local
+or staging interview demo, and leave it disabled in production/default
+environments. The in-memory local API retains deterministic fixtures for
+automated demo and Playwright journeys.
 
 ## Project status
 
@@ -135,13 +141,17 @@ provider secrets remain server-only.
 The frontend normalizes network and HTTP failures into `ApiError`, preserves
 the request ID for support diagnostics, clears expired sessions through the
 existing centralized auth restore flow, and provides a recovery boundary for
-unexpected React errors. WebSockets expose connecting, connected, reconnecting
-and disconnected states, clean up the socket and retry timer, and never log
-event contents. REST remains authoritative after reconnects.
+unexpected React errors. Authenticated WebSocket connections are
+recipient-scoped, expose connecting, connected, reconnecting and disconnected
+states, clean up the socket and retry timer, and never log event contents.
+Redux applies version/stale-event protection where domain events carry versions;
+REST remains authoritative after reconnects.
 
 Intentional limitations: the demo uses an in-process event bus, so multiple
-API instances would need a shared broker or pub/sub layer; logs are intended
-for a centralized log sink in deployment; metrics, tracing, alerting,
+API instances would need a shared broker or pub/sub layer and replay-capable
+gateway. That broker/replay architecture is future production-scale work, not
+implemented here. Logs are intended for a centralized log sink in deployment;
+metrics, tracing, alerting,
 distributed rate limiting, CSRF policy, managed MongoDB backups and payment
 provider integration remain deployment-level production work. MongoDB
 repositories preserve explicit indexes and version/state checks; a production
@@ -240,7 +250,14 @@ Commit 19.
 
 ## Stripe Test Mode payments
 
-Stripe Test Mode is required in production and staging. Set
+This submission implements Stripe Test Mode only. It includes PaymentIntent
+creation, verified webhook handling/reconciliation, payment state transitions,
+retry-safe provider references and idempotent event processing. It does not
+process real money. Production Stripe credentials, operational refunds and
+reconciliation, seller payouts/KYC, chargeback/dispute operations and full
+payment operations remain explicitly out of scope.
+
+Stripe Test Mode is required in production-like demo environments. Set
 `PAYMENT_PROVIDER=stripe` and configure
 `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and the browser-safe
 `STRIPE_PUBLISHABLE_KEY` in `.env`. The secret key and webhook secret are
@@ -607,3 +624,17 @@ checks; no live deployment is claimed here.
 
 For local development, run `npm ci`, then start the frontend with `npm run dev`
 and the API separately with `npm run dev:api`.
+
+## AI and tools disclosure
+
+Tools used for this interview submission include ChatGPT, GitHub Copilot,
+Playwright/browser tooling, GitHub Actions, Render, MongoDB Atlas and the
+Stripe Test Environment. AI assistance supported code scaffolding, architecture
+exploration, refactoring suggestions, debugging, test generation and
+documentation. Human decisions included the marketplace concept, frontend
+architecture, Redux Toolkit choice, transaction state model, WebSocket
+architecture, authorization model, payment abstraction, deployment trade-offs,
+UI direction and feature prioritisation. Verification included typecheck,
+tests, builds, API verification, browser verification, Playwright runs,
+deployment checks where available and manual review; AI-generated suggestions
+were reviewed rather than accepted blindly.

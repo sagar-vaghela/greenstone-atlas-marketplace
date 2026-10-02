@@ -30,63 +30,65 @@ const start = async (): Promise<void> => {
               const userRepository = new MongoUserRepository(
                 connection.db.collection("users"),
               );
-              for (const seed of [
-                {
-                  id: "demo-seller",
-                  email: "seller@example.com",
-                  displayName: "Seller",
-                  password: "seller123",
-                  role: "seller" as const,
-                },
-                {
-                  id: "demo-seller-2",
-                  email: "seller2@example.com",
-                  displayName: "Daniel Shah",
-                  password: "seller123",
-                  role: "seller" as const,
-                },
-                {
-                  id: "demo-buyer",
-                  email: "buyer@example.com",
-                  displayName: "Buyer A",
-                  password: "buyer123",
-                  role: "buyer" as const,
-                },
-                {
-                  id: "demo-buyer-2",
-                  email: "buyer2@example.com",
-                  displayName: "Buyer B",
-                  password: "buyer123",
-                  role: "buyer" as const,
-                },
-              ]) {
-                if (!(await userRepository.findByEmail(seed.email)))
-                  await userRepository.create({
-                    ...seed,
-                    passwordHash: hashPassword(seed.password),
-                  });
+              if (config.demoSeedEnabled) {
+                for (const seed of [
+                  {
+                    id: "demo-seller",
+                    email: "seller@example.com",
+                    displayName: "Seller",
+                    password: "seller123",
+                    role: "seller" as const,
+                  },
+                  {
+                    id: "demo-seller-2",
+                    email: "seller2@example.com",
+                    displayName: "Daniel Shah",
+                    password: "seller123",
+                    role: "seller" as const,
+                  },
+                  {
+                    id: "demo-buyer",
+                    email: "buyer@example.com",
+                    displayName: "Buyer A",
+                    password: "buyer123",
+                    role: "buyer" as const,
+                  },
+                  {
+                    id: "demo-buyer-2",
+                    email: "buyer2@example.com",
+                    displayName: "Buyer B",
+                    password: "buyer123",
+                    role: "buyer" as const,
+                  },
+                ]) {
+                  if (!(await userRepository.findByEmail(seed.email)))
+                    await userRepository.create({
+                      ...seed,
+                      passwordHash: hashPassword(seed.password),
+                    });
+                }
               }
               const sellerProfileRepository = new MongoSellerProfileRepository(
                 connection.db.collection("sellerProfiles"),
               );
-              for (const profile of [
-                {
-                  userId: "demo-seller",
-                  memberSince: "2025-01-01T00:00:00.000Z",
-                  verificationStatus: "verified" as const,
-                  responseRate: 92,
-                },
-                {
-                  userId: "demo-seller-2",
-                  memberSince: "2026-01-15T00:00:00.000Z",
-                  verificationStatus: "pending" as const,
-                  responseRate: 78,
-                },
-              ]) {
-                if (
-                  !(await sellerProfileRepository.findByUserId(profile.userId))
-                ) {
-                  await sellerProfileRepository.create(profile);
+              if (config.demoSeedEnabled) {
+                for (const profile of [
+                  {
+                    userId: "demo-seller",
+                    memberSince: "2025-01-01T00:00:00.000Z",
+                    verificationStatus: "verified" as const,
+                    responseRate: 92,
+                  },
+                  {
+                    userId: "demo-seller-2",
+                    memberSince: "2026-01-15T00:00:00.000Z",
+                    verificationStatus: "pending" as const,
+                    responseRate: 78,
+                  },
+                ]) {
+                  if (!(await sellerProfileRepository.findByUserId(profile.userId))) {
+                    await sellerProfileRepository.create(profile);
+                  }
                 }
               }
               return {

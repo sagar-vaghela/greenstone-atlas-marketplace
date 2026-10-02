@@ -11,6 +11,16 @@ describe("api config", () => {
 
     expect(config.mongodbUri).toBeUndefined();
     expect(config.mongodbDbName).toBe("atlas_marketplace");
+    expect(config.demoSeedEnabled).toBe(false);
+  });
+
+  it("enables demo seeding only when explicitly configured", () => {
+    expect(
+      getApiConfig({
+        NODE_ENV: "development",
+        DEMO_SEED_ENABLED: "true",
+      }).demoSeedEnabled,
+    ).toBe(true);
   });
 
   it("requires MongoDB in production-like environments", () => {
@@ -34,15 +44,9 @@ describe("api config", () => {
     });
 
     expect(productionConfig.allowLocalOrigins).toBe(false);
-    expect(isOriginAllowed("https://market.example", productionConfig)).toBe(
-      true,
-    );
-    expect(isOriginAllowed("http://localhost:5173", productionConfig)).toBe(
-      false,
-    );
-    expect(isOriginAllowed("https://untrusted.example", productionConfig)).toBe(
-      false,
-    );
+    expect(isOriginAllowed("https://market.example", productionConfig)).toBe(true);
+    expect(isOriginAllowed("http://localhost:5173", productionConfig)).toBe(false);
+    expect(isOriginAllowed("https://untrusted.example", productionConfig)).toBe(false);
   });
 
   it("normalizes a trailing slash on the configured frontend origin", () => {
@@ -55,9 +59,7 @@ describe("api config", () => {
       STRIPE_WEBHOOK_SECRET: "whsec_placeholder",
     });
 
-    expect(isOriginAllowed("https://market.example", productionConfig)).toBe(
-      true,
-    );
+    expect(isOriginAllowed("https://market.example", productionConfig)).toBe(true);
   });
 
   it("keeps HTTPS cookies enabled for staging", () => {

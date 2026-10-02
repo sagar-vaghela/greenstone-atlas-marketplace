@@ -94,7 +94,14 @@ test("chat shows live typing and sends on Enter while Shift+Enter inserts a newl
     );
     await page.goto("/");
     await sellerComposer.fill(scrollFiller);
+    const firstMessageResponse = sellerPage.waitForResponse(
+      (response) =>
+        response.url().includes(`/conversations/${conversationId}/messages`) &&
+        response.request().method() === "POST" &&
+        response.ok(),
+    );
     await sellerComposer.press("Enter");
+    await firstMessageResponse;
     await expect(sellerComposer).toHaveValue("");
     await expect
       .poll(async () => {

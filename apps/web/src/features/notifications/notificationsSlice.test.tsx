@@ -1,4 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
+import type { MarketplaceEventType, Notification } from "@atlas/types";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../api/client";
 import {
@@ -23,7 +24,10 @@ vi.mock("../../api/notifications", () => ({
   markNotificationRead: vi.fn(),
 }));
 
-const notification = (id = "notification-1", createdAt = "2025-01-02T00:00:00Z") =>
+const notification = (
+  id = "notification-1",
+  createdAt = "2025-01-02T00:00:00Z",
+): Notification =>
   ({
     id,
     userId: "user-1",
@@ -34,7 +38,7 @@ const notification = (id = "notification-1", createdAt = "2025-01-02T00:00:00Z")
     resourceId: "conversation-1",
     sourceEventId: `event-${id}`,
     createdAt,
-  }) as never;
+  }) satisfies Notification;
 
 const store = () => configureStore({ reducer: { notifications: reducer } });
 
@@ -78,7 +82,10 @@ describe("notifications slice", () => {
       unreadCount: 2,
     });
 
-    vi.mocked(markAllNotificationsRead).mockResolvedValueOnce({ unreadCount: -1 });
+    vi.mocked(markAllNotificationsRead).mockResolvedValueOnce({
+      updated: 1,
+      unreadCount: -1,
+    });
     await app.dispatch(markAllNotificationsReadAction());
     expect(app.getState().notifications.unreadCount).toBe(0);
     expect(app.getState().notifications.items[0].readAt).toBeDefined();
@@ -100,7 +107,7 @@ describe("notifications slice", () => {
     let state = reducer(undefined, { type: "init" });
     const event = (
       item: ReturnType<typeof notification>,
-      type = "notification.created",
+      type: MarketplaceEventType = "notification.created",
     ) =>
       notificationEventReceived({
         event: {
@@ -109,7 +116,7 @@ describe("notifications slice", () => {
           listingId: "listing-1",
           timestamp: item.createdAt,
           payload: { notification: item },
-        } as never,
+        },
       });
     state = reducer(state, event(notification("old", "2025-01-01T00:00:00Z")));
     state = reducer(state, event(notification("new", "2025-01-03T00:00:00Z")));

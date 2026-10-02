@@ -1,8 +1,6 @@
 const DEFAULT_HOST = "0.0.0.0";
 const DEFAULT_PORT = 3000;
-const DEFAULT_CORS_PORTS = [
-  5173, 5174, 5175, 5176, 5177, 5178, 4173, 4174, 4175,
-];
+const DEFAULT_CORS_PORTS = [5173, 5174, 5175, 5176, 5177, 5178, 4173, 4174, 4175];
 const DEFAULT_CORS_ORIGIN = [
   ...DEFAULT_CORS_PORTS.flatMap((port) => [
     `http://localhost:${port}`,
@@ -41,6 +39,7 @@ export interface ApiConfig {
   logLevel: string;
   slowRequestMs: number;
   paymentProvider: "demo" | "stripe";
+  demoSeedEnabled: boolean;
   stripeSecretKey?: string;
   stripeWebhookSecret?: string;
   stripePublishableKey?: string;
@@ -60,16 +59,14 @@ const parseCorsOrigin = (value: string | undefined): string | string[] => {
   return origins.length > 1 ? origins : (origins[0] ?? DEFAULT_CORS_ORIGIN);
 };
 
-export const getApiConfig = (
-  env: NodeJS.ProcessEnv = process.env,
-): ApiConfig => {
+export const getApiConfig = (env: NodeJS.ProcessEnv = process.env): ApiConfig => {
   const mongodbUri = env.MONGODB_URI?.trim() || undefined;
-  const productionLike =
-    env.NODE_ENV === "production" || env.NODE_ENV === "staging";
+  const productionLike = env.NODE_ENV === "production" || env.NODE_ENV === "staging";
 
   const sessionTtlMs = Number(env.SESSION_TTL_MS);
   const slowRequestMs = Number(env.SLOW_REQUEST_MS);
   const paymentProvider = env.PAYMENT_PROVIDER === "stripe" ? "stripe" : "demo";
+  const demoSeedEnabled = env.DEMO_SEED_ENABLED === "true";
   const stripeSecretKey = env.STRIPE_SECRET_KEY?.trim() || undefined;
   const stripeWebhookSecret = env.STRIPE_WEBHOOK_SECRET?.trim() || undefined;
   const stripePublishableKey = env.STRIPE_PUBLISHABLE_KEY?.trim() || undefined;
@@ -90,10 +87,7 @@ export const getApiConfig = (
     );
   }
 
-  if (
-    paymentProvider === "stripe" &&
-    (!stripeSecretKey || !stripeWebhookSecret)
-  ) {
+  if (paymentProvider === "stripe" && (!stripeSecretKey || !stripeWebhookSecret)) {
     throw new Error(
       "STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are required when PAYMENT_PROVIDER=stripe",
     );
@@ -132,6 +126,7 @@ export const getApiConfig = (
         ? slowRequestMs
         : DEFAULT_SLOW_REQUEST_MS,
     paymentProvider,
+    demoSeedEnabled,
     stripeSecretKey,
     stripeWebhookSecret,
     stripePublishableKey,
