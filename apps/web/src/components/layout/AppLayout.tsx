@@ -18,6 +18,7 @@ import {
   Menu,
   MenuItem,
   Snackbar,
+  Skeleton,
   Stack,
   Toolbar,
   Typography,
@@ -40,7 +41,11 @@ import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { logout, selectCurrentUser } from "../../features/auth/authSlice";
+import {
+  logout,
+  selectAuth,
+  selectCurrentUser,
+} from "../../features/auth/authSlice";
 import { selectConversations } from "../../features/messaging/messagingSlice";
 import {
   notificationClosed,
@@ -78,6 +83,7 @@ const navigationGroups = [
 
 export function AppLayout() {
   const dispatch = useAppDispatch();
+  const auth = useAppSelector(selectAuth);
   const user = useAppSelector(selectCurrentUser);
   const realtime = useAppSelector(selectRealtime);
   const notifications = useAppSelector(selectNotificationState);
@@ -250,7 +256,7 @@ export function AppLayout() {
                 <ListItemText primary="Log out" />
               </ListItemButton>
             </>
-          ) : (
+          ) : auth.initialized ? (
             <>
               <ListItemButton
                 component={RouterLink}
@@ -269,6 +275,11 @@ export function AppLayout() {
                 <ListItemText primary="Create account" />
               </ListItemButton>
             </>
+          ) : (
+            <Box sx={{ px: 1.5, py: 1 }}>
+              <Skeleton width="70%" />
+              <Skeleton width="85%" />
+            </Box>
           )}
         </List>
       </Box>
@@ -526,7 +537,7 @@ export function AppLayout() {
                       </MenuItem>
                     </Menu>
                   </>
-                ) : (
+                ) : auth.initialized ? (
                   <Stack direction="row" spacing={1} sx={{ ml: "auto" }}>
                     <Button
                       component={RouterLink}
@@ -545,6 +556,14 @@ export function AppLayout() {
                       Create account
                     </Button>
                   </Stack>
+                ) : (
+                  <Skeleton
+                    variant="rounded"
+                    width={176}
+                    height={40}
+                    sx={{ ml: "auto" }}
+                    aria-label="Restoring session"
+                  />
                 )}
               </>
             ) : (
@@ -569,7 +588,7 @@ export function AppLayout() {
                     </Badge>
                   </IconButton>
                 )}
-                {!user && (
+                {!user && auth.initialized && (
                   <Button
                     component={RouterLink}
                     to="/login"
@@ -578,6 +597,14 @@ export function AppLayout() {
                   >
                     Sign in
                   </Button>
+                )}
+                {!auth.initialized && (
+                  <Skeleton
+                    variant="circular"
+                    width={36}
+                    height={36}
+                    aria-label="Restoring session"
+                  />
                 )}
               </Box>
             )}

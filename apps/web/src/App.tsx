@@ -9,7 +9,7 @@ import {
 import { AppLayout } from "./components/layout/AppLayout";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
 import { fetchCurrentUser, selectAuth } from "./features/auth/authSlice";
-import { CircularProgress, Box } from "@mui/material";
+import { Alert, Button, CircularProgress, Box, Stack } from "@mui/material";
 import { connectMarketplaceEvents } from "./api/marketplaceEvents";
 import {
   connectionStatusChanged,
@@ -110,8 +110,29 @@ function RouteLoadingFallback() {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const dispatch = useAppDispatch();
   const auth = useAppSelector(selectAuth);
-  if (!auth.initialized)
+  if (auth.status === "failed") {
+    return (
+      <Stack spacing={2}>
+        <Alert
+          severity="error"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => void dispatch(fetchCurrentUser())}
+            >
+              Retry
+            </Button>
+          }
+        >
+          {auth.error ?? "Unable to restore your session. Please try again."}
+        </Alert>
+      </Stack>
+    );
+  }
+  if (!auth.initialized || auth.status === "loading")
     return (
       <Box sx={{ display: "grid", placeItems: "center", minHeight: "50vh" }}>
         <CircularProgress aria-label="Checking your session" />

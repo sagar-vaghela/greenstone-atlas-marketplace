@@ -72,6 +72,8 @@ const authSlice = createSlice({
     builder
       .addCase(fetchCurrentUser.pending, (state) => {
         state.status = "loading";
+        state.initialized = false;
+        state.error = null;
       })
       .addCase(fetchCurrentUser.fulfilled, (state, action) => {
         state.user = action.payload;
@@ -79,10 +81,14 @@ const authSlice = createSlice({
         state.initialized = true;
         state.error = null;
       })
-      .addCase(fetchCurrentUser.rejected, (state) => {
+      .addCase(fetchCurrentUser.rejected, (state, action) => {
         state.user = null;
-        state.status = "succeeded";
-        state.initialized = true;
+        state.status = action.payload === "" ? "succeeded" : "failed";
+        state.initialized = action.payload === "";
+        state.error =
+          action.payload === ""
+            ? null
+            : (action.payload ?? "Unable to restore your session.");
       })
       .addCase(login.pending, (state) => {
         state.status = "loading";
