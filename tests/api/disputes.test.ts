@@ -1,13 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../../apps/api/src/app.js";
+import { InMemoryTransactionRepository } from "../../apps/api/src/repositories/in-memory-transaction-repository.js";
 import { inject, login } from "./helpers.js";
 
 describe("transaction dispute cases", () => {
   let app: FastifyInstance;
+  let transactionRepository: InMemoryTransactionRepository;
 
   beforeEach(async () => {
-    app = buildApp({ secureCookies: false });
+    transactionRepository = new InMemoryTransactionRepository();
+    app = buildApp({ secureCookies: false, transactionRepository });
     await app.ready();
   });
 
@@ -29,16 +32,11 @@ describe("transaction dispute cases", () => {
     expect(accepted.statusCode).toBe(200);
     const transaction = accepted.json().transaction;
     const buyer = await login(app, "buyer@example.com", "buyer123");
-    const paid = await inject(
-      app,
-      {
-        method: "POST",
-        url: `/transactions/${transaction.id}/payment`,
-        headers: { "idempotency-key": "dispute-test-payment" },
-      },
-      buyer,
-    );
-    expect(paid.statusCode).toBe(200);
+    await transactionRepository.applyPaymentResult(transaction.id, {
+      idempotencyKey: "stripe:event:dispute-test",
+      provider: "stripe",
+      outcome: "paid",
+    });
     return { buyer, transactionId: transaction.id };
   };
 

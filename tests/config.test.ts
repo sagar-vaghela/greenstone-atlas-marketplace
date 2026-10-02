@@ -28,6 +28,9 @@ describe("api config", () => {
       NODE_ENV: "production",
       MONGODB_URI: "mongodb://localhost:27017/atlas_marketplace",
       CORS_ORIGIN: "https://market.example",
+      PAYMENT_PROVIDER: "stripe",
+      STRIPE_SECRET_KEY: "sk_test_placeholder",
+      STRIPE_WEBHOOK_SECRET: "whsec_placeholder",
     });
 
     expect(productionConfig.allowLocalOrigins).toBe(false);
@@ -47,6 +50,9 @@ describe("api config", () => {
       NODE_ENV: "production",
       MONGODB_URI: "mongodb://localhost:27017/atlas_marketplace",
       CORS_ORIGIN: "https://market.example/",
+      PAYMENT_PROVIDER: "stripe",
+      STRIPE_SECRET_KEY: "sk_test_placeholder",
+      STRIPE_WEBHOOK_SECRET: "whsec_placeholder",
     });
 
     expect(isOriginAllowed("https://market.example", productionConfig)).toBe(
@@ -59,6 +65,9 @@ describe("api config", () => {
       NODE_ENV: "staging",
       MONGODB_URI: "mongodb://localhost:27017/atlas_marketplace",
       CORS_ORIGIN: "https://market.example",
+      PAYMENT_PROVIDER: "stripe",
+      STRIPE_SECRET_KEY: "sk_test_placeholder",
+      STRIPE_WEBHOOK_SECRET: "whsec_placeholder",
     });
 
     expect(stagingConfig.secureCookies).toBe(true);
@@ -77,6 +86,16 @@ describe("api config", () => {
         STRIPE_WEBHOOK_SECRET: "whsec_placeholder",
       }),
     ).toThrow(/Stripe Test Mode/);
+  });
+
+  it("rejects demo payment mode in production-like environments", () => {
+    expect(() =>
+      getApiConfig({
+        NODE_ENV: "production",
+        MONGODB_URI: "mongodb://localhost:27017/atlas_marketplace",
+        CORS_ORIGIN: "https://market.example",
+      }),
+    ).toThrow(/PAYMENT_PROVIDER=stripe is required/);
   });
 
   it("accepts Stripe Test Mode secret keys in production-like environments", () => {

@@ -3,14 +3,6 @@ export interface PaymentProviderRequest {
   amount: number;
   currency: string;
   idempotencyKey: string;
-  demoOutcome?: "success" | "failure";
-}
-
-export interface PaymentProviderResult {
-  outcome: "paid" | "failed";
-  provider: string;
-  failureCode?: string;
-  providerReference?: string;
 }
 
 export interface PaymentIntentResult {
@@ -34,14 +26,13 @@ export interface PaymentProvider {
   retrievePaymentIntent(
     providerReference: string,
   ): Promise<PaymentIntentResult>;
-  charge(request: PaymentProviderRequest): Promise<PaymentProviderResult>;
   parseWebhookEvent?(
     payload: Buffer,
     signature: string,
   ): PaymentWebhookEvent | undefined;
 }
 
-/** Replace this adapter with a real provider at the charge boundary. */
+/** Development-only intent stub; it cannot confirm or complete a payment. */
 export class DemoPaymentProvider implements PaymentProvider {
   async createPaymentIntent(
     request: PaymentProviderRequest,
@@ -59,16 +50,4 @@ export class DemoPaymentProvider implements PaymentProvider {
     return { provider: "demo", providerReference, status: "pending" };
   }
 
-  async charge(
-    request: PaymentProviderRequest,
-  ): Promise<PaymentProviderResult> {
-    if (request.demoOutcome === "failure") {
-      return {
-        outcome: "failed",
-        provider: "demo",
-        failureCode: "demo_declined",
-      };
-    }
-    return { outcome: "paid", provider: "demo" };
-  }
 }

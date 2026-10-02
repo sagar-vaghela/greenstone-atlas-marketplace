@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getApiConfig } from "@atlas/config";
 import { InMemoryNotificationRepository } from "../../apps/api/src/repositories/in-memory-notification-repository.js";
+import { InMemoryTransactionRepository } from "../../apps/api/src/repositories/in-memory-transaction-repository.js";
 import { MarketplaceEventBus } from "../../apps/api/src/events/marketplace-event-bus.js";
 import { buildApp } from "../../apps/api/src/app.js";
 import { makeApp, inject, login, register } from "./helpers.js";
@@ -307,8 +308,11 @@ describe("authentication and listings", () => {
 
 describe("offers and transaction lifecycle", () => {
   let app: FastifyInstance;
+  let transactionRepository: InMemoryTransactionRepository;
   beforeEach(async () => {
-    app = await makeApp();
+    transactionRepository = new InMemoryTransactionRepository();
+    app = buildApp({ secureCookies: false, transactionRepository });
+    await app.ready();
   });
   afterEach(async () => {
     await app.close();
@@ -402,45 +406,25 @@ describe("offers and transaction lifecycle", () => {
         )
       ).statusCode,
     ).toBe(403);
-    expect(
-      (
-        await inject(
-          app,
-          {
-            method: "POST",
-            url: `/transactions/${transaction.id}/payment`,
-            headers: { "idempotency-key": "payment-1" },
-            payload: { outcome: "failure" },
-          },
-          buyer,
-        )
-      ).json().paymentStatus,
-    ).toBe("failed");
-    const retry = await inject(
+    const bypass = await inject(
       app,
       {
         method: "POST",
         url: `/transactions/${transaction.id}/payment`,
-        headers: { "idempotency-key": "payment-2" },
         payload: { outcome: "success" },
       },
       buyer,
     );
-    expect(retry.json().status).toBe("paid");
-    expect(
-      (
-        await inject(
-          app,
-          {
-            method: "POST",
-            url: `/transactions/${transaction.id}/payment`,
-            headers: { "idempotency-key": "payment-2" },
-            payload: { outcome: "success" },
-          },
-          buyer,
-        )
-      ).json().version,
-    ).toBe(retry.json().version);
+    expect(bypass.statusCode).toBe(404);
+    expect(await transactionRepository.findById(transaction.id)).toMatchObject({
+      status: "pending_payment",
+      paymentStatus: "pending",
+    });
+    await transactionRepository.applyPaymentResult(transaction.id, {
+      idempotencyKey: "stripe:event:confirmed-payment",
+      provider: "stripe",
+      outcome: "paid",
+    });
     expect(
       (
         await inject(

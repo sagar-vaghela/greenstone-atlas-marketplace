@@ -9,20 +9,6 @@ export const getMyTransactions = (): Promise<Transaction[]> =>
     (result) => result.items,
   );
 
-export const payTransaction = (
-  id: string,
-  idempotencyKey: string,
-  outcome: "success" | "failure" = "success",
-): Promise<Transaction> =>
-  request<Transaction>(`/transactions/${encodeURIComponent(id)}/payment`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Idempotency-Key": idempotencyKey,
-    },
-    body: JSON.stringify({ outcome }),
-  });
-
 export interface PaymentIntentResponse {
   transactionId: string;
   provider: string;

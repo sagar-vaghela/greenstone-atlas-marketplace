@@ -84,6 +84,12 @@ export const getApiConfig = (
     );
   }
 
+  if (productionLike && paymentProvider !== "stripe") {
+    throw new Error(
+      "PAYMENT_PROVIDER=stripe is required in production-like environments; demo payments cannot be used.",
+    );
+  }
+
   if (
     paymentProvider === "stripe" &&
     (!stripeSecretKey || !stripeWebhookSecret)

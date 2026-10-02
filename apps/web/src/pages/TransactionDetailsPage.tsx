@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Box,
@@ -44,7 +44,6 @@ import {
   deliverTransactionAction,
   disputeTransactionAction,
   fetchTransaction,
-  payTransactionAction,
   shipTransactionAction,
   selectTransactionById,
   selectTransactionDetailStatus,
@@ -98,13 +97,15 @@ export function TransactionDetailsPage() {
   );
   const error = useAppSelector(selectTransactionsError);
   const mutationStatus = useAppSelector(selectTransactionsMutationStatus);
-  const paymentAttemptKey = useRef<string | null>(null);
   const compactTimeline = useMediaQuery("(max-width:600px)");
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(
     null,
   );
   const [stripeDialogOpen, setStripeDialogOpen] = useState(false);
   const [awaitingReconciliation, setAwaitingReconciliation] = useState(false);
+  const [paymentSetupError, setPaymentSetupError] = useState<string | null>(
+    null,
+  );
   const [disputeDialogOpen, setDisputeDialogOpen] = useState(false);
   const [disputeReason, setDisputeReason] = useState<DisputeReason | "">("");
   const [disputeDescription, setDisputeDescription] = useState("");
@@ -198,24 +199,33 @@ export function TransactionDetailsPage() {
             : 3
         : 1;
   const submitPayment = async () => {
+    setPaymentSetupError(null);
+    if (!stripePromise) {
+      setPaymentSetupError(
+        "Card checkout is not configured on this site. No payment was made; please contact support.",
+      );
+      return;
+    }
     const idempotencyKey = crypto.randomUUID();
-    paymentAttemptKey.current = idempotencyKey;
     try {
       const intent = await dispatch(
         createPaymentIntentAction({ id: transaction.id, idempotencyKey }),
       ).unwrap();
       if (
         intent.provider === "stripe" &&
-        intent.clientSecret &&
-        stripePromise
+        intent.clientSecret
       ) {
         setStripeClientSecret(intent.clientSecret);
         setStripeDialogOpen(true);
         return;
       }
-      void dispatch(
-        payTransactionAction({ id: transaction.id, idempotencyKey }),
+      setPaymentSetupError(
+        "The card payment provider did not return a Stripe checkout. This transaction remains unpaid.",
       );
+      if (intent.status === "paid") {
+        setAwaitingReconciliation(true);
+        void dispatch(fetchTransaction(transaction.id));
+      }
     } catch {
       // Redux owns the user-visible API error state.
     }
@@ -437,6 +447,11 @@ export function TransactionDetailsPage() {
       {mutationStatus === "failed" && error && (
         <Alert severity="error" role="alert">
           {error}
+        </Alert>
+      )}
+      {paymentSetupError && (
+        <Alert severity="error" role="alert">
+          {paymentSetupError}
         </Alert>
       )}
 

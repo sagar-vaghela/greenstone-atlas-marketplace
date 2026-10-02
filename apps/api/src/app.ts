@@ -226,7 +226,6 @@ export const buildApp = (options: BuildAppOptions = {}) => {
   app.register(registerTransactionRoutes, {
     transactionRepository,
     eventBus,
-    paymentProvider,
   });
   app.register(registerPaymentRoutes, {
     transactionRepository,

@@ -14,7 +14,6 @@ import {
   getMyTransactions,
   getTransactionById,
   createPaymentIntent,
-  payTransaction,
   shipTransaction,
 } from "../../api/transactions";
 import type { PaymentIntentResponse } from "../../api/transactions";
@@ -75,21 +74,6 @@ export const fetchTransaction = createAsyncThunk<
     return rejectWithValue(message(error, "Unable to load this transaction."));
   }
 });
-
-export const payTransactionAction = createAsyncThunk<
-  Transaction,
-  { id: string; idempotencyKey: string; outcome?: "success" | "failure" },
-  { rejectValue: string }
->(
-  "transactions/pay",
-  async ({ id, idempotencyKey, outcome }, { rejectWithValue }) => {
-    try {
-      return await payTransaction(id, idempotencyKey, outcome);
-    } catch (error) {
-      return rejectWithValue(message(error, "Unable to complete payment."));
-    }
-  },
-);
 
 export const createPaymentIntentAction = createAsyncThunk<
   PaymentIntentResponse,
@@ -212,18 +196,6 @@ const transactionsSlice = createSlice({
         if (state.detailId !== action.meta.arg) return;
         state.detailStatus = "failed";
         state.error = action.payload ?? "Unable to load this transaction.";
-      })
-      .addCase(payTransactionAction.pending, (state) => {
-        state.mutationStatus = "loading";
-        state.error = null;
-      })
-      .addCase(payTransactionAction.fulfilled, (state, action) => {
-        state.mutationStatus = "succeeded";
-        setTransaction(state, action.payload);
-      })
-      .addCase(payTransactionAction.rejected, (state, action) => {
-        state.mutationStatus = "failed";
-        state.error = action.payload ?? "Unable to complete payment.";
       })
       .addCase(createPaymentIntentAction.pending, (state) => {
         state.mutationStatus = "loading";

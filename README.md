@@ -225,8 +225,8 @@ Commit 19.
 
 ## Stripe Test Mode payments
 
-Stripe is optional and defaults to the existing `DemoPaymentProvider`. To use
-Stripe Test Mode, set `PAYMENT_PROVIDER=stripe` and configure
+Stripe Test Mode is required in production and staging. Set
+`PAYMENT_PROVIDER=stripe` and configure
 `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and the browser-safe
 `STRIPE_PUBLISHABLE_KEY` in `.env`. The secret key and webhook secret are
 server-only; only the publishable key is exposed through
@@ -243,7 +243,9 @@ React + Redux -> POST /transactions/:id/payment-intent
 
 The API derives the amount and buyer authorization from the transaction.
 Existing amounts are major currency units, so Stripe conversion uses
-deterministic minor unit conversion (for example, AED 10.00 becomes 1000). The transaction stores the provider reference, while card numbers, CVV, client secrets, and Stripe credentials are never persisted or placed in Redux.
+deterministic minor unit conversion (for example, AED 10.00 becomes 1000). The
+transaction stores the provider reference, while card numbers, CVV, client
+secrets, and Stripe credentials are never persisted or placed in Redux.
 
 For local forwarding, use the Stripe CLI with `stripe listen --forward-to
 localhost:3000/webhooks/stripe` and copy the printed signing secret into
@@ -255,8 +257,10 @@ browser confirmation response, changes the Atlas transaction to paid.
 PaymentIntent creation reuses the stored provider reference and sends an
 idempotency key to Stripe. Webhook event ids are also used as Atlas payment
 attempt keys, so replayed events do not duplicate transaction mutations,
-notifications, or WebSocket updates. The DemoPaymentProvider remains available for
-offline development and regression tests.
+notifications, or WebSocket updates. The development `DemoPaymentProvider` only
+returns a placeholder intent and cannot mark a transaction paid. Payment status can be changed only by a
+verified Stripe webhook. The former direct `POST /transactions/:id/payment`
+success/failure endpoint has been removed.
 
 For the automated browser journey, place fresh rotated Stripe Test Mode keys in
 the ignored `.env` and run `stripe listen` in a second terminal, then run
@@ -405,7 +409,7 @@ Cross-state rules are enforced server-side:
 - Delivery requires `transaction.status === paid`, `paymentStatus === paid`, and `fulfilmentStatus === shipped`.
 - Completion requires `transaction.status === paid`, `paymentStatus === paid`, and `fulfilmentStatus === delivered`.
 - Shipping and delivery are represented in `fulfilmentStatus`; they do not change `TransactionStatus`.
-- The API preserves the existing action endpoints (`POST /transactions/:id/payment`, `/ship`, `/deliver`, `/complete`, `/cancel`, `/dispute`) and rejects invalid lifecycle transitions with a `409` conflict.
+- The API rejects invalid transaction lifecycle transitions with a `409` conflict. Payment completion is reconciled only from verified Stripe webhooks.
 - Disputes require a reason and a 20–2000 character description. The case reference and submission details are saved with the transaction and shared with both participants; the demo support contact is `support@example.com`.
 
 ## Real-time offer updates
@@ -572,10 +576,19 @@ The API verifies the raw request signature and deduplicates event IDs.
 Smoke-test unauthenticated `/health` (`200`, liveness only) and `/ready` (`200`
 when MongoDB is available), then verify the home page and direct React-route
 refresh, login/session restoration/logout, listings, offers, transactions,
-messaging, notifications and authenticated `/events` WebSocket updates. Complete
-a Stripe Test Mode payment and verify webhook delivery and transaction
-reconciliation. CI runs the repository quality checks; no live deployment is
-claimed here.
+messaging, notifications and authenticated `/events` WebSocket updates. Create
+a new transaction by accepting an offer (do not use a seeded transaction that
+is already marked paid), then complete a Stripe Test Mode payment and verify
+webhook delivery and transaction reconciliation. For a successful test, use
+`4242 4242 4242 4242` with any
+future expiry and CVC, then verify the Stripe Dashboard PaymentIntent succeeded,
+the `/webhooks/stripe` delivery returned `200`, and the transaction changed to
+paid only after that delivery. For a declined test, use
+`4000 0000 0000 9995` and verify the transaction remains unpaid/failed. If
+Stripe setup or webhook delivery is unavailable, the UI must report the
+problem and the transaction must remain pending; a POST to the removed
+`/transactions/:id/payment` route returns `404`. CI runs the repository quality
+checks; no live deployment is claimed here.
 
 For local development, run `npm ci`, then start the frontend with `npm run dev`
 and the API separately with `npm run dev:api`.

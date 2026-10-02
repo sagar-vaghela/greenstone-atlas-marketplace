@@ -3,7 +3,6 @@ import type {
   PaymentIntentResult,
   PaymentProvider,
   PaymentProviderRequest,
-  PaymentProviderResult,
   PaymentWebhookEvent,
 } from "./payment-provider.js";
 
@@ -106,12 +105,6 @@ export class StripePaymentProvider implements PaymentProvider {
           : "Payment provider unavailable",
       );
     }
-  }
-
-  async charge(
-    _request: PaymentProviderRequest,
-  ): Promise<PaymentProviderResult> {
-    throw new Error("Stripe payments must be confirmed through PaymentIntents");
   }
 
   parseWebhookEvent(

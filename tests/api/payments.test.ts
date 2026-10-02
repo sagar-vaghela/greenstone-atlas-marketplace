@@ -3,7 +3,6 @@ import type {
   PaymentIntentResult,
   PaymentProvider,
   PaymentProviderRequest,
-  PaymentProviderResult,
   PaymentWebhookEvent,
 } from "../../apps/api/src/payments/payment-provider.js";
 import { buildApp } from "../../apps/api/src/app.js";
@@ -13,9 +12,12 @@ import type { FastifyInstance } from "fastify";
 class FakePaymentProvider implements PaymentProvider {
   private lastReference = "";
 
+  constructor(private readonly failSetup = false) {}
+
   async createPaymentIntent(
     request: PaymentProviderRequest,
   ): Promise<PaymentIntentResult> {
+    if (this.failSetup) throw new Error("provider unavailable");
     this.lastReference = `pi_${request.transactionId}`;
     return {
       provider: "stripe",
@@ -33,16 +35,6 @@ class FakePaymentProvider implements PaymentProvider {
       providerReference,
       clientSecret: "cs_test_secret",
       status: "pending",
-    };
-  }
-
-  async charge(
-    _request: PaymentProviderRequest,
-  ): Promise<PaymentProviderResult> {
-    return {
-      provider: "stripe",
-      outcome: "failed",
-      failureCode: "not_supported",
     };
   }
 
@@ -109,6 +101,32 @@ describe("Stripe payment boundary", () => {
     expect(first.statusCode).toBe(200);
     expect(first.json().paymentIntentId).toBe(`pi_${transaction.id}`);
     expect(first.json().clientSecret).toBe("cs_test_secret");
+    expect(first.json().transaction).toMatchObject({
+      status: "pending_payment",
+      paymentStatus: "pending",
+    });
+    const bypass = await inject(
+      app,
+      {
+        method: "POST",
+        url: `/transactions/${transaction.id}/payment`,
+        payload: { outcome: "success" },
+      },
+      buyer,
+    );
+    expect(bypass.statusCode).toBe(404);
+    expect(
+      (
+        await inject(
+          app,
+          { method: "GET", url: `/transactions/${transaction.id}` },
+          buyer,
+        )
+      ).json(),
+    ).toMatchObject({
+      status: "pending_payment",
+      paymentStatus: "pending",
+    });
 
     const second = await inject(
       app,
@@ -121,6 +139,50 @@ describe("Stripe payment boundary", () => {
     );
     expect(second.statusCode).toBe(200);
     expect(second.json().paymentIntentId).toBe(first.json().paymentIntentId);
+  });
+
+  it("leaves the transaction unpaid when the payment provider cannot create an intent", async () => {
+    await app.close();
+    app = buildApp({
+      secureCookies: false,
+      paymentProvider: new FakePaymentProvider(true),
+    });
+    await app.ready();
+
+    const seller = await login(app, "seller@example.com", "seller123");
+    const accepted = await inject(
+      app,
+      {
+        method: "PATCH",
+        url: "/offers/offer-1/status",
+        payload: { status: "accepted" },
+      },
+      seller,
+    );
+    const transaction = accepted.json().transaction;
+    const buyer = await login(app, "buyer@example.com", "buyer123");
+    const setup = await inject(
+      app,
+      {
+        method: "POST",
+        url: `/transactions/${transaction.id}/payment-intent`,
+      },
+      buyer,
+    );
+
+    expect(setup.statusCode).toBe(502);
+    expect(
+      (
+        await inject(
+          app,
+          { method: "GET", url: `/transactions/${transaction.id}` },
+          buyer,
+        )
+      ).json(),
+    ).toMatchObject({
+      status: "pending_payment",
+      paymentStatus: "pending",
+    });
   });
 
   it("rejects invalid signatures and reconciles a webhook exactly once", async () => {
