@@ -42,6 +42,18 @@ describe("api config", () => {
     );
   });
 
+  it("normalizes a trailing slash on the configured frontend origin", () => {
+    const productionConfig = getApiConfig({
+      NODE_ENV: "production",
+      MONGODB_URI: "mongodb://localhost:27017/atlas_marketplace",
+      CORS_ORIGIN: "https://market.example/",
+    });
+
+    expect(isOriginAllowed("https://market.example", productionConfig)).toBe(
+      true,
+    );
+  });
+
   it("keeps HTTPS cookies enabled for staging", () => {
     const stagingConfig = getApiConfig({
       NODE_ENV: "staging",

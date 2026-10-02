@@ -54,6 +54,7 @@ const parseCorsOrigin = (value: string | undefined): string | string[] => {
   const origins = value
     .split(",")
     .map((origin) => origin.trim())
+    .map((origin) => origin.replace(/\/+$/, ""))
     .filter(Boolean);
 
   return origins.length > 1 ? origins : (origins[0] ?? DEFAULT_CORS_ORIGIN);

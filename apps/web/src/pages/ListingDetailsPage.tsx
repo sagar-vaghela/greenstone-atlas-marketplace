@@ -30,11 +30,11 @@ import {
   selectSelectedListing,
   updateListingStatus,
 } from "../features/listings/listingsSlice";
-import { createConversationAction } from "../features/messaging/messagingSlice";
 import { PriceDisplay } from "../components/common/PriceDisplay";
 import { StatusChip } from "../components/common/StatusChip";
 import { LoadingState } from "../components/common/LoadingState";
 import { BackToMarketplaceButton } from "../components/common/BackToMarketplaceButton";
+import { MessageSellerButton } from "../components/listings/MessageSellerButton";
 
 const statusLabels: Record<ListingStatus, string> = {
   draft: "Draft",
@@ -308,22 +308,10 @@ export function ListingDetailsPage() {
             </Stack>
           </Stack>
           <SellerCard sellerId={listing.sellerId} />
-          {currentUser && currentUser.id !== listing.sellerId && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                void dispatch(createConversationAction(listing.id)).then(
-                  (result) => {
-                    if (createConversationAction.fulfilled.match(result)) {
-                      void navigate(`/messages/${result.payload.id}`);
-                    }
-                  },
-                );
-              }}
-            >
-              Message seller
-            </Button>
-          )}
+          <MessageSellerButton
+            listingId={listing.id}
+            sellerId={listing.sellerId}
+          />
           {currentUser ? (
             <OfferPanel
               listing={listing}

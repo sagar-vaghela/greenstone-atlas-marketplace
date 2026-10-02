@@ -12,7 +12,7 @@ export const connectMarketplaceEvents = (
   onStatus: (status: EventConnectionStatus) => void,
 ): (() => void) => {
   onStatus("connecting");
-  const eventUrl = new URL(`${API_BASE_URL}/events`);
+  const eventUrl = new URL("/events", API_BASE_URL || window.location.origin);
   eventUrl.protocol = eventUrl.protocol === "https:" ? "wss:" : "ws:";
 
   let closed = false;

@@ -13,6 +13,7 @@ import { Link as RouterLink } from "react-router-dom";
 import type { Listing } from "@atlas/types";
 import { PriceDisplay } from "../common/PriceDisplay";
 import { StatusChip } from "../common/StatusChip";
+import { MessageSellerButton } from "./MessageSellerButton";
 
 export function ListingCard({ listing }: { listing: Listing }) {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -102,7 +103,17 @@ export function ListingCard({ listing }: { listing: Listing }) {
           </Typography>
         </CardContent>
       </CardActionArea>
-      <Box sx={{ px: 2, pb: 1.5 }}>
+      <Box
+        sx={{
+          px: 2,
+          pb: 1.5,
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1,
+        }}
+      >
         <Link
           component={RouterLink}
           to={`/sellers/${listing.sellerId}`}
@@ -112,6 +123,10 @@ export function ListingCard({ listing }: { listing: Listing }) {
         >
           View seller profile
         </Link>
+        <MessageSellerButton
+          listingId={listing.id}
+          sellerId={listing.sellerId}
+        />
       </Box>
     </Card>
   );
