@@ -183,6 +183,7 @@ flowchart LR
 | Web                   | React, TypeScript, Vite, Material UI                   | Fast iteration with typed, responsive, accessible UI primitives                                   |
 | Client state          | Redux Toolkit                                          | Explicit, testable workflow state for listings, offers, messages, notifications, and transactions |
 | API                   | Fastify + TypeScript                                   | Small, performant HTTP boundary with schema-friendly route organization                           |
+| Repository structure  | npm-workspaces monorepo                                | Keeps web, API, and shared packages together with one dependency lockfile and consistent commands |
 | Domain                | Typed transition guards                                | Prevents invalid listing, auction, bid, offer, payment, and fulfilment changes                    |
 | Persistence           | Repository interfaces + MongoDB Atlas                  | Keeps application logic testable and persistence replaceable                                      |
 | Payments              | Stripe behind `PaymentProvider`                        | Isolates provider details and makes webhook reconciliation explicit                               |
@@ -190,6 +191,24 @@ flowchart LR
 | Deployment            | Render static site + Docker API                        | Reproducible interview deployment with a small operational footprint                              |
 | Quality               | Vitest, Playwright, ESLint, TypeScript, GitHub Actions | Covers domain rules, API/UI behavior, real browser journeys, and release gates                    |
 | Code quality (target) | SonarQube or SonarCloud in CI                          | Planned static-analysis and quality-gate layer; not enabled in the current prototype              |
+
+### Monorepo strategy
+
+The project uses an **npm-workspaces monorepo** with separate applications and shared packages:
+
+```text
+apps/
+  web/                  React + Vite frontend
+  api/                  Fastify + TypeScript backend
+packages/
+  types/                Shared marketplace entities and lifecycle types
+  validation/           Shared input validation
+  config/               Shared configuration helpers
+```
+
+This structure keeps the frontend and API independently deployable while allowing them to share strongly typed contracts and validation rules. It avoids duplicating marketplace status definitions, request/response shapes, and validation logic across separate repositories. Root-level scripts provide consistent commands for development, linting, formatting, type checking, unit tests, browser tests, builds, and coverage.
+
+The trade-off is that workspace dependency boundaries and build order must be maintained carefully. The repository addresses this with explicit workspace scripts, a single `package-lock.json`, strict TypeScript builds, and CI checks across the workspaces.
 
 ### Important reliability decisions
 
@@ -478,6 +497,7 @@ AWS migration from the current Render deployment, shared realtime broker for mul
 - Confirmed the stack and deployment model against the repository README.
 - Confirmed auction, bid, offer, listing, payment, fulfilment, and transaction statuses against the typed domain code.
 - Confirmed the data entities and interaction surfaces against the shared types and web pages.
+- Confirmed the npm-workspaces monorepo structure, shared `types`/`validation`/`config` packages, root scripts, and workspace build order against the repository configuration.
 - Confirmed browser automation coverage and configuration against the Playwright config and end-to-end specs, including responsive viewports, realtime messaging, authentication, and marketplace navigation.
 - Kept payment language server-authoritative: the browser does not independently mark a transaction paid.
 - Called out known prototype limitations instead of presenting them as solved production capabilities.
@@ -506,6 +526,8 @@ All repository links below are relative references that can be pasted into a Not
 - [Web application](../apps/web/src) — React pages, components, state, and visual styles.
 - [API application](../apps/api/src) — Fastify routes, domain rules, repositories, payments, and events.
 - [Shared types](../packages/types/src/index.ts) — marketplace entities, statuses, and event payloads.
+- [Root workspace configuration](../package.json) — npm-workspaces monorepo, shared scripts, build order, and quality commands.
+- [Shared validation package](../packages/validation/src/index.ts) — reusable input validation across application boundaries.
 - [Domain tests](../tests/domain.test.ts) — transition and state-rule coverage.
 - [Marketplace journey tests](../tests/e2e/marketplace.spec.ts) — end-to-end discovery and purchase-oriented behavior.
 - [Offer journey tests](../tests/e2e/offers.spec.ts) — negotiation flow coverage.
