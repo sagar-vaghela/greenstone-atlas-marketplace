@@ -6,5 +6,5 @@ const appDir = dirname(fileURLToPath(import.meta.url));
 const repoRootEnv = resolve(appDir, "../../../.env");
 const apiEnv = resolve(appDir, "../.env");
 
-loadEnv({ path: repoRootEnv, override: true });
-loadEnv({ path: apiEnv, override: true });
+loadEnv({ path: repoRootEnv });
+loadEnv({ path: apiEnv });

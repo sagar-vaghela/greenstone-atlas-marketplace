@@ -202,32 +202,34 @@ export function TransactionDetailsPage() {
         : 1;
   const submitPayment = async () => {
     setPaymentSetupError(null);
-    if (!stripePromise) {
-      setPaymentSetupError(
-        "Card checkout is not configured on this site. No payment was made; please contact support.",
-      );
-      return;
-    }
     const idempotencyKey = crypto.randomUUID();
     try {
       const intent = await dispatch(
         createPaymentIntentAction({ id: transaction.id, idempotencyKey }),
       ).unwrap();
-      if (
-        intent.provider === "stripe" &&
-        intent.clientSecret
-      ) {
+
+      if (intent.status === "paid") {
+        setAwaitingReconciliation(true);
+        void dispatch(fetchTransaction(transaction.id));
+        return;
+      }
+
+      if (intent.provider === "stripe" && intent.clientSecret) {
         setStripeClientSecret(intent.clientSecret);
         setStripeDialogOpen(true);
         return;
       }
+
+      if (!stripePromise) {
+        setPaymentSetupError(
+          "The payment provider did not complete this transaction. Please try again or contact support.",
+        );
+        return;
+      }
+
       setPaymentSetupError(
         "The card payment provider did not return a Stripe checkout. This transaction remains unpaid.",
       );
-      if (intent.status === "paid") {
-        setAwaitingReconciliation(true);
-        void dispatch(fetchTransaction(transaction.id));
-      }
     } catch {
       // Redux owns the user-visible API error state.
     }

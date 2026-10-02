@@ -113,6 +113,21 @@ export const registerPaymentRoutes = async (
             intent.provider,
             intent.providerReference,
           );
+      let paymentTransaction = saved;
+      if (intent.status === "paid") {
+        const result = await options.transactionRepository.applyPaymentResult(
+          transaction.id,
+          {
+            idempotencyKey: `${intent.provider}:${intent.providerReference}`,
+            provider: intent.provider,
+            outcome: "paid",
+          },
+        );
+        paymentTransaction = result?.transaction ?? paymentTransaction;
+        if (result?.changed) {
+          publishPaymentUpdate(options.eventBus, result.transaction);
+        }
+      }
       request.log.info(
         {
           transactionId: transaction.id,
@@ -128,8 +143,8 @@ export const registerPaymentRoutes = async (
         provider: intent.provider,
         paymentIntentId: intent.providerReference,
         clientSecret: intent.clientSecret,
-        status: intent.status,
-        transaction: saved,
+        status: paymentTransaction.paymentStatus,
+        transaction: paymentTransaction,
       };
     },
   );

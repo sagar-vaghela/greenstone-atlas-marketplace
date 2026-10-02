@@ -4,7 +4,7 @@ import { signIn } from "./helpers";
 test("buyer can validate and submit an offer", async ({ page }) => {
   await signIn(page, "buyer");
 
-  await page.goto("/listings/listing-1");
+  await page.goto("/listings/listing-rolex-submariner-126610ln");
 
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 

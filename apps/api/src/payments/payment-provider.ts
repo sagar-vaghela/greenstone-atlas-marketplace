@@ -32,7 +32,7 @@ export interface PaymentProvider {
   ): PaymentWebhookEvent | undefined;
 }
 
-/** Development-only intent stub; it cannot confirm or complete a payment. */
+/** Development-only provider that immediately settles a payment for demo flows. */
 export class DemoPaymentProvider implements PaymentProvider {
   async createPaymentIntent(
     request: PaymentProviderRequest,
@@ -40,14 +40,13 @@ export class DemoPaymentProvider implements PaymentProvider {
     return {
       provider: "demo",
       providerReference: `demo:${request.transactionId}`,
-      status: "pending",
+      status: "paid",
     };
   }
 
   async retrievePaymentIntent(
     providerReference: string,
   ): Promise<PaymentIntentResult> {
-    return { provider: "demo", providerReference, status: "pending" };
+    return { provider: "demo", providerReference, status: "paid" };
   }
-
 }

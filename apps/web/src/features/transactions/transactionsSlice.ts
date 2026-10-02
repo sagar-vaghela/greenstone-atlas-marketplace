@@ -201,8 +201,11 @@ const transactionsSlice = createSlice({
         state.mutationStatus = "loading";
         state.error = null;
       })
-      .addCase(createPaymentIntentAction.fulfilled, (state) => {
+      .addCase(createPaymentIntentAction.fulfilled, (state, action) => {
         state.mutationStatus = "succeeded";
+        if (action.payload.transaction) {
+          setTransaction(state, action.payload.transaction);
+        }
       })
       .addCase(createPaymentIntentAction.rejected, (state, action) => {
         state.mutationStatus = "failed";

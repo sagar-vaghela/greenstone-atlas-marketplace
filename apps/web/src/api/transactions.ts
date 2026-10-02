@@ -15,6 +15,7 @@ export interface PaymentIntentResponse {
   paymentIntentId: string;
   clientSecret?: string;
   status: "pending" | "paid" | "failed";
+  transaction?: Transaction;
 }
 
 export const createPaymentIntent = (
