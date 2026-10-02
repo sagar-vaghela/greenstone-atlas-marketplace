@@ -34,6 +34,7 @@ import { createConversationAction } from "../features/messaging/messagingSlice";
 import { PriceDisplay } from "../components/common/PriceDisplay";
 import { StatusChip } from "../components/common/StatusChip";
 import { LoadingState } from "../components/common/LoadingState";
+import { BackToMarketplaceButton } from "../components/common/BackToMarketplaceButton";
 
 const statusLabels: Record<ListingStatus, string> = {
   draft: "Draft",
@@ -100,14 +101,7 @@ export function ListingDetailsPage() {
     return (
       <Stack spacing={2}>
         <Typography variant="h1">Listing not found</Typography>
-        <Button
-          component={RouterLink}
-          to="/"
-          variant="outlined"
-          sx={{ alignSelf: "flex-start" }}
-        >
-          Back to marketplace
-        </Button>
+        <BackToMarketplaceButton />
       </Stack>
     );
   }
@@ -118,14 +112,7 @@ export function ListingDetailsPage() {
         <Alert severity="error">
           Unable to load this listing. Please try again.
         </Alert>
-        <Button
-          component={RouterLink}
-          to="/"
-          variant="outlined"
-          sx={{ alignSelf: "flex-start" }}
-        >
-          Back to marketplace
-        </Button>
+        <BackToMarketplaceButton />
       </Stack>
     );
   }
@@ -237,9 +224,7 @@ export function ListingDetailsPage() {
 
   return (
     <Stack spacing={3}>
-      <Button component={RouterLink} to="/" sx={{ alignSelf: "flex-start" }}>
-        Back to marketplace
-      </Button>
+      <BackToMarketplaceButton />
       <Box
         sx={{
           display: "grid",

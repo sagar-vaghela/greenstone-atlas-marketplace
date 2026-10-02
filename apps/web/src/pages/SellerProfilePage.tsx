@@ -2,15 +2,15 @@ import { useEffect } from "react";
 import {
   Alert,
   Box,
-  Button,
   Card,
   CardContent,
   CircularProgress,
   Stack,
   Typography,
 } from "@mui/material";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
+import { BackToMarketplaceButton } from "../components/common/BackToMarketplaceButton";
 import { ListingCard } from "../components/listings/ListingCard";
 import {
   fetchSellerListings,
@@ -40,9 +40,7 @@ export function SellerProfilePage() {
     return (
       <Stack spacing={2}>
         <Alert severity="error">{state.selectedSellerError}</Alert>
-        <Button component={RouterLink} to="/">
-          Back to marketplace
-        </Button>
+        <BackToMarketplaceButton />
       </Stack>
     );
   const verification =

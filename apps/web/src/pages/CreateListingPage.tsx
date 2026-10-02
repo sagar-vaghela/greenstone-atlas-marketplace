@@ -1,9 +1,10 @@
 import { useEffect } from "react";
-import { Button, Stack, Typography } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 import type { CreateListingInput } from "@atlas/types";
 import { createListingSchema } from "@atlas/validation";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
+import { BackToMarketplaceButton } from "../components/common/BackToMarketplaceButton";
 import {
   ListingForm,
   type ListingFormFieldErrors,
@@ -76,9 +77,7 @@ export function CreateListingPage() {
 
   return (
     <Stack spacing={3}>
-      <Button component={RouterLink} to="/" sx={{ alignSelf: "flex-start" }}>
-        Back to marketplace
-      </Button>
+      <BackToMarketplaceButton />
       <Stack spacing={1}>
         <Typography variant="h1">Create a listing</Typography>
         <Typography color="text.secondary">
