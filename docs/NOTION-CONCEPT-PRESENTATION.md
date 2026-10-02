@@ -1,6 +1,5 @@
 # Atlas Marketplace — Concept Presentation
 
-> **Notion-ready submission document**  
 > A considered marketplace for authenticated pre-owned luxury watches, connecting buyers and trusted sellers through discovery, valuation, negotiation, and protected purchase.
 
 **Prepared:** 2 October 2026  
@@ -407,69 +406,17 @@ The visual direction is **quiet, editorial, and evidence-led**: warm neutral sur
 
 ### Screen A — Marketplace discovery
 
-```text
-┌──────────────────────────────────────────────────────────────────────┐
-│ ATLAS                         Browse   Sell   Messages   Sign in      │
-├──────────────────────────────────────────────────────────────────────┤
-│ THE CONSIDERED COLLECTION                                           │
-│ Find the watch that stays with you.                                 │
-│ [ 🔍 Search brand, model, reference...                         ]    │
-│                                                                      │
-│ Refine your search                                                   │
-│ [Category ▾]  [Min price]  [Max price]  [Sort: Newest ▾]             │
-│                                                                      │
-│ 124 watches                                      [Clear filters]     │
-│ ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                │
-│ │              │  │              │  │              │                │
-│ │    PHOTO     │  │    PHOTO     │  │    PHOTO     │                │
-│ │              │  │              │  │              │                │
-│ ├──────────────┤  ├──────────────┤  ├──────────────┤                │
-│ │ Rolex ...    │  │ Omega ...    │  │ Cartier ...  │                │
-│ │ AED 32,000   │  │ AED 18,500   │  │ AED 24,000   │                │
-│ │ Verified ... │  │ Auction      │  │ Private ...  │                │
-│ └──────────────┘  └──────────────┘  └──────────────┘                │
-└──────────────────────────────────────────────────────────────────────┘
-```
+<img width="1920" height="1080" alt="Screenshot 2026-10-03 at 12 28 39 AM (2)" src="https://github.com/user-attachments/assets/8e8878bb-265f-4b18-b0d8-64701cba592b" />
+
 
 ### Screen B — Listing detail and offer panel
 
-```text
-┌──────────────────────────────────────────────────────────────────────┐
-│ ← Back to marketplace                                                │
-│                                                                      │
-│ ┌───────────────────────────────┐  Rolex Submariner 126610LN        │
-│ │                               │  AED 42,000                       │
-│ │          HERO IMAGE           │  Excellent · 2022 · Dubai         │
-│ │                               │  Reference: 126610LN              │
-│ └───────────────────────────────┘  ───────────────────────────────  │
-│ [thumb] [thumb] [thumb]             Make an offer                   │
-│                                      [ AED amount                 ]  │
-│ Condition and details               [ Submit offer ]                │
-│ Clear description, service history,  [ Message seller ]              │
-│ and what is included.                Seller: Samir · Verified        │
-│                                      98% response rate                │
-└──────────────────────────────────────────────────────────────────────┘
-```
+<img width="1920" height="922" alt="Screenshot 2026-10-03 at 12 29 01 AM" src="https://github.com/user-attachments/assets/ce18c814-660a-455f-9256-fd40d922363c" />
+
 
 ### Screen C — Transaction timeline
 
-```text
-┌──────────────────────────────────────────────────────────────────────┐
-│ Purchase · Rolex Submariner 126610LN                    AED 42,000  │
-├──────────────────────────────────────────────────────────────────────┤
-│ ✓ Offer accepted        02 Oct                                        │
-│ │                                                                    │
-│ ● Payment required      [ Pay securely ]                              │
-│ │                                                                    │
-│ ○ Seller ships          Waiting for verified payment                 │
-│ │                                                                    │
-│ ○ Delivery confirmed    Tracking will appear here                    │
-│ │                                                                    │
-│ ○ Completed             Buyer confirms receipt                        │
-│                                                                      │
-│ Need help? Message seller · Report a problem                          │
-└──────────────────────────────────────────────────────────────────────┘
-```
+<img width="1916" height="840" alt="Screenshot 2026-10-03 at 12 31 38 AM" src="https://github.com/user-attachments/assets/93455143-6380-4600-90f3-48ad600dc736" />
 
 ### Responsive and accessibility notes
 
