@@ -86,17 +86,19 @@ export class MongoConversationRepository implements ConversationRepository {
       body,
       createdAt: timestamp,
     };
-    await this.messages.insertOne(message);
-    await this.conversations.updateOne(
-      { id: conversationId },
-      {
-        $set: {
-          lastMessageAt: timestamp,
-          lastMessagePreview: body.slice(0, 160),
-          updatedAt: timestamp,
+    await Promise.all([
+      this.messages.insertOne(message),
+      this.conversations.updateOne(
+        { id: conversationId },
+        {
+          $set: {
+            lastMessageAt: timestamp,
+            lastMessagePreview: body.slice(0, 160),
+            updatedAt: timestamp,
+          },
         },
-      },
-    );
+      ),
+    ]);
     return toMessage(message);
   }
 
@@ -123,8 +125,6 @@ export class MongoConversationRepository implements ConversationRepository {
   }
 
   async countUnread(conversationId: string, userId: string): Promise<number> {
-    const conversation = await this.findById(conversationId);
-    if (!conversation) return 0;
     return this.messages.countDocuments({
       conversationId,
       senderId: { $ne: userId },

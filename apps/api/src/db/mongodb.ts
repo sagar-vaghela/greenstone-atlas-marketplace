@@ -89,6 +89,7 @@ export const connectMongoDB = async (
 
     await messages.createIndex({ id: 1 }, { unique: true });
     await messages.createIndex({ conversationId: 1, createdAt: -1 });
+    await messages.createIndex({ conversationId: 1, senderId: 1, readAt: 1 });
     await messages.createIndex({ senderId: 1, createdAt: -1 });
 
     await notifications.createIndex({ id: 1 }, { unique: true });
