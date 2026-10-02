@@ -29,6 +29,7 @@ const initialValues: ListingFormValues = {
   price: "",
   currency: "AED",
   category: "",
+  saleMode: "fixed_price",
   images: [],
 };
 

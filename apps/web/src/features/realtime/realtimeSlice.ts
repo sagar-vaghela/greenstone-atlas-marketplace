@@ -37,6 +37,9 @@ const realtimeSlice = createSlice({
       if (event.actorUserId === userId && event.type === "offer.created")
         return;
       const messages: Record<MarketplaceEvent["type"], string> = {
+        "auction.created": "Auction created.",
+        "auction.updated": "Auction status updated.",
+        "bid.placed": "A new bid was placed.",
         "offer.created": "New offer received for this listing.",
         "offer.countered": "Seller sent you a counter-offer.",
         "offer.accepted": "Your offer was accepted.",

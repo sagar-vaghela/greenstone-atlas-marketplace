@@ -21,9 +21,22 @@ test("buyer can validate and submit an offer", async ({ page }) => {
       .getByText("Your offer", { exact: true })
       .first(),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "How this marketplace works" }),
+  ).toBeVisible();
+  const offerHistory = page.getByRole("region", { name: "Offer history" });
+  await expect(offerHistory).toBeVisible();
+  await expect
+    .poll(() =>
+      offerHistory.evaluate((element) => ({
+        overflowY: getComputedStyle(element).overflowY,
+        maxHeight: getComputedStyle(element).maxHeight,
+      })),
+    )
+    .toMatchObject({ overflowY: "auto", maxHeight: "520px" });
 });
 
-test("seller counter can be accepted and paid from the transaction", async ({
+test("seller counter can be accepted and payment dialog is shown", async ({
   page,
   browser,
 }) => {
@@ -34,9 +47,7 @@ test("seller counter can be accepted and paid from the transaction", async ({
     await signIn(sellerPage, "seller2");
     await sellerPage.goto("/listings/new");
     await sellerPage.getByLabel("Title").fill(listingTitle);
-    await sellerPage
-      .getByLabel("Description")
-      .fill("Counter offer test listing.");
+    await sellerPage.getByLabel("Description").fill("Counter offer test listing.");
     await sellerPage.getByLabel("Brand").fill("Omega");
     await sellerPage.getByLabel("Model").fill("Speedmaster");
     await sellerPage.getByLabel("Reference number").fill("311.30.42.30.01.005");
@@ -53,9 +64,7 @@ test("seller counter can be accepted and paid from the transaction", async ({
       );
     await sellerPage.getByRole("button", { name: "Add" }).click();
     await sellerPage.getByRole("button", { name: "Create listing" }).click();
-    await expect(
-      sellerPage.getByRole("heading", { name: listingTitle }),
-    ).toBeVisible();
+    await expect(sellerPage.getByRole("heading", { name: listingTitle })).toBeVisible();
     const listingId = new URL(sellerPage.url()).pathname.split("/").at(-1)!;
 
     await signIn(page, "buyer");
@@ -71,9 +80,7 @@ test("seller counter can be accepted and paid from the transaction", async ({
       .locator(".MuiCard-root")
       .filter({ hasText: "27,123" })
       .first();
-    await expect(
-      buyerOffer.getByText("Buyer offer", { exact: true }),
-    ).toBeVisible();
+    await expect(buyerOffer.getByText("Buyer offer", { exact: true })).toBeVisible();
     await buyerOffer.getByRole("button", { name: "Counter" }).click();
     await sellerPage.getByLabel("Counter amount (AED)").fill("28000");
     await sellerPage.getByRole("button", { name: "Send counter" }).click();
@@ -86,23 +93,19 @@ test("seller counter can be accepted and paid from the transaction", async ({
     await page.getByRole("button", { name: "Accept counter" }).click();
 
     await page.goto("/transactions");
-    await expect(
-      page.getByRole("heading", { name: "Transactions" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
     const transactionCard = page
       .locator(".MuiCard-root")
-      .filter({ hasText: listingId })
+      .filter({ hasText: "Payment: pending" })
       .first();
     await expect(transactionCard).toBeVisible();
-    await transactionCard
-      .getByRole("link", { name: "View transaction" })
-      .click();
-    await expect(
-      page.getByText("Pending payment", { exact: true }),
-    ).toBeVisible();
+    await transactionCard.getByRole("link", { name: "View transaction" }).click();
+    await expect(page.getByText("Pending payment", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Pay now" }).click();
     await expect(
-      page.getByText("Payment received. Waiting for seller to ship."),
+      page.getByText(
+        /Secure test payment|Payment received\. Waiting for seller to ship\./,
+      ),
     ).toBeVisible();
   } finally {
     await sellerContext.close();

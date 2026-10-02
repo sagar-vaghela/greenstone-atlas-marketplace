@@ -20,6 +20,7 @@ const toListing = (document: ListingDocument): Listing => {
     ...listing,
     sellerId: listing.sellerId ?? "demo-seller",
     images: listing.images ?? [],
+    saleMode: listing.saleMode ?? "fixed_price",
     version: listing.version ?? 1,
   };
 };
@@ -137,6 +138,18 @@ export class MongoListingRepository implements ListingRepository {
       },
     );
 
+    return document ? toListing(document) : undefined;
+  }
+
+  async claimActive(id: string): Promise<Listing | undefined> {
+    const document = await this.collection.findOneAndUpdate(
+      { id, status: "active" },
+      {
+        $set: { status: "sold", updatedAt: new Date().toISOString() },
+        $inc: { version: 1 },
+      },
+      { projection: { _id: 0 }, returnDocument: "after" },
+    );
     return document ? toListing(document) : undefined;
   }
 }

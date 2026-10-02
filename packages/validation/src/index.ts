@@ -89,6 +89,7 @@ export const createListingSchema: z.ZodType<CreateListingInput> = z.object({
   currency: z.literal("AED"),
   category: z.string().trim().min(1),
   images: listingImagesSchema.default([]),
+  saleMode: z.enum(["fixed_price", "auction"]).default("fixed_price"),
 });
 
 export const registerSchema = z.object({
@@ -214,6 +215,24 @@ const currencySchema = z
   .length(3)
   .transform((value) => value.toUpperCase())
   .pipe(z.literal("AED"));
+const isoDateSchema = z.string().datetime({ offset: true });
+export const createAuctionRequestSchema = z.object({
+  startsAt: isoDateSchema,
+  endsAt: isoDateSchema,
+  startingPrice: moneySchema,
+  reservePrice: moneySchema.optional(),
+  minimumBidIncrement: moneySchema,
+}).refine((value) => new Date(value.endsAt).getTime() > new Date(value.startsAt).getTime(), {
+  message: "Auction must end after it starts",
+  path: ["endsAt"],
+}).refine((value) => value.reservePrice === undefined || value.reservePrice >= value.startingPrice, {
+  message: "Reserve price must be at least the starting price",
+  path: ["reservePrice"],
+});
+export const placeBidRequestSchema = z.object({
+  amount: moneySchema,
+  currency: currencySchema,
+});
 export const createOfferSchema: z.ZodType<CreateOfferInput> = z.object({
   listingId: z.string().trim().min(1),
   buyerId: z.string().trim().min(1),

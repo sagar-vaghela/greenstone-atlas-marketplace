@@ -3,6 +3,7 @@ import { InMemoryConversationRepository } from "../apps/api/src/repositories/in-
 import { InMemoryNotificationRepository } from "../apps/api/src/repositories/in-memory-notification-repository.js";
 import { InMemoryOfferRepository } from "../apps/api/src/repositories/in-memory-offer-repository.js";
 import { InMemoryTransactionRepository } from "../apps/api/src/repositories/in-memory-transaction-repository.js";
+import { InMemoryAuctionRepository } from "../apps/api/src/repositories/in-memory-auction-repository.js";
 
 const transactionInput = {
   listingId: "listing-1",
@@ -14,6 +15,41 @@ const transactionInput = {
 };
 
 describe("in-memory repositories", () => {
+  it("allows only the highest valid concurrent auction bid to win", async () => {
+    const repository = new InMemoryAuctionRepository();
+    const auction = await repository.create({
+      listingId: "auction-listing",
+      sellerId: "seller-1",
+      startsAt: new Date(Date.now() - 1_000).toISOString(),
+      endsAt: new Date(Date.now() + 60_000).toISOString(),
+      startingPrice: 100,
+      minimumBidIncrement: 10,
+    });
+
+    const results = await Promise.allSettled([
+      repository.placeBid({
+        auctionId: auction.id,
+        listingId: auction.listingId,
+        bidderId: "buyer-1",
+        amount: 110,
+        currency: "AED",
+      }),
+      repository.placeBid({
+        auctionId: auction.id,
+        listingId: auction.listingId,
+        bidderId: "buyer-2",
+        amount: 110,
+        currency: "AED",
+      }),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    expect(await repository.listBids(auction.id)).toMatchObject([
+      { amount: 110, status: "winning" },
+    ]);
+  });
+
   it("preserves transaction versions and payment idempotency", async () => {
     const repository = new InMemoryTransactionRepository();
     const created = await repository.create(transactionInput);

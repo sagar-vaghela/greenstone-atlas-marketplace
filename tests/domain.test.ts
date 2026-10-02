@@ -10,6 +10,8 @@ import {
 } from "@atlas/validation";
 import { assertValidListingStatusTransition } from "../apps/api/src/domain/listing-status.js";
 import { assertValidOfferTransition } from "../apps/api/src/domain/offer-status.js";
+import { assertValidAuctionTransition, assertValidBidTransition } from "../apps/api/src/domain/auction-status.js";
+import { createAuctionRequestSchema, placeBidRequestSchema } from "@atlas/validation";
 import {
   assertValidFulfilmentTransition,
   assertValidPaymentTransition,
@@ -121,5 +123,18 @@ describe("state machines", () => {
     expect(() =>
       assertValidTransactionTransition("pending_payment", "completed"),
     ).toThrow();
+  });
+
+  it("validates auction inputs and transitions", () => {
+    const startsAt = new Date(Date.now() - 1000).toISOString();
+    const endsAt = new Date(Date.now() + 60_000).toISOString();
+    expect(createAuctionRequestSchema.safeParse({
+      startsAt, endsAt, startingPrice: 100, minimumBidIncrement: 10,
+    }).success).toBe(true);
+    expect(placeBidRequestSchema.safeParse({ amount: 109, currency: "AED" }).success).toBe(true);
+    expect(() => assertValidAuctionTransition("active", "ended")).not.toThrow();
+    expect(() => assertValidAuctionTransition("ended", "active")).toThrow();
+    expect(() => assertValidBidTransition("winning", "accepted")).not.toThrow();
+    expect(() => assertValidBidTransition("outbid", "accepted")).toThrow();
   });
 });

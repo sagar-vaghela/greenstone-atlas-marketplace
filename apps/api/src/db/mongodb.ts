@@ -40,6 +40,8 @@ export const connectMongoDB = async (
     const conversations = db.collection("conversations");
     const messages = db.collection("messages");
     const notifications = db.collection("notifications");
+    const auctions = db.collection("auctions");
+    const bids = db.collection("bids");
 
     await listings.createIndex({ id: 1 }, { unique: true });
     await listings.createIndex({ status: 1, updatedAt: -1 });
@@ -99,6 +101,14 @@ export const connectMongoDB = async (
       { userId: 1, sourceEventId: 1 },
       { unique: true },
     );
+    await auctions.createIndex({ id: 1 }, { unique: true });
+    await auctions.createIndex({ listingId: 1 }, { unique: true });
+    await auctions.createIndex({ status: 1, endsAt: 1 });
+    await auctions.createIndex({ highestBidId: 1 });
+    await bids.createIndex({ id: 1 }, { unique: true });
+    await bids.createIndex({ auctionId: 1, amount: -1 });
+    await bids.createIndex({ auctionId: 1, createdAt: -1 });
+    await bids.createIndex({ bidderId: 1, createdAt: -1 });
     await notifications.createIndex(
       { userId: 1, dedupeKey: 1 },
       {

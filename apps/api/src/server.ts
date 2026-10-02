@@ -15,6 +15,7 @@ import { MongoTransactionRepository } from "./repositories/mongo-transaction-rep
 import { MongoConversationRepository } from "./repositories/mongo-conversation-repository.js";
 import { InMemoryConversationRepository } from "./repositories/in-memory-conversation-repository.js";
 import { MongoNotificationRepository } from "./repositories/mongo-notification-repository.js";
+import { MongoAuctionRepository } from "./repositories/mongo-auction-repository.js";
 
 let app: ReturnType<typeof buildApp> | undefined;
 let mongoConnection: MongoConnection | undefined;
@@ -116,6 +117,10 @@ const start = async (): Promise<void> => {
                 notificationRepository: new MongoNotificationRepository(
                   connection.db.collection("notifications"),
                 ),
+                auctionRepository: new MongoAuctionRepository(
+                  connection.db.collection("auctions"),
+                  connection.db.collection("bids"),
+                ),
               };
             },
           );
@@ -129,6 +134,7 @@ const start = async (): Promise<void> => {
           transactionRepository: new InMemoryTransactionRepository(),
           conversationRepository: new InMemoryConversationRepository(),
           notificationRepository: undefined,
+          auctionRepository: undefined,
           readinessCheck: undefined,
         });
 
@@ -144,6 +150,7 @@ const start = async (): Promise<void> => {
       transactionRepository: resolvedRepositories.transactionRepository,
       conversationRepository: resolvedRepositories.conversationRepository,
       notificationRepository: resolvedRepositories.notificationRepository,
+      auctionRepository: resolvedRepositories.auctionRepository,
       readinessCheck: resolvedRepositories.readinessCheck,
     });
     await resolvedRepositories.sellerProfileRepository.ensureIndexes();

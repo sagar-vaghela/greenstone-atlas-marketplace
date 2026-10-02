@@ -25,7 +25,7 @@ automated demo and Playwright journeys.
 
 ## Project status
 
-The current concept is a pre-owned luxury-watch marketplace. The demo API includes Rolex and Omega watch listings and an offer negotiation workflow.
+The current concept is a pre-owned luxury-watch marketplace. The demo API includes Rolex and Omega watch listings, an offer negotiation workflow, and a separate auction/bid workflow. Auction bids use conditional repository updates so competing bids cannot overwrite a higher bid; the in-memory API includes an expiry poller and MongoDB deployments receive auction/bid indexes.
 
 ## High-level architecture
 

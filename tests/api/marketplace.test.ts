@@ -96,16 +96,13 @@ describe("authentication and listings", () => {
   it("registers, restores, and logs out a session", async () => {
     const cookie = await register(app, "new@example.com");
     expect(
-      (await inject(app, { method: "GET", url: "/auth/me" }, cookie)).json()
-        .email,
+      (await inject(app, { method: "GET", url: "/auth/me" }, cookie)).json().email,
     ).toBe("new@example.com");
     expect(
-      (await inject(app, { method: "POST", url: "/auth/logout" }, cookie))
-        .statusCode,
+      (await inject(app, { method: "POST", url: "/auth/logout" }, cookie)).statusCode,
     ).toBe(200);
     expect(
-      (await inject(app, { method: "GET", url: "/auth/me" }, cookie))
-        .statusCode,
+      (await inject(app, { method: "GET", url: "/auth/me" }, cookie)).statusCode,
     ).toBe(401);
   });
 
@@ -129,9 +126,7 @@ describe("authentication and listings", () => {
         payload: { email: "buyer@example.com", password: "buyer123" },
       });
       const setCookies = login.headers["set-cookie"];
-      const cookieHeaders = Array.isArray(setCookies)
-        ? setCookies
-        : [setCookies];
+      const cookieHeaders = Array.isArray(setCookies) ? setCookies : [setCookies];
       const setCookie = cookieHeaders.find((header) =>
         header?.startsWith("atlas_session_partitioned="),
       );
@@ -183,15 +178,13 @@ describe("authentication and listings", () => {
     });
     expect(health.statusCode).toBe(200);
     expect(health.headers["x-request-id"]).toBe("browser-check-1");
-    expect((await app.inject({ method: "GET", url: "/ready" })).json()).toEqual(
-      { status: "ready" },
-    );
+    expect((await app.inject({ method: "GET", url: "/ready" })).json()).toEqual({
+      status: "ready",
+    });
     const missing = await app.inject({ method: "GET", url: "/does-not-exist" });
     expect(missing.statusCode).toBe(404);
     expect(missing.headers["x-request-id"]).toBeTruthy();
-    expect(missing.json().error.requestId).toBe(
-      missing.headers["x-request-id"],
-    );
+    expect(missing.json().error.requestId).toBe(missing.headers["x-request-id"]);
   });
 
   it("rejects invalid credentials and protects listing creation", async () => {
@@ -202,8 +195,7 @@ describe("authentication and listings", () => {
     });
     expect(invalid.statusCode).toBe(401);
     expect(
-      (await app.inject({ method: "POST", url: "/listings", payload: {} }))
-        .statusCode,
+      (await app.inject({ method: "POST", url: "/listings", payload: {} })).statusCode,
     ).toBe(401);
     const cookie = await login(app, "seller@example.com", "seller123");
     const created = await inject(
@@ -235,9 +227,7 @@ describe("authentication and listings", () => {
       url: "/listings?category=luxury-watches&sort=price_asc",
     });
     expect(sorted.statusCode).toBe(200);
-    const prices = sorted
-      .json()
-      .items.map((item: { price: number }) => item.price);
+    const prices = sorted.json().items.map((item: { price: number }) => item.price);
     expect(prices).toEqual([...prices].sort((left, right) => left - right));
     expect(
       (
@@ -248,8 +238,7 @@ describe("authentication and listings", () => {
       ).statusCode,
     ).toBe(400);
     expect(
-      (await app.inject({ method: "GET", url: "/listings/missing" }))
-        .statusCode,
+      (await app.inject({ method: "GET", url: "/listings/missing" })).statusCode,
     ).toBe(404);
     expect(
       (
@@ -420,6 +409,7 @@ describe("offers and transaction lifecycle", () => {
       status: "pending_payment",
       paymentStatus: "pending",
     });
+
     await transactionRepository.applyPaymentResult(transaction.id, {
       idempotencyKey: "stripe:event:confirmed-payment",
       provider: "stripe",
@@ -461,6 +451,38 @@ describe("offers and transaction lifecycle", () => {
         )
       ).json().status,
     ).toBe("completed");
+  });
+
+  it("allows only one concurrent offer acceptance to claim a listing", async () => {
+    const seller = await login(app, "seller@example.com", "seller123");
+    const results = await Promise.all([
+      inject(
+        app,
+        {
+          method: "PATCH",
+          url: "/offers/offer-1/status",
+          payload: { status: "accepted" },
+        },
+        seller,
+      ),
+      inject(
+        app,
+        {
+          method: "PATCH",
+          url: "/offers/offer-2/status",
+          payload: { status: "accepted" },
+        },
+        seller,
+      ),
+    ]);
+
+    expect(results.map((result) => result.statusCode).sort()).toEqual([200, 409]);
+    expect(
+      (await app.inject({ method: "GET", url: "/listings/listing-1" })).json(),
+    ).toMatchObject({ status: "sold" });
+    expect((await transactionRepository.findByListingId("listing-1"))?.listingId).toBe(
+      "listing-1",
+    );
   });
 });
 
@@ -511,11 +533,7 @@ describe("messaging and notifications", () => {
     expect(firstNotifications.json().items[0].readAt).toBeUndefined();
     expect(
       (
-        await inject(
-          app,
-          { method: "GET", url: "/notifications/unread-count" },
-          seller,
-        )
+        await inject(app, { method: "GET", url: "/notifications/unread-count" }, seller)
       ).json().unreadCount,
     ).toBe(1);
 
@@ -536,11 +554,7 @@ describe("messaging and notifications", () => {
     expect(notificationsWhileUnread.json().items).toHaveLength(1);
     expect(
       (
-        await inject(
-          app,
-          { method: "GET", url: "/notifications/unread-count" },
-          seller,
-        )
+        await inject(app, { method: "GET", url: "/notifications/unread-count" }, seller)
       ).json().unreadCount,
     ).toBe(1);
 
@@ -551,9 +565,8 @@ describe("messaging and notifications", () => {
     );
     expect(readConversation.json().notificationUnreadCount).toBe(0);
     expect(
-      (
-        await inject(app, { method: "GET", url: "/notifications" }, seller)
-      ).json().items[0].readAt,
+      (await inject(app, { method: "GET", url: "/notifications" }, seller)).json()
+        .items[0].readAt,
     ).toBeTruthy();
 
     await inject(
@@ -581,11 +594,7 @@ describe("messaging and notifications", () => {
     ).toHaveLength(1);
     expect(
       (
-        await inject(
-          app,
-          { method: "GET", url: "/notifications/unread-count" },
-          seller,
-        )
+        await inject(app, { method: "GET", url: "/notifications/unread-count" }, seller)
       ).json().unreadCount,
     ).toBe(1);
     const sellerConversations = await inject(
@@ -594,9 +603,8 @@ describe("messaging and notifications", () => {
       seller,
     );
     expect(
-      sellerConversations
-        .json()
-        .items.find((item: { id: string }) => item.id === id).unreadCount,
+      sellerConversations.json().items.find((item: { id: string }) => item.id === id)
+        .unreadCount,
     ).toBe(1);
     const sellerNotifications = await inject(
       app,
@@ -642,11 +650,7 @@ describe("messaging and notifications", () => {
     await typingApp.ready();
     try {
       const buyer = await login(typingApp, "buyer@example.com", "buyer123");
-      const unrelatedBuyer = await login(
-        typingApp,
-        "buyer2@example.com",
-        "buyer123",
-      );
+      const unrelatedBuyer = await login(typingApp, "buyer2@example.com", "buyer123");
       const created = await inject(
         typingApp,
         {
@@ -785,16 +789,10 @@ describe("messaging and notifications", () => {
       }),
     ).toBeUndefined();
     expect(first).toBeDefined();
-    const list = await inject(
-      app,
-      { method: "GET", url: "/notifications" },
-      seller,
-    );
+    const list = await inject(app, { method: "GET", url: "/notifications" }, seller);
     expect(list.statusCode).toBe(200);
     expect(
-      (
-        await inject(app, { method: "GET", url: "/notifications" }, buyer)
-      ).json().items,
+      (await inject(app, { method: "GET", url: "/notifications" }, buyer)).json().items,
     ).toEqual([]);
     bus.close();
   });

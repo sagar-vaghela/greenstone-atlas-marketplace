@@ -17,10 +17,12 @@ export class InMemoryListingRepository implements ListingRepository {
     const canonicalListings = demoListings.map((listing) => ({
       ...listing,
       images: [...(listing.images ?? [])],
+      saleMode: listing.saleMode ?? "fixed_price",
     }));
     const legacyListings = canonicalListings.slice(0, 3).map((listing, index) => ({
       ...listing,
       id: `listing-${index + 1}`,
+      saleMode: listing.saleMode ?? "fixed_price",
     }));
     this.listings = [...legacyListings, ...canonicalListings];
     this.nextId = this.listings.length + 1;
@@ -111,10 +113,20 @@ export class InMemoryListingRepository implements ListingRepository {
     return { ...updatedListing, images: [...updatedListing.images] };
   }
 
+  async claimActive(id: string): Promise<Listing | undefined> {
+    const listing = this.listings.find((item) => item.id === id && item.status === "active");
+    if (!listing) return undefined;
+    listing.status = "sold";
+    listing.updatedAt = new Date().toISOString();
+    listing.version += 1;
+    return { ...listing, images: [...listing.images] };
+  }
+
   private createListing(id: string, input: CreateListingRepositoryInput): Listing {
     const timestamp = new Date().toISOString();
     return {
       ...input,
+      saleMode: input.saleMode ?? "fixed_price",
       images: [...(input.images ?? [])],
       sellerId: input.sellerId,
       id,

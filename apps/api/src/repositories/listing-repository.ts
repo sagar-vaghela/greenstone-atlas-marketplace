@@ -12,4 +12,5 @@ export interface ListingRepository {
   create(input: CreateListingRepositoryInput): Promise<Listing>;
   update(id: string, input: UpdateListingInput): Promise<Listing | undefined>;
   updateStatus(id: string, status: ListingStatus): Promise<Listing | undefined>;
+  claimActive(id: string): Promise<Listing | undefined>;
 }

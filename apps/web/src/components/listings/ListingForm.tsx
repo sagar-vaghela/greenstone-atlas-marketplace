@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Button, Paper, Stack, TextField } from "@mui/material";
+import { Alert, Button, MenuItem, Paper, Stack, TextField } from "@mui/material";
 import type {
   CreateListingInput,
   ListingImage,
@@ -8,10 +8,11 @@ import type {
 import { Link as RouterLink } from "react-router-dom";
 import { ListingImageManager } from "./ListingImageManager";
 
-export type ListingFormValues = Omit<
-  Record<keyof CreateListingInput, string>,
-  "images"
+export type ListingFormValues = Record<
+  Exclude<keyof CreateListingInput, "images" | "saleMode">,
+  string
 > & {
+  saleMode?: string;
   images: ListingImage[];
 };
 export type ListingFormFieldErrors = Partial<Record<keyof ListingFormValues, string>>;
@@ -92,6 +93,17 @@ export function ListingForm<T extends ListingFormData>({
           multiline
           minRows={4}
         />
+        <TextField
+          select
+          label="Sale mode"
+          value={values.saleMode ?? "fixed_price"}
+          onChange={(event) => updateField("saleMode", event.target.value)}
+          helperText="Choose fixed-price offers or auction bidding."
+          fullWidth
+        >
+          <MenuItem value="fixed_price">Fixed price offers</MenuItem>
+          <MenuItem value="auction">Auction</MenuItem>
+        </TextField>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <TextField
             label="Brand"

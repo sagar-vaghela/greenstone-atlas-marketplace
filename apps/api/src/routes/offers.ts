@@ -161,20 +161,19 @@ export const registerOfferRoutes = async (
       const listing = await options.listingRepository.findById(offer.listingId);
       if (!listing) return error(reply, 404, "LISTING_NOT_FOUND", "Listing not found");
       if (parsed.data.status === "accepted") {
+        if (offer.status !== "pending" && offer.status !== "countered")
+          return error(reply, 409, "OFFER_CONFLICT", "This offer is no longer actionable.");
         if (listing.status !== "active")
-          return error(
-            reply,
-            409,
-            "OFFER_CONFLICT",
-            "This listing has already been sold.",
-          );
+          return error(reply, 409, "OFFER_CONFLICT", "This listing has already been sold.");
+        const claimedListing = await options.listingRepository.claimActive(listing.id);
+        if (!claimedListing)
+          return error(reply, 409, "OFFER_CONFLICT", "This listing has already been sold.");
         const accepted = await options.offerRepository.updateStatus(
           offer.id,
           "accepted",
         );
         if (!accepted)
           return error(reply, 409, "OFFER_CONFLICT", "Offer could not be accepted.");
-        await options.listingRepository.updateStatus(listing.id, "sold");
         const competing = await options.offerRepository.listByListingId(listing.id);
         const rejected = await Promise.all(
           competing

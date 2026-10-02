@@ -97,6 +97,7 @@ export function EditListingPage() {
     price: String(listing.price),
     currency: listing.currency,
     category: listing.category,
+    saleMode: listing.saleMode ?? "fixed_price",
     images: listing.images ?? [],
   };
 

@@ -35,6 +35,9 @@ import { DemoPaymentProvider } from "./payments/payment-provider.js";
 import { StripePaymentProvider } from "./payments/stripe-payment-provider.js";
 import { registerPaymentRoutes } from "./routes/payments.js";
 import { isOriginAllowed } from "./http/origin.js";
+import { InMemoryAuctionRepository } from "./repositories/in-memory-auction-repository.js";
+import type { AuctionRepository } from "./repositories/auction-repository.js";
+import { registerAuctionRoutes } from "./routes/auctions.js";
 
 interface BuildAppOptions {
   repository?: ListingRepository;
@@ -49,6 +52,7 @@ interface BuildAppOptions {
   conversationRepository?: ConversationRepository;
   notificationRepository?: NotificationRepository;
   paymentProvider?: PaymentProvider;
+  auctionRepository?: AuctionRepository;
   readinessCheck?: () => Promise<void>;
 }
 
@@ -183,6 +187,8 @@ export const buildApp = (options: BuildAppOptions = {}) => {
   const eventBus = options.eventBus ?? new MarketplaceEventBus();
   const offerRepository =
     options.offerRepository ?? new InMemoryOfferRepository();
+  const auctionRepository =
+    options.auctionRepository ?? new InMemoryAuctionRepository();
   const transactionRepository =
     options.transactionRepository ?? new InMemoryTransactionRepository();
   const conversationRepository =
@@ -223,6 +229,11 @@ export const buildApp = (options: BuildAppOptions = {}) => {
     eventBus,
     transactionRepository,
   });
+  app.register(registerAuctionRoutes, {
+    auctions: auctionRepository,
+    listings: listingRepository,
+    eventBus,
+  });
   app.register(registerTransactionRoutes, {
     transactionRepository,
     eventBus,
@@ -249,7 +260,30 @@ export const buildApp = (options: BuildAppOptions = {}) => {
       options.sellerProfileRepository ?? new InMemorySellerProfileRepository(),
   });
   app.register(registerEventRoutes, eventBus);
+  const auctionExpiryTimer = setInterval(async () => {
+    const expired = await auctionRepository.listExpiredActive(new Date().toISOString());
+    for (const auction of expired) {
+      try {
+        const ended = await auctionRepository.updateStatus(auction.id, "ended");
+        if (ended) {
+          const bids = await auctionRepository.listBids(auction.id);
+          eventBus.publish(
+            {
+              type: "auction.updated",
+              listingId: auction.listingId,
+              payload: { auction: ended },
+            },
+            [auction.sellerId, ...bids.map((bid) => bid.bidderId)],
+          );
+        }
+      } catch (error) {
+        app.log.warn({ err: error, auctionId: auction.id }, "Auction expiry transition failed");
+      }
+    }
+  }, 60_000);
+  auctionExpiryTimer.unref();
   app.addHook("onClose", async () => {
+    clearInterval(auctionExpiryTimer);
     notificationService.close();
     eventBus.close();
   });

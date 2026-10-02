@@ -179,110 +179,175 @@ export function OfferPanel({ listing, onAccepted }: Props) {
           No offers yet. Offers will appear here as buyers express interest.
         </Typography>
       ) : (
-        <Stack spacing={1.5}>
-          {visibleOffers.map((offer) => (
-            <Card key={offer.id} variant="outlined">
-              <CardContent>
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  sx={{ justifyContent: "space-between", gap: 1 }}
-                >
-                  <Box>
-                    <Typography sx={{ fontWeight: 600 }}>
-                      {isSeller
-                        ? "Buyer offer"
-                        : offer.status === "countered"
-                          ? "Seller countered your offer"
-                          : "Your offer"}
-                    </Typography>
-                    <PriceDisplay
-                      amount={offer.amount}
-                      currency={offer.currency}
-                      variant="h6"
-                      sx={{ color: "primary.main" }}
-                    />
-                  </Box>
-                  <StatusChip status={offer.status} />
-                </Stack>
-                <Typography variant="body2" color="text.secondary">
-                  {new Date(offer.createdAt).toLocaleString()}{" "}
-                  {offer.parentOfferId ? " · Response to an earlier offer" : ""}
-                </Typography>
-                {offer.status === "countered" && !isSeller && (
-                  <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    spacing={1}
-                    sx={{ mt: 2 }}
-                  >
-                    <Button
-                      variant="contained"
-                      onClick={() => act(offer, "accepted")}
-                      disabled={mutationStatus === "loading"}
-                    >
-                      Accept counter
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => {
-                        setCounterTarget(offer);
-                        setCounterAmount("");
-                      }}
-                    >
-                      Make revised offer
-                    </Button>
-                    <Button
-                      onClick={() => act(offer, "withdrawn")}
-                      disabled={mutationStatus === "loading"}
-                    >
-                      Withdraw
-                    </Button>
-                  </Stack>
-                )}
-                {!isSeller && offer.status === "pending" && (
-                  <Button
-                    sx={{ mt: 1 }}
-                    onClick={() => act(offer, "withdrawn")}
-                    disabled={mutationStatus === "loading"}
-                  >
-                    Withdraw offer
-                  </Button>
-                )}
-                {isSeller &&
-                  (offer.status === "pending" || offer.status === "countered") && (
+        <Box
+          component="section"
+          aria-labelledby="offer-activity-heading"
+          sx={{
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 2,
+            bgcolor: "background.default",
+            overflow: "hidden",
+          }}
+        >
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            sx={{
+              justifyContent: "space-between",
+              alignItems: { sm: "center" },
+              gap: 0.5,
+              px: 2,
+              py: 1.5,
+              borderBottom: 1,
+              borderColor: "divider",
+              bgcolor: "background.paper",
+            }}
+          >
+            <Box>
+              <Typography
+                id="offer-activity-heading"
+                variant="subtitle1"
+                sx={{ fontWeight: 700 }}
+              >
+                Offer activity
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {visibleOffers.length} {visibleOffers.length === 1 ? "offer" : "offers"}{" "}
+                in this negotiation
+              </Typography>
+            </Box>
+            <Typography variant="caption" color="text.secondary">
+              Scroll to view history
+            </Typography>
+          </Stack>
+          <Box
+            role="region"
+            aria-label="Offer history"
+            tabIndex={0}
+            sx={{
+              maxHeight: { xs: 420, sm: 520 },
+              overflowY: "auto",
+              p: 1.5,
+              overscrollBehavior: "contain",
+              scrollbarGutter: "stable",
+              "&:focus-visible": {
+                outline: "2px solid",
+                outlineColor: "primary.main",
+                outlineOffset: -2,
+              },
+              "&::-webkit-scrollbar": { width: 8 },
+              "&::-webkit-scrollbar-thumb": {
+                bgcolor: "action.disabled",
+                borderRadius: 4,
+              },
+            }}
+          >
+            <Stack spacing={1.5}>
+              {visibleOffers.map((offer) => (
+                <Card key={offer.id} variant="outlined">
+                  <CardContent>
                     <Stack
                       direction={{ xs: "column", sm: "row" }}
-                      spacing={1}
-                      sx={{ mt: 2 }}
+                      sx={{ justifyContent: "space-between", gap: 1 }}
                     >
-                      <Button
-                        variant="contained"
-                        onClick={() => setAcceptTarget(offer)}
-                        disabled={mutationStatus === "loading"}
-                      >
-                        Accept
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        onClick={() => act(offer, "rejected")}
-                        disabled={mutationStatus === "loading"}
-                      >
-                        Reject
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setCounterTarget(offer);
-                          setCounterAmount("");
-                        }}
-                        disabled={mutationStatus === "loading"}
-                      >
-                        Counter
-                      </Button>
+                      <Box>
+                        <Typography sx={{ fontWeight: 600 }}>
+                          {isSeller
+                            ? "Buyer offer"
+                            : offer.status === "countered"
+                              ? "Seller countered your offer"
+                              : "Your offer"}
+                        </Typography>
+                        <PriceDisplay
+                          amount={offer.amount}
+                          currency={offer.currency}
+                          variant="h6"
+                          sx={{ color: "primary.main" }}
+                        />
+                      </Box>
+                      <StatusChip status={offer.status} />
                     </Stack>
-                  )}
-              </CardContent>
-            </Card>
-          ))}
-        </Stack>
+                    <Typography variant="body2" color="text.secondary">
+                      {new Date(offer.createdAt).toLocaleString()}{" "}
+                      {offer.parentOfferId ? " · Response to an earlier offer" : ""}
+                    </Typography>
+                    {offer.status === "countered" && !isSeller && (
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={1}
+                        sx={{ mt: 2 }}
+                      >
+                        <Button
+                          variant="contained"
+                          onClick={() => act(offer, "accepted")}
+                          disabled={mutationStatus === "loading"}
+                        >
+                          Accept counter
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          onClick={() => {
+                            setCounterTarget(offer);
+                            setCounterAmount("");
+                          }}
+                        >
+                          Make revised offer
+                        </Button>
+                        <Button
+                          onClick={() => act(offer, "withdrawn")}
+                          disabled={mutationStatus === "loading"}
+                        >
+                          Withdraw
+                        </Button>
+                      </Stack>
+                    )}
+                    {!isSeller && offer.status === "pending" && (
+                      <Button
+                        sx={{ mt: 1 }}
+                        onClick={() => act(offer, "withdrawn")}
+                        disabled={mutationStatus === "loading"}
+                      >
+                        Withdraw offer
+                      </Button>
+                    )}
+                    {isSeller &&
+                      (offer.status === "pending" || offer.status === "countered") && (
+                        <Stack
+                          direction={{ xs: "column", sm: "row" }}
+                          spacing={1}
+                          sx={{ mt: 2 }}
+                        >
+                          <Button
+                            variant="contained"
+                            onClick={() => setAcceptTarget(offer)}
+                            disabled={mutationStatus === "loading"}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            onClick={() => act(offer, "rejected")}
+                            disabled={mutationStatus === "loading"}
+                          >
+                            Reject
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setCounterTarget(offer);
+                              setCounterAmount("");
+                            }}
+                            disabled={mutationStatus === "loading"}
+                          >
+                            Counter
+                          </Button>
+                        </Stack>
+                      )}
+                  </CardContent>
+                </Card>
+              ))}
+            </Stack>
+          </Box>
+        </Box>
       )}
       <Dialog
         open={Boolean(acceptTarget)}

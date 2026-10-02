@@ -3,8 +3,11 @@ import {
   Alert,
   Box,
   Button,
+  Card,
+  CardContent,
   CardMedia,
   CircularProgress,
+  Divider,
   Dialog,
   DialogActions,
   DialogContent,
@@ -242,6 +245,62 @@ export function ListingDetailsPage() {
               {listing.description}
             </Typography>
           </Box>
+          <Card
+            component="section"
+            variant="outlined"
+            aria-labelledby="marketplace-guide-heading"
+          >
+            <CardContent>
+              <Stack spacing={2}>
+                <Box>
+                  <Typography
+                    id="marketplace-guide-heading"
+                    variant="h5"
+                    component="h2"
+                  >
+                    How this marketplace works
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Review the details, connect with the seller, then agree on the next
+                    step.
+                  </Typography>
+                </Box>
+                <Stack
+                  divider={<Divider flexItem />}
+                  spacing={1.5}
+                  sx={{ color: "text.secondary" }}
+                >
+                  <Box>
+                    <Typography variant="subtitle2" color="text.primary">
+                      1. Review the listing
+                    </Typography>
+                    <Typography variant="body2">
+                      Confirm the condition, year, location, and included details.
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" color="text.primary">
+                      2. Contact the seller
+                    </Typography>
+                    <Typography variant="body2">
+                      Ask questions or request additional information before committing.
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" color="text.primary">
+                      3.{" "}
+                      {listing.saleMode === "auction" ? "Place a bid" : "Make an offer"}
+                    </Typography>
+                    <Typography variant="body2">
+                      {listing.saleMode === "auction"
+                        ? "Bids are validated server-side and the current bid history remains visible."
+                        : "Your offer is private to the seller and can be negotiated before acceptance."}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
         </Stack>
         <Stack
           spacing={2.5}

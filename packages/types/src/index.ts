@@ -1,4 +1,5 @@
 export type ListingStatus = "draft" | "active" | "sold";
+export type ListingSaleMode = "fixed_price" | "auction";
 
 export type UserRole = "buyer" | "seller";
 
@@ -126,9 +127,57 @@ export interface Listing {
   category: string;
   images: ListingImage[];
   status: ListingStatus;
+  saleMode?: ListingSaleMode;
   createdAt: string;
   updatedAt: string;
   version: number;
+}
+
+export type AuctionStatus = "scheduled" | "active" | "ended" | "cancelled";
+export type BidStatus = "active" | "outbid" | "winning" | "withdrawn" | "accepted";
+
+export interface Auction {
+  id: string;
+  listingId: string;
+  sellerId: string;
+  startsAt: string;
+  endsAt: string;
+  status: AuctionStatus;
+  startingPrice: number;
+  reservePrice?: number;
+  minimumBidIncrement: number;
+  highestBidId?: string;
+  version: number;
+}
+
+export interface Bid {
+  id: string;
+  auctionId: string;
+  listingId: string;
+  bidderId: string;
+  amount: number;
+  currency: string;
+  status: BidStatus;
+  createdAt: string;
+  version: number;
+}
+
+export interface CreateAuctionInput {
+  listingId: string;
+  sellerId: string;
+  startsAt: string;
+  endsAt: string;
+  startingPrice: number;
+  reservePrice?: number;
+  minimumBidIncrement: number;
+}
+
+export interface PlaceBidInput {
+  auctionId: string;
+  listingId: string;
+  bidderId: string;
+  amount: number;
+  currency: string;
 }
 
 export interface Offer {
@@ -146,6 +195,9 @@ export interface Offer {
 }
 
 export type MarketplaceEventType =
+  | "auction.created"
+  | "auction.updated"
+  | "bid.placed"
   | "offer.created"
   | "offer.countered"
   | "offer.accepted"
@@ -199,6 +251,8 @@ export interface Notification {
 
 export type MarketplaceEventPayload =
   | { offer: Offer }
+  | { auction: Auction }
+  | { bid: Bid }
   | { listing: Listing }
   | { transaction: Transaction }
   | { message: Message }
@@ -240,6 +294,7 @@ export interface CreateListingInput {
   currency: string;
   category: string;
   images: ListingImage[];
+  saleMode?: ListingSaleMode;
 }
 
 export interface CreateListingRepositoryInput extends CreateListingInput {
