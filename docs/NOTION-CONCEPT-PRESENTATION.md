@@ -188,7 +188,7 @@ flowchart LR
 | Payments              | Stripe behind `PaymentProvider`                        | Isolates provider details and makes webhook reconciliation explicit                               |
 | Realtime              | Authenticated WebSocket + REST reconciliation          | Immediate feedback while REST remains authoritative after reconnect                               |
 | Deployment            | Render static site + Docker API                        | Reproducible interview deployment with a small operational footprint                              |
-| Quality               | Vitest, Playwright, ESLint, TypeScript, GitHub Actions | Covers domain rules, API/UI behavior, real journeys, and release gates                            |
+| Quality               | Vitest, Playwright, ESLint, TypeScript, GitHub Actions | Covers domain rules, API/UI behavior, real browser journeys, and release gates                    |
 | Code quality (target) | SonarQube or SonarCloud in CI                          | Planned static-analysis and quality-gate layer; not enabled in the current prototype              |
 
 ### Important reliability decisions
@@ -261,6 +261,21 @@ flowchart TD
 - **Messaging:** conversations, messages, read state, seller questions.
 - **Realtime and notifications:** event ingestion, deduplication, toast/inbox notifications, reconnect reconciliation.
 - **Shared UX:** price formatting, status chips, loading skeletons, error recovery, responsive navigation.
+
+### Browser testing and automation
+
+Browser testing is part of the implemented quality strategy, not only a future recommendation. Playwright starts the API and web application locally when required, runs against a deterministic seeded demo environment, and produces an HTML report plus failure screenshots, video, and traces on retry.
+
+| Automated browser coverage        | What it verifies                                                                                                                 |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Marketplace discovery             | Guest browsing, search, category and price filters, sorting, listing navigation, and clear-filter behavior                       |
+| Authentication and account access | Protected-route redirects, sign-in, session persistence after reload, and account-menu access                                    |
+| Offers and auctions               | Buyer/seller negotiation, bid outcomes, lifecycle transitions, and realtime updates                                              |
+| Messaging                         | Conversations, live typing, Enter versus Shift+Enter behavior, unread counts, and recipient updates                              |
+| Responsive behavior               | Marketplace, account, listing, seller, message, notification, and transaction routes across phone, tablet, and desktop viewports |
+| Accessibility-oriented selectors  | User-facing roles, labels, names, and visible states instead of brittle implementation selectors where practical                 |
+
+The automation is designed to catch regressions in the complete user journey, not just isolated components. Tests run serially against the in-memory demo event bus to avoid race conditions, use retries in CI, and keep REST responses authoritative after realtime updates. The same suite can target a deployed environment through `E2E_DEPLOYED`, while local runs automatically start the required web and API servers.
 
 ---
 
@@ -408,11 +423,9 @@ The visual direction is **quiet, editorial, and evidence-led**: warm neutral sur
 
 <img width="1920" height="1080" alt="Screenshot 2026-10-03 at 12 28 39 AM (2)" src="https://github.com/user-attachments/assets/8e8878bb-265f-4b18-b0d8-64701cba592b" />
 
-
 ### Screen B — Listing detail and offer panel
 
 <img width="1920" height="922" alt="Screenshot 2026-10-03 at 12 29 01 AM" src="https://github.com/user-attachments/assets/ce18c814-660a-455f-9256-fd40d922363c" />
-
 
 ### Screen C — Transaction timeline
 
@@ -440,7 +453,7 @@ Offers, counters, withdrawals, auction creation, bids, outbid notifications, mes
 
 ### Phase 3 — Protected completion
 
-Transactions, Stripe payment intent and webhook reconciliation, fulfilment timeline, shipment/delivery confirmation, disputes, and operational notifications.
+Transactions, Stripe payment intent and webhook reconciliation, fulfilment timeline, shipment/delivery confirmation, disputes, operational notifications, and automated browser coverage for the complete purchase journey.
 
 ### Phase 4 — Production hardening
 
@@ -456,6 +469,7 @@ AWS migration from the current Render deployment, shared realtime broker for mul
 | Existing TypeScript source and tests                        | Evidence for architecture, statuses, API boundaries, payment behavior, auction concurrency, and user journeys             | Cross-checked the proposal against the actual modules and documented the prototype’s known production limitations                                                           |
 | Mermaid diagrams                                            | System, frontend, data, journey, and lifecycle diagrams                                                                   | Reviewed diagram readability and simplified labels so they can be pasted into Notion code blocks or rendered by Mermaid-compatible tools                                    |
 | Markdown wireframes                                         | Fast visual concept communication without introducing a design dependency                                                 | Chose the information hierarchy, primary actions, responsive behavior, and accessibility notes                                                                              |
+| Playwright browser automation                               | Automated real-browser journeys, responsive checks, realtime interactions, and failure diagnostics                        | Selected the critical buyer/seller paths, deterministic test data, viewport matrix, assertions, and CI behavior                                                             |
 | SonarQube/SonarCloud (planned)                              | Defined the intended static-analysis and quality-gate role in the future CI pipeline                                      | Did not present Sonar as implemented; retained the existing ESLint, TypeScript, coverage, and test checks as the evidence for the prototype                                 |
 | AWS architecture references (planned)                       | Mapped the Render prototype to a future S3/CloudFront, ECS/Fargate, Secrets Manager, broker, and CloudWatch setup         | Chose Render for the interview because of time, cost, and deployment simplicity; documented AWS as the target rather than claiming it was used                              |
 
@@ -464,6 +478,7 @@ AWS migration from the current Render deployment, shared realtime broker for mul
 - Confirmed the stack and deployment model against the repository README.
 - Confirmed auction, bid, offer, listing, payment, fulfilment, and transaction statuses against the typed domain code.
 - Confirmed the data entities and interaction surfaces against the shared types and web pages.
+- Confirmed browser automation coverage and configuration against the Playwright config and end-to-end specs, including responsive viewports, realtime messaging, authentication, and marketplace navigation.
 - Kept payment language server-authoritative: the browser does not independently mark a transaction paid.
 - Called out known prototype limitations instead of presenting them as solved production capabilities.
 - Clearly separated implemented tools (Render, GitHub Actions, ESLint, TypeScript, Vitest, and Playwright) from planned tools (AWS and SonarQube/SonarCloud).
@@ -495,6 +510,8 @@ All repository links below are relative references that can be pasted into a Not
 - [Marketplace journey tests](../tests/e2e/marketplace.spec.ts) — end-to-end discovery and purchase-oriented behavior.
 - [Offer journey tests](../tests/e2e/offers.spec.ts) — negotiation flow coverage.
 - [Auction journey tests](../tests/e2e/auctions.spec.ts) — bidding and auction lifecycle coverage.
+- [Playwright configuration](../playwright.config.ts) — browser, server startup, retries, reports, traces, screenshots, and deployed-test settings.
+- [Responsive browser tests](../tests/e2e/responsive.spec.ts) — phone, tablet, and desktop viewport automation.
 - [Stripe](https://stripe.com/docs) — public payment-provider reference.
 - [Mermaid](https://mermaid.js.org/) — public diagram syntax reference.
 - [AWS architecture](https://aws.amazon.com/architecture/) — public reference for the target deployment direction.
