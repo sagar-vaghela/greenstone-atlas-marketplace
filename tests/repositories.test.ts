@@ -23,6 +23,7 @@ describe("in-memory repositories", () => {
       outcome: "failed",
       failureCode: "declined",
     });
+
     expect(failed?.transaction.paymentStatus).toBe("failed");
     const retried = await repository.applyPaymentResult(created.id, {
       idempotencyKey: "key-2",
@@ -39,12 +40,96 @@ describe("in-memory repositories", () => {
     expect(duplicate?.transaction.version).toBe(retried?.transaction.version);
   });
 
+  it("supports transaction lookups, provider references, and terminal timestamps", async () => {
+    const repository = new InMemoryTransactionRepository();
+    const transaction = await repository.create(transactionInput);
+
+    expect(await repository.findById("missing")).toBeUndefined();
+    expect(await repository.findByOfferId(transaction.offerId)).toMatchObject({
+      id: transaction.id,
+    });
+    expect(await repository.findByListingId(transaction.listingId)).toMatchObject({
+      id: transaction.id,
+    });
+    expect(await repository.findForUser("unrelated")).toEqual([]);
+
+    const referenced = await repository.setPaymentProviderReference(
+      transaction.id,
+      "demo",
+      "payment-reference",
+    );
+    expect(referenced).toMatchObject({
+      paymentProvider: "demo",
+      paymentProviderReference: "payment-reference",
+      version: 2,
+    });
+    expect(
+      await repository.setPaymentProviderReference(
+        transaction.id,
+        "other-provider",
+        "payment-reference",
+      ),
+    ).toMatchObject({ paymentProvider: "demo", version: 2 });
+
+    await repository.applyPaymentResult(transaction.id, {
+      idempotencyKey: "paid",
+      provider: "demo",
+      outcome: "paid",
+    });
+    const completed = await repository.updateStatus(transaction.id, "completed");
+    expect(completed?.completedAt).toBeDefined();
+    expect(completed?.status).toBe("completed");
+    await expect(
+      repository.updateStatus(transaction.id, "cancelled"),
+    ).rejects.toThrow();
+    expect(await repository.updateStatus("missing", "paid")).toBeUndefined();
+  });
+
+  it("requires cancellation before refunds and protects payment state ordering", async () => {
+    const repository = new InMemoryTransactionRepository();
+    const transaction = await repository.create(transactionInput);
+
+    await expect(
+      repository.updatePaymentStatus(transaction.id, "refunded"),
+    ).rejects.toThrow();
+    await repository.updatePaymentStatus(transaction.id, "failed");
+    await repository.updatePaymentStatus(transaction.id, "pending");
+    await repository.updatePaymentStatus(transaction.id, "paid");
+    await expect(
+      repository.updatePaymentStatus(transaction.id, "paid"),
+    ).rejects.toThrow();
+    await repository.updateStatus(transaction.id, "cancelled");
+    const refunded = await repository.updatePaymentStatus(transaction.id, "refunded");
+    expect(refunded).toMatchObject({
+      status: "cancelled",
+      paymentStatus: "refunded",
+    });
+    expect(await repository.updatePaymentStatus("missing", "pending")).toBeUndefined();
+  });
+
   it("enforces offer transitions and separate fulfilment ordering", async () => {
     const offers = new InMemoryOfferRepository();
-    await expect(
-      offers.updateStatus("offer-1", "accepted"),
-    ).resolves.toMatchObject({ status: "accepted" });
+    expect(await offers.findById("missing")).toBeUndefined();
+    expect((await offers.listByListingId("listing-1")).length).toBe(3);
+    expect(await offers.listByBuyerId("demo-buyer-2")).toHaveLength(1);
+    expect(await offers.listBySellerId("demo-seller")).toHaveLength(3);
+    const createdOffer = await offers.create({
+      listingId: "listing-2",
+      buyerId: "buyer-1",
+      sellerId: "seller-1",
+      amount: 125,
+      currency: "AED",
+    });
+    expect(createdOffer).toMatchObject({
+      status: "pending",
+      version: 1,
+      listingId: "listing-2",
+    });
+    await expect(offers.updateStatus("offer-1", "accepted")).resolves.toMatchObject({
+      status: "accepted",
+    });
     await expect(offers.updateStatus("offer-1", "rejected")).rejects.toThrow();
+    expect(await offers.updateStatus("missing", "accepted")).toBeUndefined();
     const transactions = new InMemoryTransactionRepository();
     const transaction = await transactions.create(transactionInput);
     await expect(
@@ -129,9 +214,8 @@ describe("in-memory repositories", () => {
       resourceId: "conversation-1",
       sourceEventId: "event-2",
     } as const;
-    const messageNotification = await repository.createMessageNotification(
-      messageInput,
-    );
+    const messageNotification =
+      await repository.createMessageNotification(messageInput);
     expect(messageNotification).toBeDefined();
     expect(
       await repository.createMessageNotification({
@@ -143,17 +227,9 @@ describe("in-memory repositories", () => {
     expect(await repository.countUnread("buyer-1")).toBe(2);
     expect(await repository.countUnread("buyer-2")).toBe(0);
     expect(
-      await repository.markRead(
-        notification!.id,
-        "buyer-2",
-        new Date().toISOString(),
-      ),
+      await repository.markRead(notification!.id, "buyer-2", new Date().toISOString()),
     ).toBeUndefined();
-    await repository.markRead(
-      notification!.id,
-      "buyer-1",
-      new Date().toISOString(),
-    );
+    await repository.markRead(notification!.id, "buyer-1", new Date().toISOString());
     expect(await repository.countUnread("buyer-1")).toBe(1);
     expect(
       await repository.markConversationRead(

@@ -459,7 +459,7 @@ export function AppLayout() {
                         selected={isActive("/profile")}
                         onClick={() => setProfileAnchor(null)}
                       >
-                        Profile
+                        Seller profile
                       </MenuItem>
                       <MenuItem
                         onClick={() => {

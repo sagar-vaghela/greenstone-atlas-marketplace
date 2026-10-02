@@ -5,47 +5,24 @@ import type {
   ListingStatus,
   UpdateListingInput,
 } from "@atlas/types";
+import { demoListings } from "../seed-marketplace-data.js";
 import { assertValidListingStatusTransition } from "../domain/listing-status.js";
 import type { ListingRepository } from "./listing-repository.js";
-
-const seedListings: CreateListingRepositoryInput[] = [
-  {
-    title: "Rolex Submariner Date 126610LN",
-    description: "Pre-owned luxury watch in excellent condition, with box and papers.",
-    price: 28500,
-    currency: "AED",
-    category: "luxury-watches",
-    images: [],
-    sellerId: "demo-seller",
-  },
-  {
-    title: "Omega Speedmaster Professional Moonwatch",
-    description: "Pre-owned chronograph offered by a verified-demo seller.",
-    price: 18500,
-    currency: "AED",
-    category: "luxury-watches",
-    images: [],
-    sellerId: "demo-seller",
-  },
-  {
-    title: "Cartier Santos Medium WSSA0029",
-    description: "Pre-owned classic with a clean bracelet and broad wrist appeal.",
-    price: 22000,
-    currency: "AED",
-    category: "luxury-watches",
-    images: [],
-    sellerId: "demo-seller-2",
-  },
-];
 
 export class InMemoryListingRepository implements ListingRepository {
   private readonly listings: Listing[];
   private nextId: number;
 
   constructor() {
-    this.listings = seedListings.map((input, index) =>
-      this.createListing(`listing-${index + 1}`, input),
-    );
+    const canonicalListings = demoListings.map((listing) => ({
+      ...listing,
+      images: [...(listing.images ?? [])],
+    }));
+    const legacyListings = canonicalListings.slice(0, 3).map((listing, index) => ({
+      ...listing,
+      id: `listing-${index + 1}`,
+    }));
+    this.listings = [...legacyListings, ...canonicalListings];
     this.nextId = this.listings.length + 1;
   }
 

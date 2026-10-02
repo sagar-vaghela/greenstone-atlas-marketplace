@@ -26,29 +26,31 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     ...devices["Desktop Chrome"],
   },
-  webServer: [
-    {
-      command: "npm run dev --workspace @atlas/api -- --host 127.0.0.1 --port 3000",
-      url: `${apiURL}/health`,
-      timeout: 120_000,
-      reuseExistingServer: !process.env.CI,
-      env: {
-        ...process.env,
-        PAYMENT_PROVIDER: "demo",
-        STRIPE_SECRET_KEY: "",
-        STRIPE_WEBHOOK_SECRET: "",
-      },
-    },
-    {
-      command: "npm run dev --workspace @atlas/web -- --host 127.0.0.1 --port 4173",
-      url: baseURL,
-      timeout: 120_000,
-      reuseExistingServer: !process.env.CI,
-      env: {
-        ...process.env,
-        VITE_API_URL: apiURL,
-        VITE_STRIPE_PUBLISHABLE_KEY: "",
-      },
-    },
-  ],
+  webServer: process.env.E2E_DEPLOYED
+    ? undefined
+    : [
+        {
+          command: "npm run dev --workspace @atlas/api -- --host 127.0.0.1 --port 3000",
+          url: `${apiURL}/health`,
+          timeout: 120_000,
+          reuseExistingServer: !process.env.CI,
+          env: {
+            ...process.env,
+            PAYMENT_PROVIDER: "demo",
+            STRIPE_SECRET_KEY: "",
+            STRIPE_WEBHOOK_SECRET: "",
+          },
+        },
+        {
+          command: "npm run dev --workspace @atlas/web -- --host 127.0.0.1 --port 4173",
+          url: baseURL,
+          timeout: 120_000,
+          reuseExistingServer: !process.env.CI,
+          env: {
+            ...process.env,
+            VITE_API_URL: apiURL,
+            VITE_STRIPE_PUBLISHABLE_KEY: "",
+          },
+        },
+      ],
 });

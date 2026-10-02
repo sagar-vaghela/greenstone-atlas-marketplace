@@ -19,7 +19,17 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: ["**/*.d.ts", "**/*.test.*", "**/main.tsx", "**/vite-env.d.ts"],
+      include: [
+        "apps/api/src/**/*.ts",
+        "apps/web/src/**/*.{ts,tsx}",
+        "packages/*/src/**/*.ts",
+      ],
+      exclude: [
+        "**/*.d.ts",
+        "**/*.test.*",
+        "**/main.tsx",
+        "**/vite-env.d.ts",
+      ],
     },
   },
 });
