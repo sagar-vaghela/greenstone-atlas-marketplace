@@ -4,7 +4,7 @@ import {
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
-import type { Transaction } from "@atlas/types";
+import type { DisputeReason, Transaction } from "@atlas/types";
 import { ApiError } from "../../api/client";
 import {
   cancelTransaction,
@@ -26,6 +26,7 @@ interface TransactionsState {
   selectedId: string | null;
   listStatus: RequestStatus;
   detailStatus: RequestStatus;
+  detailId: string | null;
   mutationStatus: RequestStatus;
   error: string | null;
 }
@@ -35,6 +36,7 @@ const initialState: TransactionsState = {
   selectedId: null,
   listStatus: "idle",
   detailStatus: "idle",
+  detailId: null,
   mutationStatus: "idle",
   error: null,
 };
@@ -157,11 +159,11 @@ export const cancelTransactionAction = createAsyncThunk<
 
 export const disputeTransactionAction = createAsyncThunk<
   Transaction,
-  string,
+  { id: string; reason: DisputeReason; description: string },
   { rejectValue: string }
->("transactions/dispute", async (id, { rejectWithValue }) => {
+>("transactions/dispute", async ({ id, reason, description }, { rejectWithValue }) => {
   try {
-    return await disputeTransaction(id);
+    return await disputeTransaction(id, { reason, description });
   } catch (error) {
     return rejectWithValue(message(error, "Unable to open a dispute."));
   }
@@ -195,16 +197,19 @@ const transactionsSlice = createSlice({
         state.listStatus = "failed";
         state.error = action.payload ?? "Unable to load transactions.";
       })
-      .addCase(fetchTransaction.pending, (state) => {
+      .addCase(fetchTransaction.pending, (state, action) => {
+        state.detailId = action.meta.arg;
         state.detailStatus = "loading";
         state.error = null;
       })
       .addCase(fetchTransaction.fulfilled, (state, action) => {
+        if (state.detailId !== action.meta.arg) return;
         state.detailStatus = "succeeded";
         state.selectedId = action.payload.id;
         setTransaction(state, action.payload);
       })
       .addCase(fetchTransaction.rejected, (state, action) => {
+        if (state.detailId !== action.meta.arg) return;
         state.detailStatus = "failed";
         state.error = action.payload ?? "Unable to load this transaction.";
       })
@@ -309,6 +314,15 @@ export const selectTransactionDetail = (state: {
   state.transactions.selectedId
     ? (state.transactions.items[state.transactions.selectedId] ?? null)
     : null;
+export const selectTransactionById = (
+  state: { transactions: TransactionsState },
+  id: string,
+) => state.transactions.items[id] ?? null;
+export const selectTransactionDetailStatus = (
+  state: { transactions: TransactionsState },
+  id: string,
+): RequestStatus =>
+  state.transactions.detailId === id ? state.transactions.detailStatus : "loading";
 export const selectTransactionsListStatus = (state: {
   transactions: TransactionsState;
 }) => state.transactions.listStatus;

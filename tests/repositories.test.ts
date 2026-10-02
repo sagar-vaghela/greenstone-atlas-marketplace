@@ -69,6 +69,46 @@ describe("in-memory repositories", () => {
     ).resolves.toMatchObject({ fulfilmentStatus: "delivered" });
   });
 
+  it("stores dispute details and advances the transaction atomically", async () => {
+    const repository = new InMemoryTransactionRepository();
+    const transaction = await repository.create(transactionInput);
+    await repository.applyPaymentResult(transaction.id, {
+      idempotencyKey: "pay",
+      provider: "demo",
+      outcome: "paid",
+    });
+
+    const openedAt = new Date().toISOString();
+    const disputed = await repository.openDispute(transaction.id, {
+      caseReference: "DSP-12345678",
+      reason: "item_not_as_described",
+      description: "The listed condition does not match the item received.",
+      openedBy: "buyer-1",
+      openedAt,
+    });
+
+    expect(disputed).toMatchObject({
+      status: "disputed",
+      dispute: {
+        caseReference: "DSP-12345678",
+        reason: "item_not_as_described",
+        openedBy: "buyer-1",
+      },
+      updatedAt: openedAt,
+      version: 3,
+    });
+    expect(await repository.findById(transaction.id)).toMatchObject(disputed);
+    await expect(
+      repository.openDispute(transaction.id, {
+        caseReference: "DSP-87654321",
+        reason: "other",
+        description: "A second dispute should not be allowed.",
+        openedBy: "buyer-1",
+        openedAt,
+      }),
+    ).rejects.toThrow();
+  });
+
   it("projects notifications once and scopes read/unread state", async () => {
     const repository = new InMemoryNotificationRepository();
     const input = {

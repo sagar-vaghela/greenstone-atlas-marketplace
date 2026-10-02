@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
+import type { DisputeReason } from "@atlas/types";
 import { requireAuthenticatedUser } from "../auth/middleware.js";
 import { InvalidTransactionStateError } from "../domain/transaction-status.js";
 import type { MarketplaceEventBus } from "../events/marketplace-event-bus.js";
@@ -18,6 +20,23 @@ interface IdParams {
 interface PaymentBody {
   outcome?: "success" | "failure";
 }
+
+interface DisputeBody {
+  reason: DisputeReason;
+  description: string;
+}
+
+const disputeReasons: DisputeReason[] = [
+  "item_not_received",
+  "item_not_as_described",
+  "suspected_counterfeit",
+  "payment_or_refund",
+  "other",
+];
+
+const isDisputeReason = (reason: unknown): reason is DisputeReason =>
+  typeof reason === "string" &&
+  disputeReasons.some((validReason) => validReason === reason);
 
 const error = (
   reply: { status: (code: number) => { send: (body: unknown) => unknown } },
@@ -297,9 +316,27 @@ export const registerTransactionRoutes = async (
     }
   });
 
-  app.post<{ Params: IdParams }>('/transactions/:id/dispute', async (request, reply) => {
+  app.post<{ Params: IdParams; Body: DisputeBody }>('/transactions/:id/dispute', async (request, reply) => {
     const user = requireAuthenticatedUser(request, reply);
     if (!user) return;
+
+    const reason = request.body?.reason;
+    const rawDescription = request.body?.description;
+    const description =
+      typeof rawDescription === "string" ? rawDescription.trim() : undefined;
+    if (
+      !isDisputeReason(reason) ||
+      !description ||
+      description.length < 20 ||
+      description.length > 2000
+    ) {
+      return error(
+        reply,
+        400,
+        'INVALID_DISPUTE_REQUEST',
+        'Choose a valid reason and provide a description between 20 and 2000 characters.',
+      );
+    }
 
     const transaction = await options.transactionRepository.findById(request.params.id);
     if (!transaction) {
@@ -308,14 +345,20 @@ export const registerTransactionRoutes = async (
     if (transaction.buyerId !== user.id && transaction.sellerId !== user.id) {
       return error(reply, 403, 'FORBIDDEN', 'Only a participant can open a dispute.');
     }
-    if (transaction.status !== 'paid') {
+    if (transaction.status !== 'paid' || transaction.paymentStatus !== 'paid') {
       return error(reply, 409, 'INVALID_TRANSACTION_STATE', 'This transaction cannot be disputed in its current state.');
     }
 
     try {
-      const updated = await options.transactionRepository.updateStatus(
+      const updated = await options.transactionRepository.openDispute(
         transaction.id,
-        'disputed',
+        {
+          caseReference: `DSP-${randomUUID().slice(0, 8).toUpperCase()}`,
+          reason,
+          description,
+          openedBy: user.id,
+          openedAt: new Date().toISOString(),
+        },
       );
       if (updated) {
         options.eventBus.publish(

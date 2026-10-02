@@ -1,4 +1,4 @@
-import type { Transaction } from "@atlas/types";
+import type { DisputeReason, Transaction } from "@atlas/types";
 import { request } from "./client";
 
 export const getTransactionById = (id: string): Promise<Transaction> =>
@@ -67,8 +67,12 @@ export const cancelTransaction = (id: string): Promise<Transaction> =>
     headers: { "Content-Type": "application/json" },
   });
 
-export const disputeTransaction = (id: string): Promise<Transaction> =>
+export const disputeTransaction = (
+  id: string,
+  details: { reason: DisputeReason; description: string },
+): Promise<Transaction> =>
   request<Transaction>(`/transactions/${encodeURIComponent(id)}/dispute`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(details),
   });

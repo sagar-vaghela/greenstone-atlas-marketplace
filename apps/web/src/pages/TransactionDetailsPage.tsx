@@ -11,14 +11,20 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   Step,
   StepLabel,
+  TextField,
   Stepper,
   Typography,
   useMediaQuery,
 } from "@mui/material";
+import type { DisputeReason } from "@atlas/types";
 import {
   CardElement,
   Elements,
@@ -32,6 +38,7 @@ import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import {
   cancelTransactionAction,
+  clearTransactionError,
   completeTransactionAction,
   createPaymentIntentAction,
   deliverTransactionAction,
@@ -39,11 +46,20 @@ import {
   fetchTransaction,
   payTransactionAction,
   shipTransactionAction,
-  selectTransactionDetail,
+  selectTransactionById,
+  selectTransactionDetailStatus,
   selectTransactionsError,
   selectTransactionsMutationStatus,
-  selectTransactionsListStatus,
 } from "../features/transactions/transactionsSlice";
+
+const supportEmail = "support@example.com";
+const disputeReasonLabels: Record<DisputeReason, string> = {
+  item_not_received: "Item not received",
+  item_not_as_described: "Item not as described",
+  suspected_counterfeit: "Authenticity concern",
+  payment_or_refund: "Payment or refund issue",
+  other: "Other",
+};
 
 const stripePromise = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
@@ -74,8 +90,12 @@ export function TransactionDetailsPage() {
   const { id } = useParams();
   const dispatch = useAppDispatch();
   const currentUser = useAppSelector(selectCurrentUser);
-  const transaction = useAppSelector(selectTransactionDetail);
-  const listStatus = useAppSelector(selectTransactionsListStatus);
+  const transaction = useAppSelector((state) =>
+    selectTransactionById(state, id ?? ""),
+  );
+  const detailStatus = useAppSelector((state) =>
+    selectTransactionDetailStatus(state, id ?? ""),
+  );
   const error = useAppSelector(selectTransactionsError);
   const mutationStatus = useAppSelector(selectTransactionsMutationStatus);
   const paymentAttemptKey = useRef<string | null>(null);
@@ -85,6 +105,9 @@ export function TransactionDetailsPage() {
   );
   const [stripeDialogOpen, setStripeDialogOpen] = useState(false);
   const [awaitingReconciliation, setAwaitingReconciliation] = useState(false);
+  const [disputeDialogOpen, setDisputeDialogOpen] = useState(false);
+  const [disputeReason, setDisputeReason] = useState<DisputeReason | "">("");
+  const [disputeDescription, setDisputeDescription] = useState("");
 
   useEffect(() => {
     if (id) {
@@ -96,7 +119,7 @@ export function TransactionDetailsPage() {
     return <Alert severity="error">Transaction id is missing.</Alert>;
   }
 
-  if (!transaction && listStatus === "loading") {
+  if (!transaction && detailStatus !== "failed") {
     return (
       <Box sx={{ display: "grid", placeItems: "center", py: 6 }}>
         <CircularProgress aria-label="Loading transaction" />
@@ -195,6 +218,20 @@ export function TransactionDetailsPage() {
       );
     } catch {
       // Redux owns the user-visible API error state.
+    }
+  };
+  const submitDispute = async () => {
+    if (!disputeReason) return;
+    try {
+      await dispatch(
+        disputeTransactionAction({
+          id: transaction.id,
+          reason: disputeReason,
+          description: disputeDescription.trim(),
+        }),
+      ).unwrap();
+    } catch {
+      // The API error is shown in the dialog.
     }
   };
 
@@ -348,8 +385,35 @@ export function TransactionDetailsPage() {
       )}
       {transaction.status === "disputed" && (
         <Alert severity="warning">
-          This transaction is disputed. A production dispute workflow would add
-          evidence review and resolution.
+          <Stack spacing={1}>
+            <Typography>
+              Case {transaction.dispute?.caseReference ?? "opened"} has been
+              submitted for review.
+            </Typography>
+            {transaction.dispute && (
+              <>
+                <Typography variant="body2">
+                  Reason: {disputeReasonLabels[transaction.dispute.reason]}
+                </Typography>
+                <Typography variant="body2">
+                  {transaction.dispute.description}
+                </Typography>
+                <Typography variant="body2">
+                  Submitted{" "}
+                  {new Date(transaction.dispute.openedAt).toLocaleString()}
+                </Typography>
+              </>
+            )}
+            <Typography variant="body2">
+              Need to add more information?{" "}
+              <a
+                href={`mailto:${supportEmail}?subject=${encodeURIComponent(`Dispute ${transaction.dispute?.caseReference ?? transaction.id}`)}&body=${encodeURIComponent(`Please include case ${transaction.dispute?.caseReference ?? transaction.id} in your reply.`)}`}
+              >
+                Contact the support team
+              </a>
+              .
+            </Typography>
+          </Stack>
         </Alert>
       )}
       {isSeller &&
@@ -368,6 +432,11 @@ export function TransactionDetailsPage() {
       {awaitingReconciliation && transaction.paymentStatus !== "paid" && (
         <Alert severity="info">
           Payment received. Confirming transaction status...
+        </Alert>
+      )}
+      {mutationStatus === "failed" && error && (
+        <Alert severity="error" role="alert">
+          {error}
         </Alert>
       )}
 
@@ -401,51 +470,57 @@ export function TransactionDetailsPage() {
               {canShip && (
                 <Button
                   variant="contained"
+                  disabled={mutationStatus === "loading"}
                   onClick={() =>
                     void dispatch(shipTransactionAction(transaction.id))
                   }
                 >
-                  Mark as shipped
+                  {mutationStatus === "loading" ? "Updating..." : "Mark as shipped"}
                 </Button>
               )}
               {canDeliver && (
                 <Button
                   variant="contained"
+                  disabled={mutationStatus === "loading"}
                   onClick={() =>
                     void dispatch(deliverTransactionAction(transaction.id))
                   }
                 >
-                  Confirm delivery
+                  {mutationStatus === "loading" ? "Updating..." : "Confirm delivery"}
                 </Button>
               )}
               {canComplete && (
                 <Button
                   variant="contained"
+                  disabled={mutationStatus === "loading"}
                   onClick={() =>
                     void dispatch(completeTransactionAction(transaction.id))
                   }
                 >
-                  Complete transaction
+                  {mutationStatus === "loading" ? "Updating..." : "Complete transaction"}
                 </Button>
               )}
               {canCancel && (
                 <Button
                   color="warning"
                   variant="outlined"
+                  disabled={mutationStatus === "loading"}
                   onClick={() =>
                     void dispatch(cancelTransactionAction(transaction.id))
                   }
                 >
-                  Cancel transaction
+                  {mutationStatus === "loading" ? "Updating..." : "Cancel transaction"}
                 </Button>
               )}
               {canDispute && (
                 <Button
                   color="error"
                   variant="outlined"
-                  onClick={() =>
-                    void dispatch(disputeTransactionAction(transaction.id))
-                  }
+                  disabled={mutationStatus === "loading"}
+                  onClick={() => {
+                    dispatch(clearTransactionError());
+                    setDisputeDialogOpen(true);
+                  }}
                 >
                   Open dispute
                 </Button>
@@ -478,6 +553,115 @@ export function TransactionDetailsPage() {
           "This transaction was cancelled."}
         {transaction.status === "disputed" && "A dispute has been opened."}
       </Typography>
+      <Dialog
+        open={disputeDialogOpen}
+        onClose={() => setDisputeDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {transaction.dispute ? "Dispute submitted" : "Open a dispute"}
+        </DialogTitle>
+        <DialogContent>
+          {transaction.dispute ? (
+            <Stack spacing={2} sx={{ pt: 1 }}>
+              <Alert severity="success">
+                Case {transaction.dispute.caseReference} is saved and shared
+                with both transaction participants.
+              </Alert>
+              <Typography variant="body2" color="text.secondary">
+                Your case is saved to this transaction. Both participants can
+                view it; email support if you need to continue the conversation.
+              </Typography>
+              <Button
+                component="a"
+                href={`mailto:${supportEmail}?subject=${encodeURIComponent(`Dispute ${transaction.dispute.caseReference}`)}&body=${encodeURIComponent(`Hello Support Team,\n\nI need help with dispute case ${transaction.dispute.caseReference} for transaction ${transaction.id}.\n\n`)}`}
+                variant="outlined"
+                sx={{ alignSelf: "flex-start" }}
+              >
+                Email support
+              </Button>
+            </Stack>
+          ) : (
+            <Stack spacing={2} sx={{ pt: 1 }}>
+              <Alert severity="info">
+                Tell us what happened. Opening a dispute pauses the transaction
+                and saves your case; use the demo support contact below to
+                request follow-up.
+              </Alert>
+              {mutationStatus === "failed" && error && (
+                <Alert severity="error">{error}</Alert>
+              )}
+              <FormControl fullWidth required>
+                <InputLabel id="dispute-reason-label">Reason</InputLabel>
+                <Select
+                  labelId="dispute-reason-label"
+                  value={disputeReason}
+                  label="Reason"
+                  onChange={(event) =>
+                    setDisputeReason(event.target.value as DisputeReason)
+                  }
+                >
+                  {Object.entries(disputeReasonLabels).map(([value, label]) => (
+                    <MenuItem key={value} value={value}>
+                      {label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                label="What happened?"
+                value={disputeDescription}
+                onChange={(event) =>
+                  setDisputeDescription(event.target.value.slice(0, 2000))
+                }
+                multiline
+                minRows={4}
+                maxRows={8}
+                required
+                helperText={`${disputeDescription.length}/2000 characters (minimum 20)`}
+                slotProps={{ htmlInput: { maxLength: 2000 } }}
+              />
+              <Typography variant="body2" color="text.secondary">
+                For direct follow-up, email the demo support contact at{" "}
+                <a href={`mailto:${supportEmail}`}>{supportEmail}</a>. Submitting
+                this form saves a case in the transaction.
+              </Typography>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          {transaction.dispute ? (
+            <Button onClick={() => setDisputeDialogOpen(false)}>Done</Button>
+          ) : (
+            <>
+              <Button
+                onClick={() => setDisputeDialogOpen(false)}
+                disabled={mutationStatus === "loading"}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                color="error"
+                onClick={() => void submitDispute()}
+                disabled={
+                  mutationStatus === "loading" ||
+                  !disputeReason ||
+                  disputeDescription.trim().length < 20
+                }
+                startIcon={
+                  mutationStatus === "loading" ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : undefined
+                }
+              >
+                {mutationStatus === "loading" ? "Submitting..." : "Submit dispute"}
+              </Button>
+            </>
+          )}
+        </DialogActions>
+      </Dialog>
       {stripeClientSecret && (
         <Elements
           stripe={stripePromise}

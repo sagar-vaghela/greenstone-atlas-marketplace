@@ -34,6 +34,7 @@ describe("frontend hardening regressions", () => {
         selectedId: transaction.id,
         listStatus: "succeeded",
         detailStatus: "idle",
+        detailId: null,
         mutationStatus: "idle",
         error: null,
       },

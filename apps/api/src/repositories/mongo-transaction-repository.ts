@@ -4,6 +4,7 @@ import type {
   FulfilmentStatus,
   PaymentStatus,
   Transaction,
+  TransactionDispute,
   TransactionStatus,
 } from "@atlas/types";
 import type { Collection, ObjectId } from "mongodb";
@@ -131,6 +132,47 @@ export class MongoTransactionRepository implements TransactionRepository {
     }
 
     return toTransaction(nextDocument);
+  }
+
+  async openDispute(
+    id: string,
+    dispute: TransactionDispute,
+  ): Promise<Transaction | undefined> {
+    const currentDocument = await this.collection.findOne({ id });
+    if (!currentDocument) return undefined;
+    if (currentDocument.paymentStatus !== "paid") {
+      throw new InvalidTransactionStateError(
+        currentDocument.status,
+        "disputed",
+      );
+    }
+    assertValidTransactionTransition(currentDocument.status, "disputed");
+
+    const document = await this.collection.findOneAndUpdate(
+      {
+        id,
+        status: "paid",
+        paymentStatus: "paid",
+        version: currentDocument.version ?? 1,
+      },
+      {
+        $set: {
+          status: "disputed",
+          dispute,
+          updatedAt: dispute.openedAt,
+          version: (currentDocument.version ?? 1) + 1,
+        },
+      },
+      { projection: { _id: 0 }, returnDocument: "after" },
+    );
+    if (!document) {
+      const latest = await this.findById(id);
+      if (latest) {
+        throw new InvalidTransactionStateError(latest.status, "disputed");
+      }
+      return undefined;
+    }
+    return toTransaction(document);
   }
 
   async updatePaymentStatus(

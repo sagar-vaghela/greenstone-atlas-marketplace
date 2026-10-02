@@ -3,6 +3,7 @@ import type {
   CreateTransactionInput,
   FulfilmentStatus,
   PaymentStatus,
+  TransactionDispute,
   Transaction,
   TransactionStatus,
 } from "@atlas/types";
@@ -91,6 +92,24 @@ export class InMemoryTransactionRepository implements TransactionRepository {
       transaction.cancelledAt ??= transaction.updatedAt;
     }
 
+    return copy(transaction);
+  }
+
+  async openDispute(
+    id: string,
+    dispute: TransactionDispute,
+  ): Promise<Transaction | undefined> {
+    const transaction = this.transactions.find((item) => item.id === id);
+    if (!transaction) return undefined;
+
+    if (transaction.paymentStatus !== "paid") {
+      throw new InvalidTransactionStateError(transaction.status, "disputed");
+    }
+    assertValidTransactionTransition(transaction.status, "disputed");
+    transaction.status = "disputed";
+    transaction.dispute = { ...dispute };
+    transaction.updatedAt = dispute.openedAt;
+    transaction.version += 1;
     return copy(transaction);
   }
 

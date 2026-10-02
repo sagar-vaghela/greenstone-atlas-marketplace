@@ -268,6 +268,22 @@ export interface Transaction {
   paymentFailureCode?: string;
   paidAt?: string;
   paymentFailedAt?: string;
+  dispute?: TransactionDispute;
+}
+
+export type DisputeReason =
+  | "item_not_received"
+  | "item_not_as_described"
+  | "suspected_counterfeit"
+  | "payment_or_refund"
+  | "other";
+
+export interface TransactionDispute {
+  caseReference: string;
+  reason: DisputeReason;
+  description: string;
+  openedBy: string;
+  openedAt: string;
 }
 
 export interface CreateTransactionInput {

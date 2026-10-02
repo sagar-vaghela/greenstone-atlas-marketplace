@@ -1,5 +1,6 @@
 import type {
   CreateTransactionInput,
+  TransactionDispute,
   FulfilmentStatus,
   PaymentStatus,
   Transaction,
@@ -18,6 +19,10 @@ export interface TransactionRepository {
   updateStatus(
     id: string,
     status: TransactionStatus,
+  ): Promise<Transaction | undefined>;
+  openDispute(
+    id: string,
+    dispute: TransactionDispute,
   ): Promise<Transaction | undefined>;
   updatePaymentStatus(
     id: string,
