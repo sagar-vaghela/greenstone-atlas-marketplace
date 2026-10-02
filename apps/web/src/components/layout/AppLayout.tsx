@@ -25,12 +25,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import {
-  Link as RouterLink,
-  Outlet,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
+import { Link as RouterLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
@@ -41,11 +36,7 @@ import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import {
-  logout,
-  selectAuth,
-  selectCurrentUser,
-} from "../../features/auth/authSlice";
+import { logout, selectAuth, selectCurrentUser } from "../../features/auth/authSlice";
 import { selectConversations } from "../../features/messaging/messagingSlice";
 import {
   notificationClosed,
@@ -99,17 +90,16 @@ export function AppLayout() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("lg"));
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [notificationAnchor, setNotificationAnchor] =
-    useState<null | HTMLElement>(null);
+  const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(
+    null,
+  );
   const [profileAnchor, setProfileAnchor] = useState<null | HTMLElement>(null);
   const closeDrawer = () => setDrawerOpen(false);
   useEffect(() => {
     setDrawerOpen(false);
   }, [location.pathname]);
   const isActive = (path: string) =>
-    path === "/"
-      ? location.pathname === "/"
-      : location.pathname.startsWith(path);
+    path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
   const headerControlStyle = {
     borderRadius: 1,
     transition: theme.transitions.create("background-color", {
@@ -123,15 +113,12 @@ export function AppLayout() {
     borderColor: isActive(path) ? "secondary.light" : "transparent",
     "&:hover": {
       bgcolor: "rgba(255, 255, 255, 0.12)",
-      borderColor: isActive(path)
-        ? "secondary.light"
-        : "rgba(255, 255, 255, 0.45)",
+      borderColor: isActive(path) ? "secondary.light" : "rgba(255, 255, 255, 0.45)",
     },
   });
   const unreadCount =
     notifications.unreadCount > 99 ? "99+" : notifications.unreadCount;
-  const unreadMessagesBadge =
-    unreadMessagesCount > 99 ? "99+" : unreadMessagesCount;
+  const unreadMessagesBadge = unreadMessagesCount > 99 ? "99+" : unreadMessagesCount;
   const visibleNavigationGroups = navigationGroups.filter(
     (group) => group.label === "Browse" || Boolean(user),
   );
@@ -191,16 +178,15 @@ export function AppLayout() {
                       },
                     }}
                   />
-                  {item.to === "/notifications" &&
-                    notifications.unreadCount > 0 && (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        aria-label={`${notifications.unreadCount} unread notifications`}
-                      >
-                        {unreadCount}
-                      </Typography>
-                    )}
+                  {item.to === "/notifications" && notifications.unreadCount > 0 && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      aria-label={`${notifications.unreadCount} unread notifications`}
+                    >
+                      {unreadCount}
+                    </Typography>
+                  )}
                   {item.to === "/messages" && unreadMessagesCount > 0 && (
                     <Typography
                       variant="caption"
@@ -239,7 +225,7 @@ export function AppLayout() {
                   <AccountCircleOutlinedIcon />
                 </ListItemIcon>
                 <ListItemText
-                  primary="Profile"
+                  primary="Seller profile"
                   slotProps={{ primary: { sx: { whiteSpace: "normal" } } }}
                 />
               </ListItemButton>
@@ -325,11 +311,7 @@ export function AppLayout() {
             >
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <StorefrontIcon fontSize="small" />
-                <Typography
-                  variant="h6"
-                  component="span"
-                  sx={{ fontWeight: 700 }}
-                >
+                <Typography variant="h6" component="span" sx={{ fontWeight: 700 }}>
                   Atlas
                 </Typography>
               </Stack>
@@ -361,9 +343,7 @@ export function AppLayout() {
                             ? `Messages, ${unreadMessagesBadge} unread ${unreadMessagesCount === 1 ? "message" : "messages"}`
                             : "Messages"
                         }
-                        aria-current={
-                          isActive("/messages") ? "page" : undefined
-                        }
+                        aria-current={isActive("/messages") ? "page" : undefined}
                         sx={desktopLinkStyle("/messages")}
                       >
                         <Stack
@@ -402,9 +382,7 @@ export function AppLayout() {
                         component={RouterLink}
                         to="/transactions"
                         color="inherit"
-                        aria-current={
-                          isActive("/transactions") ? "page" : undefined
-                        }
+                        aria-current={isActive("/transactions") ? "page" : undefined}
                         sx={desktopLinkStyle("/transactions")}
                       >
                         Transactions
@@ -438,9 +416,7 @@ export function AppLayout() {
                       }}
                       aria-label={`Notifications, ${notifications.unreadCount} unread`}
                       aria-haspopup="menu"
-                      aria-current={
-                        isActive("/notifications") ? "page" : undefined
-                      }
+                      aria-current={isActive("/notifications") ? "page" : undefined}
                       sx={{
                         ...headerControlStyle,
                         bgcolor: isActive("/notifications")
@@ -543,6 +519,7 @@ export function AppLayout() {
                       component={RouterLink}
                       to="/login"
                       color="inherit"
+                      aria-label="Sign in"
                       sx={headerControlStyle}
                     >
                       Sign in
@@ -647,9 +624,7 @@ export function AppLayout() {
         {renderDrawerItems()}
       </Drawer>
       {user && (
-        <Box
-          sx={{ px: 2, py: 0.75, textAlign: "center", bgcolor: "action.hover" }}
-        >
+        <Box sx={{ px: 2, py: 0.75, textAlign: "center", bgcolor: "action.hover" }}>
           <Typography variant="caption" color="text.secondary" role="status">
             {realtime.connectionStatus === "connected"
               ? "Live updates connected"

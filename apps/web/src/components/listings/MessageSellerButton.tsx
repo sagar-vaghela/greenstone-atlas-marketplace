@@ -35,7 +35,7 @@ export function MessageSellerButton({
         to={`/login?returnTo=${encodeURIComponent(returnTo)}`}
         variant="outlined"
       >
-        Sign in to message
+        Contact seller
       </Button>
     );
   }
@@ -55,11 +55,7 @@ export function MessageSellerButton({
 
   return (
     <Stack spacing={1} sx={{ alignItems: "flex-start" }}>
-      <Button
-        onClick={startConversation}
-        variant="outlined"
-        disabled={isStarting}
-      >
+      <Button onClick={startConversation} variant="outlined" disabled={isStarting}>
         {isStarting ? "Opening conversation..." : "Message seller"}
       </Button>
       {error && <Alert severity="error">{error}</Alert>}

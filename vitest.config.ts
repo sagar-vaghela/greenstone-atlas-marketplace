@@ -16,5 +16,10 @@ export default defineConfig({
     setupFiles: ["tests/setup.ts"],
     environment: "node",
     testTimeout: 10_000,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+      exclude: ["**/*.d.ts", "**/*.test.*", "**/main.tsx", "**/vite-env.d.ts"],
+    },
   },
 });

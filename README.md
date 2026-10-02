@@ -2,6 +2,21 @@
 
 Atlas Marketplace is a marketplace concept for authenticated luxury and collectible watches, connecting buyers and sellers through discovery, valuation, offers, negotiation and transaction workflows.
 
+## Final architecture and delivery model
+
+- **Frontend:** React + TypeScript + Material UI + Redux Toolkit, built with Vite.
+- **API:** Fastify + TypeScript with a centralized browser API client.
+- **Persistence:** MongoDB Atlas through repository interfaces.
+- **Payments:** Stripe Test Mode behind a server-side provider abstraction.
+- **Realtime:** Authenticated event delivery over WebSocket/SSE-compatible marketplace events, with REST remaining authoritative after reconnects.
+- **Deployment:** Render Static Site for the frontend and a Render Docker service for the API.
+- **CI/CD:** GitHub Actions is the quality gate: lint, typecheck, unit tests, coverage, build, Playwright, workspace validation, and optional deployed smoke checks.
+- **Testing:** Vitest for domain/API/UI logic and Playwright for real user journeys and responsive navigation.
+
+Render is used instead of AWS for this interview deployment because it keeps the release path small and reproducible while still exercising Docker, managed hosting, environment configuration, and health checks. GitHub Actions is the source of truth for quality; Render remains the deployment host rather than a competing test runner. A future AWS migration could map the static site to S3/CloudFront, the API container to ECS/Fargate, secrets to Secrets Manager, and the event bus to a shared broker. The current single API instance is intentional because the in-process event bus is not a cross-instance broker.
+
+Redux Toolkit keeps client workflow state explicit and testable without introducing another state library. MongoDB fits the prototype's document-shaped marketplace data and repository boundaries. Stripe is isolated behind a provider interface so test-mode payment behavior and webhook reconciliation remain replaceable. Transaction, offer, and payment versions are checked server-side to protect against stale concurrent updates. CI blocks downstream checks and deployment smoke verification when a quality gate fails.
+
 ## Project status
 
 The current concept is a pre-owned luxury-watch marketplace. The demo API includes Rolex and Omega watch listings and an offer negotiation workflow.
@@ -70,12 +85,12 @@ database.
 
 The main demo accounts are the original seller and buyer logins:
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Seller | `seller@example.com` | `seller123` |
-| Buyer | `buyer@example.com` | `buyer123` |
+| Role          | Email                 | Password    |
+| ------------- | --------------------- | ----------- |
+| Seller        | `seller@example.com`  | `seller123` |
+| Buyer         | `buyer@example.com`   | `buyer123`  |
 | Second seller | `seller2@example.com` | `seller123` |
-| Second buyer | `buyer2@example.com` | `buyer123` |
+| Second buyer  | `buyer2@example.com`  | `buyer123`  |
 
 The listings describe real watch models and use public Unsplash watch
 photography. Images are illustrative rather than representations of the

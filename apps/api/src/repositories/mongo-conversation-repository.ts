@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Collection, ObjectId } from "mongodb";
-import type { Conversation, Message } from "@atlas/types";
+import type { Message } from "@atlas/types";
 import type {
   ConversationRecord,
   ConversationRepository,
@@ -8,8 +8,12 @@ import type {
   MessagePage,
 } from "./conversation-repository.js";
 
-interface ConversationDocument extends ConversationRecord { _id?: ObjectId }
-interface MessageDocument extends Message { _id?: ObjectId }
+interface ConversationDocument extends ConversationRecord {
+  _id?: ObjectId;
+}
+interface MessageDocument extends Message {
+  _id?: ObjectId;
+}
 
 const toConversation = (document: ConversationDocument): ConversationRecord => {
   const { _id: _ignoredId, ...conversation } = document;
@@ -27,18 +31,30 @@ export class MongoConversationRepository implements ConversationRepository {
   ) {}
 
   async findById(id: string): Promise<ConversationRecord | undefined> {
-    const document = await this.conversations.findOne({ id }, { projection: { _id: 0 } });
+    const document = await this.conversations.findOne(
+      { id },
+      { projection: { _id: 0 } },
+    );
     return document ? toConversation(document) : undefined;
   }
 
-  async findForListingBuyer(listingId: string, buyerId: string): Promise<ConversationRecord | undefined> {
-    const document = await this.conversations.findOne({ listingId, buyerId }, { projection: { _id: 0 } });
+  async findForListingBuyer(
+    listingId: string,
+    buyerId: string,
+  ): Promise<ConversationRecord | undefined> {
+    const document = await this.conversations.findOne(
+      { listingId, buyerId },
+      { projection: { _id: 0 } },
+    );
     return document ? toConversation(document) : undefined;
   }
 
   async listForUser(userId: string): Promise<ConversationRecord[]> {
     const documents = await this.conversations
-      .find({ $or: [{ buyerId: userId }, { sellerId: userId }] }, { projection: { _id: 0 } })
+      .find(
+        { $or: [{ buyerId: userId }, { sellerId: userId }] },
+        { projection: { _id: 0 } },
+      )
       .sort({ lastMessageAt: -1, id: -1 })
       .toArray();
     return documents.map(toConversation);
@@ -57,7 +73,11 @@ export class MongoConversationRepository implements ConversationRepository {
     return toConversation(conversation);
   }
 
-  async createMessage(conversationId: string, senderId: string, body: string): Promise<Message> {
+  async createMessage(
+    conversationId: string,
+    senderId: string,
+    body: string,
+  ): Promise<Message> {
     const timestamp = new Date().toISOString();
     const message: MessageDocument = {
       id: `message-${randomUUID()}`,
@@ -69,13 +89,26 @@ export class MongoConversationRepository implements ConversationRepository {
     await this.messages.insertOne(message);
     await this.conversations.updateOne(
       { id: conversationId },
-      { $set: { lastMessageAt: timestamp, lastMessagePreview: body.slice(0, 160), updatedAt: timestamp } },
+      {
+        $set: {
+          lastMessageAt: timestamp,
+          lastMessagePreview: body.slice(0, 160),
+          updatedAt: timestamp,
+        },
+      },
     );
     return toMessage(message);
   }
 
-  async listMessages(conversationId: string, limit: number, before?: string): Promise<MessagePage> {
-    const filter = { conversationId, ...(before ? { createdAt: { $lt: before } } : {}) };
+  async listMessages(
+    conversationId: string,
+    limit: number,
+    before?: string,
+  ): Promise<MessagePage> {
+    const filter = {
+      conversationId,
+      ...(before ? { createdAt: { $lt: before } } : {}),
+    };
     const documents = await this.messages
       .find(filter, { projection: { _id: 0 } })
       .sort({ createdAt: -1, id: -1 })
@@ -99,13 +132,26 @@ export class MongoConversationRepository implements ConversationRepository {
     });
   }
 
-  async markRead(conversationId: string, userId: string, readAt: string): Promise<ConversationRecord | undefined> {
+  async markRead(
+    conversationId: string,
+    userId: string,
+    readAt: string,
+  ): Promise<ConversationRecord | undefined> {
     const conversation = await this.findById(conversationId);
     if (!conversation) return undefined;
-    const field = conversation.buyerId === userId ? "buyerLastReadAt" : "sellerLastReadAt";
-    await this.conversations.updateOne({ id: conversationId }, { $set: { [field]: readAt } });
+    const field =
+      conversation.buyerId === userId ? "buyerLastReadAt" : "sellerLastReadAt";
+    await this.conversations.updateOne(
+      { id: conversationId },
+      { $set: { [field]: readAt } },
+    );
     await this.messages.updateMany(
-      { conversationId, senderId: { $ne: userId }, createdAt: { $lte: readAt }, readAt: { $exists: false } },
+      {
+        conversationId,
+        senderId: { $ne: userId },
+        createdAt: { $lte: readAt },
+        readAt: { $exists: false },
+      },
       { $set: { readAt } },
     );
     return this.findById(conversationId);

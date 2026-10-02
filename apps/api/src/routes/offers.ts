@@ -4,7 +4,7 @@ import {
   createOfferRequestSchema,
   updateOfferStatusSchema,
 } from "@atlas/validation";
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { requireAuthenticatedUser } from "../auth/middleware.js";
 import { InvalidOfferTransitionError } from "../domain/offer-status.js";
 import type { ListingRepository } from "../repositories/listing-repository.js";
@@ -43,13 +43,12 @@ export const registerOfferRoutes = async (
       const listing = await options.listingRepository.findById(
         request.params.listingId,
       );
-      if (!listing)
-        return error(reply, 404, "LISTING_NOT_FOUND", "Listing not found");
+      if (!listing) return error(reply, 404, "LISTING_NOT_FOUND", "Listing not found");
       if (listing.sellerId !== user.id)
         return {
-          items: (
-            await options.offerRepository.listByListingId(listing.id)
-          ).filter((offer) => offer.buyerId === user.id),
+          items: (await options.offerRepository.listByListingId(listing.id)).filter(
+            (offer) => offer.buyerId === user.id,
+          ),
         };
       return {
         items: await options.offerRepository.listByListingId(listing.id),
@@ -67,9 +66,7 @@ export const registerOfferRoutes = async (
         "FORBIDDEN",
         "You don't have permission to perform this action.",
       );
-    return offer
-      ? offer
-      : error(reply, 404, "OFFER_NOT_FOUND", "Offer not found");
+    return offer ? offer : error(reply, 404, "OFFER_NOT_FOUND", "Offer not found");
   });
   app.post<{ Params: ListingParams; Body: unknown }>(
     "/listings/:listingId/offers",
@@ -82,8 +79,7 @@ export const registerOfferRoutes = async (
       const listing = await options.listingRepository.findById(
         request.params.listingId,
       );
-      if (!listing)
-        return error(reply, 404, "LISTING_NOT_FOUND", "Listing not found");
+      if (!listing) return error(reply, 404, "LISTING_NOT_FOUND", "Listing not found");
       if (listing.status !== "active")
         return error(
           reply,
@@ -143,14 +139,12 @@ export const registerOfferRoutes = async (
       if (!parsed.success)
         return error(reply, 400, "VALIDATION_ERROR", "Invalid offer action.");
       const offer = await options.offerRepository.findById(request.params.id);
-      if (!offer)
-        return error(reply, 404, "OFFER_NOT_FOUND", "Offer not found");
+      if (!offer) return error(reply, 404, "OFFER_NOT_FOUND", "Offer not found");
       const isSeller = user.id === offer.sellerId;
       const isBuyer = user.id === offer.buyerId;
       if (
         (parsed.data.status === "withdrawn" && !isBuyer) ||
-        ((parsed.data.status === "accepted" ||
-          parsed.data.status === "rejected") &&
+        ((parsed.data.status === "accepted" || parsed.data.status === "rejected") &&
           !isSeller &&
           !(
             parsed.data.status === "accepted" &&
@@ -165,8 +159,7 @@ export const registerOfferRoutes = async (
           "You don't have permission to perform this action.",
         );
       const listing = await options.listingRepository.findById(offer.listingId);
-      if (!listing)
-        return error(reply, 404, "LISTING_NOT_FOUND", "Listing not found");
+      if (!listing) return error(reply, 404, "LISTING_NOT_FOUND", "Listing not found");
       if (parsed.data.status === "accepted") {
         if (listing.status !== "active")
           return error(
@@ -180,16 +173,9 @@ export const registerOfferRoutes = async (
           "accepted",
         );
         if (!accepted)
-          return error(
-            reply,
-            409,
-            "OFFER_CONFLICT",
-            "Offer could not be accepted.",
-          );
+          return error(reply, 409, "OFFER_CONFLICT", "Offer could not be accepted.");
         await options.listingRepository.updateStatus(listing.id, "sold");
-        const competing = await options.offerRepository.listByListingId(
-          listing.id,
-        );
+        const competing = await options.offerRepository.listByListingId(listing.id);
         const rejected = await Promise.all(
           competing
             .filter(
@@ -197,9 +183,7 @@ export const registerOfferRoutes = async (
                 item.id !== offer.id &&
                 (item.status === "pending" || item.status === "countered"),
             )
-            .map((item) =>
-              options.offerRepository.updateStatus(item.id, "rejected"),
-            ),
+            .map((item) => options.offerRepository.updateStatus(item.id, "rejected")),
         );
         options.eventBus.publish(
           {
@@ -225,8 +209,9 @@ export const registerOfferRoutes = async (
             );
           }
         }
-        const existingTransaction =
-          await options.transactionRepository.findByListingId(listing.id);
+        const existingTransaction = await options.transactionRepository.findByListingId(
+          listing.id,
+        );
         if (
           existingTransaction &&
           existingTransaction.status !== "cancelled" &&
@@ -259,9 +244,7 @@ export const registerOfferRoutes = async (
           [transaction.buyerId, transaction.sellerId],
         );
 
-        const updatedListing = await options.listingRepository.findById(
-          listing.id,
-        );
+        const updatedListing = await options.listingRepository.findById(listing.id);
         if (updatedListing) {
           options.eventBus.publish(
             {
@@ -287,9 +270,7 @@ export const registerOfferRoutes = async (
         if (updated) {
           options.eventBus.publish(
             {
-              type: `offer.${updated.status}` as
-                | "offer.rejected"
-                | "offer.withdrawn",
+              type: `offer.${updated.status}` as "offer.rejected" | "offer.withdrawn",
               listingId: updated.listingId,
               offerId: updated.id,
               actorUserId: user.id,
@@ -313,17 +294,9 @@ export const registerOfferRoutes = async (
       if (!user) return;
       const parsed = counterOfferRequestSchema.safeParse(request.body);
       if (!parsed.success)
-        return error(
-          reply,
-          400,
-          "VALIDATION_ERROR",
-          "Invalid counter-offer details.",
-        );
-      const original = await options.offerRepository.findById(
-        request.params.id,
-      );
-      if (!original)
-        return error(reply, 404, "OFFER_NOT_FOUND", "Offer not found");
+        return error(reply, 400, "VALIDATION_ERROR", "Invalid counter-offer details.");
+      const original = await options.offerRepository.findById(request.params.id);
+      if (!original) return error(reply, 404, "OFFER_NOT_FOUND", "Offer not found");
       if (user.id !== original.sellerId)
         return error(
           reply,
@@ -331,9 +304,7 @@ export const registerOfferRoutes = async (
           "FORBIDDEN",
           "Only the seller can counter this offer.",
         );
-      const listing = await options.listingRepository.findById(
-        original.listingId,
-      );
+      const listing = await options.listingRepository.findById(original.listingId);
       if (!listing || listing.status !== "active")
         return error(
           reply,

@@ -1,5 +1,4 @@
 import type {
-  CreateListingInput,
   CreateListingRepositoryInput,
   Listing,
   ListingQuery,
@@ -12,8 +11,7 @@ import type { ListingRepository } from "./listing-repository.js";
 const seedListings: CreateListingRepositoryInput[] = [
   {
     title: "Rolex Submariner Date 126610LN",
-    description:
-      "Pre-owned luxury watch in excellent condition, with box and papers.",
+    description: "Pre-owned luxury watch in excellent condition, with box and papers.",
     price: 28500,
     currency: "AED",
     category: "luxury-watches",
@@ -31,8 +29,7 @@ const seedListings: CreateListingRepositoryInput[] = [
   },
   {
     title: "Cartier Santos Medium WSSA0029",
-    description:
-      "Pre-owned classic with a clean bracelet and broad wrist appeal.",
+    description: "Pre-owned classic with a clean bracelet and broad wrist appeal.",
     price: 22000,
     currency: "AED",
     category: "luxury-watches",
@@ -59,16 +56,13 @@ export class InMemoryListingRepository implements ListingRepository {
         !search ||
         listing.title.toLocaleLowerCase().includes(search) ||
         listing.description.toLocaleLowerCase().includes(search);
-      const matchesCategory =
-        !query.category || listing.category === query.category;
+      const matchesCategory = !query.category || listing.category === query.category;
       const matchesMinPrice =
         query.minPrice === undefined || listing.price >= query.minPrice;
       const matchesMaxPrice =
         query.maxPrice === undefined || listing.price <= query.maxPrice;
 
-      return (
-        matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice
-      );
+      return matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice;
     });
 
     return filteredListings
@@ -96,9 +90,7 @@ export class InMemoryListingRepository implements ListingRepository {
 
   async findById(id: string): Promise<Listing | undefined> {
     const listing = this.listings.find((item) => item.id === id);
-    return listing
-      ? { ...listing, images: [...(listing.images ?? [])] }
-      : undefined;
+    return listing ? { ...listing, images: [...(listing.images ?? [])] } : undefined;
   }
 
   async create(input: CreateListingRepositoryInput): Promise<Listing> {
@@ -108,10 +100,7 @@ export class InMemoryListingRepository implements ListingRepository {
     return { ...listing, images: [...listing.images] };
   }
 
-  async update(
-    id: string,
-    input: UpdateListingInput,
-  ): Promise<Listing | undefined> {
+  async update(id: string, input: UpdateListingInput): Promise<Listing | undefined> {
     const index = this.listings.findIndex((listing) => listing.id === id);
     if (index === -1) {
       return undefined;
@@ -127,10 +116,7 @@ export class InMemoryListingRepository implements ListingRepository {
     return { ...updatedListing, images: [...updatedListing.images] };
   }
 
-  async updateStatus(
-    id: string,
-    status: ListingStatus,
-  ): Promise<Listing | undefined> {
+  async updateStatus(id: string, status: ListingStatus): Promise<Listing | undefined> {
     const index = this.listings.findIndex((listing) => listing.id === id);
     if (index === -1) {
       return undefined;
@@ -148,10 +134,7 @@ export class InMemoryListingRepository implements ListingRepository {
     return { ...updatedListing, images: [...updatedListing.images] };
   }
 
-  private createListing(
-    id: string,
-    input: CreateListingRepositoryInput,
-  ): Listing {
+  private createListing(id: string, input: CreateListingRepositoryInput): Listing {
     const timestamp = new Date().toISOString();
     return {
       ...input,

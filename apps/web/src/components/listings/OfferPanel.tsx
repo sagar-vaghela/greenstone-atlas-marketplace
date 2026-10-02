@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import type { Listing, Offer, OfferStatus } from "@atlas/types";
+import type { Listing, Offer } from "@atlas/types";
 import {
   Alert,
   Box,
   Button,
   Card,
   CardContent,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -249,8 +248,7 @@ export function OfferPanel({ listing, onAccepted }: Props) {
                   </Button>
                 )}
                 {isSeller &&
-                  (offer.status === "pending" ||
-                    offer.status === "countered") && (
+                  (offer.status === "pending" || offer.status === "countered") && (
                     <Stack
                       direction={{ xs: "column", sm: "row" }}
                       spacing={1}
@@ -333,7 +331,6 @@ export function OfferPanel({ listing, onAccepted }: Props) {
           <DialogTitle>Send a counter-offer</DialogTitle>
           <DialogContent>
             <TextField
-              autoFocus
               fullWidth
               label={`Counter amount (${listing.currency})`}
               type="number"

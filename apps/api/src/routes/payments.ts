@@ -53,12 +53,7 @@ export const registerPaymentRoutes = async (
         request.params.id,
       );
       if (!transaction)
-        return error(
-          reply,
-          404,
-          "TRANSACTION_NOT_FOUND",
-          "Transaction not found",
-        );
+        return error(reply, 404, "TRANSACTION_NOT_FOUND", "Transaction not found");
       if (transaction.buyerId !== user.id)
         return error(
           reply,
@@ -80,8 +75,7 @@ export const registerPaymentRoutes = async (
 
       const header = request.headers["idempotency-key"];
       const idempotencyKey =
-        (Array.isArray(header) ? header[0] : header) ??
-        `atlas:${transaction.id}`;
+        (Array.isArray(header) ? header[0] : header) ?? `atlas:${transaction.id}`;
       let intent;
       try {
         intent = transaction.paymentProviderReference
@@ -113,6 +107,14 @@ export const registerPaymentRoutes = async (
             intent.provider,
             intent.providerReference,
           );
+      if (!saved) {
+        return error(
+          reply,
+          404,
+          "TRANSACTION_NOT_FOUND",
+          "Transaction could not be updated because it no longer exists.",
+        );
+      }
       let paymentTransaction = saved;
       if (intent.status === "paid") {
         const result = await options.transactionRepository.applyPaymentResult(
@@ -167,19 +169,11 @@ export const registerPaymentRoutes = async (
       ? signatureHeader[0]
       : signatureHeader;
     if (!signature || !Buffer.isBuffer(request.body))
-      return error(
-        reply,
-        400,
-        "INVALID_WEBHOOK",
-        "Invalid Stripe webhook request.",
-      );
+      return error(reply, 400, "INVALID_WEBHOOK", "Invalid Stripe webhook request.");
 
     let event;
     try {
-      event = options.paymentProvider.parseWebhookEvent(
-        request.body,
-        signature,
-      );
+      event = options.paymentProvider.parseWebhookEvent(request.body, signature);
     } catch {
       request.log.warn("Stripe webhook rejected");
       return error(
@@ -207,15 +201,12 @@ export const registerPaymentRoutes = async (
       );
     let result;
     try {
-      result = await options.transactionRepository.applyPaymentResult(
-        transaction.id,
-        {
-          idempotencyKey: `stripe:event:${event.id}`,
-          provider: "stripe",
-          outcome: event.type === "payment_succeeded" ? "paid" : "failed",
-          failureCode: event.failureCode,
-        },
-      );
+      result = await options.transactionRepository.applyPaymentResult(transaction.id, {
+        idempotencyKey: `stripe:event:${event.id}`,
+        provider: "stripe",
+        outcome: event.type === "payment_succeeded" ? "paid" : "failed",
+        failureCode: event.failureCode,
+      });
     } catch (caught) {
       if (caught instanceof InvalidTransactionStateError) {
         request.log.warn(
@@ -231,8 +222,7 @@ export const registerPaymentRoutes = async (
       }
       throw caught;
     }
-    if (result?.changed)
-      publishPaymentUpdate(options.eventBus, result.transaction);
+    if (result?.changed) publishPaymentUpdate(options.eventBus, result.transaction);
     request.log.info(
       {
         transactionId: transaction.id,

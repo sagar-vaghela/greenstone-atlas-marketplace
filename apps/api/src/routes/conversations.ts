@@ -1,9 +1,4 @@
-import type {
-  Conversation,
-  ConversationSummary,
-  Message,
-  SellerPublicUser,
-} from "@atlas/types";
+import type { Conversation, ConversationSummary, SellerPublicUser } from "@atlas/types";
 import {
   createConversationSchema,
   createMessageSchema,
@@ -42,10 +37,7 @@ const error = (
   message: string,
 ) => reply.status(status).send({ error: { code, message } });
 
-const isParticipant = (
-  conversation: ConversationRecord,
-  userId: string,
-): boolean =>
+const isParticipant = (conversation: ConversationRecord, userId: string): boolean =>
   conversation.buyerId === userId || conversation.sellerId === userId;
 
 const publicConversation = (conversation: ConversationRecord): Conversation => {
@@ -65,9 +57,7 @@ const summary = async (
   const [listing, participant, unreadCount] = await Promise.all([
     options.listings.findById(conversation.listingId),
     options.users.findById(
-      conversation.buyerId === userId
-        ? conversation.sellerId
-        : conversation.buyerId,
+      conversation.buyerId === userId ? conversation.sellerId : conversation.buyerId,
     ),
     options.conversations.countUnread(conversation.id, userId),
   ]);
@@ -116,15 +106,9 @@ export const registerConversationRoutes = async (
     if (!user) return;
     const parsed = createConversationSchema.safeParse(request.body);
     if (!parsed.success)
-      return error(
-        reply,
-        400,
-        "VALIDATION_ERROR",
-        "Invalid conversation details.",
-      );
+      return error(reply, 400, "VALIDATION_ERROR", "Invalid conversation details.");
     const listing = await options.listings.findById(parsed.data.listingId);
-    if (!listing)
-      return error(reply, 404, "LISTING_NOT_FOUND", "Listing not found.");
+    if (!listing) return error(reply, 404, "LISTING_NOT_FOUND", "Listing not found.");
     if (listing.sellerId === user.id)
       return error(reply, 403, "FORBIDDEN", "You cannot message yourself.");
     const existing = await options.conversations.findForListingBuyer(
@@ -138,9 +122,7 @@ export const registerConversationRoutes = async (
       buyerId: user.id,
       sellerId: listing.sellerId,
     });
-    return reply
-      .status(201)
-      .send(await summary(conversation, user.id, options));
+    return reply.status(201).send(await summary(conversation, user.id, options));
   });
 
   app.get("/conversations", async (request, reply) => {
@@ -148,28 +130,23 @@ export const registerConversationRoutes = async (
     if (!user) return;
     const conversations = await options.conversations.listForUser(user.id);
     const items = (
-      await Promise.all(
-        conversations.map((item) => summary(item, user.id, options)),
-      )
+      await Promise.all(conversations.map((item) => summary(item, user.id, options)))
     ).filter((item): item is ConversationSummary => Boolean(item));
     return { items };
   });
 
-  app.get<{ Params: IdParams }>(
-    "/conversations/:id",
-    async (request, reply) => {
-      const user = requireAuthenticatedUser(request, reply);
-      if (!user) return;
-      const conversation = await getAuthorizedConversation(
-        request.params.id,
-        user.id,
-        options,
-        reply,
-      );
-      if (!conversation) return;
-      return summary(conversation, user.id, options);
-    },
-  );
+  app.get<{ Params: IdParams }>("/conversations/:id", async (request, reply) => {
+    const user = requireAuthenticatedUser(request, reply);
+    if (!user) return;
+    const conversation = await getAuthorizedConversation(
+      request.params.id,
+      user.id,
+      options,
+      reply,
+    );
+    if (!conversation) return;
+    return summary(conversation, user.id, options);
+  });
 
   app.get<{ Params: IdParams; Querystring: ConversationQuery }>(
     "/conversations/:id/messages",
@@ -185,12 +162,7 @@ export const registerConversationRoutes = async (
       if (!conversation) return;
       const parsed = messagePaginationSchema.safeParse(request.query);
       if (!parsed.success)
-        return error(
-          reply,
-          400,
-          "VALIDATION_ERROR",
-          "Invalid message pagination.",
-        );
+        return error(reply, 400, "VALIDATION_ERROR", "Invalid message pagination.");
       return options.conversations.listMessages(
         conversation.id,
         parsed.data.limit,
@@ -220,9 +192,7 @@ export const registerConversationRoutes = async (
           "Message must contain 1 to 2,000 characters.",
         );
       const recipientUserId =
-        conversation.buyerId === user.id
-          ? conversation.sellerId
-          : conversation.buyerId;
+        conversation.buyerId === user.id ? conversation.sellerId : conversation.buyerId;
       const unreadBefore = await options.conversations.countUnread(
         conversation.id,
         recipientUserId,
@@ -294,9 +264,7 @@ export const registerConversationRoutes = async (
         );
       }
       const recipientUserId =
-        conversation.buyerId === user.id
-          ? conversation.sellerId
-          : conversation.buyerId;
+        conversation.buyerId === user.id ? conversation.sellerId : conversation.buyerId;
       options.eventBus.publish(
         {
           type: "conversation.typing",
@@ -312,60 +280,44 @@ export const registerConversationRoutes = async (
     },
   );
 
-  app.post<{ Params: IdParams }>(
-    "/conversations/:id/read",
-    async (request, reply) => {
-      const user = requireAuthenticatedUser(request, reply);
-      if (!user) return;
-      const conversation = await getAuthorizedConversation(
-        request.params.id,
-        user.id,
-        options,
-        reply,
-      );
-      if (!conversation) return;
-      const readAt = new Date().toISOString();
-      const updated = await options.conversations.markRead(
-        conversation.id,
-        user.id,
-        readAt,
-      );
-      if (!updated)
-        return error(
-          reply,
-          404,
-          "CONVERSATION_NOT_FOUND",
-          "Conversation not found.",
-        );
-      await options.notifications.markConversationRead(
-        user.id,
-        conversation.id,
-        readAt,
-      );
-      const notificationUnreadCount = await options.notifications.countUnread(
-        user.id,
-      );
-      const recipientUserId =
-        conversation.buyerId === user.id
-          ? conversation.sellerId
-          : conversation.buyerId;
-      options.eventBus.publish(
-        {
-          type: "conversation.read",
-          listingId: conversation.listingId,
-          offerId: conversation.offerId,
-          actorUserId: user.id,
-          recipientUserId,
-          payload: { conversationId: conversation.id, readAt },
-        },
-        [recipientUserId],
-      );
-      return {
-        conversation: publicConversation(updated),
-        unreadCount: 0,
-        notificationUnreadCount,
-        notificationReadAt: readAt,
-      };
-    },
-  );
+  app.post<{ Params: IdParams }>("/conversations/:id/read", async (request, reply) => {
+    const user = requireAuthenticatedUser(request, reply);
+    if (!user) return;
+    const conversation = await getAuthorizedConversation(
+      request.params.id,
+      user.id,
+      options,
+      reply,
+    );
+    if (!conversation) return;
+    const readAt = new Date().toISOString();
+    const updated = await options.conversations.markRead(
+      conversation.id,
+      user.id,
+      readAt,
+    );
+    if (!updated)
+      return error(reply, 404, "CONVERSATION_NOT_FOUND", "Conversation not found.");
+    await options.notifications.markConversationRead(user.id, conversation.id, readAt);
+    const notificationUnreadCount = await options.notifications.countUnread(user.id);
+    const recipientUserId =
+      conversation.buyerId === user.id ? conversation.sellerId : conversation.buyerId;
+    options.eventBus.publish(
+      {
+        type: "conversation.read",
+        listingId: conversation.listingId,
+        offerId: conversation.offerId,
+        actorUserId: user.id,
+        recipientUserId,
+        payload: { conversationId: conversation.id, readAt },
+      },
+      [recipientUserId],
+    );
+    return {
+      conversation: publicConversation(updated),
+      unreadCount: 0,
+      notificationUnreadCount,
+      notificationReadAt: readAt,
+    };
+  });
 };

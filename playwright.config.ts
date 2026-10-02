@@ -8,11 +8,10 @@ export default defineConfig({
   testMatch: /.*\.spec\.ts/,
   fullyParallel: false,
   retries: process.env.CI ? 2 : 1,
-  workers: process.env.CI ? 2 : 1,
-  reporter: [
-    ["list"],
-    ["html", { open: "never", outputFolder: "playwright-report" }],
-  ],
+  // The demo API uses an in-memory event bus and seeded state, so tests must
+  // share one deterministic worker rather than racing against each other.
+  workers: 1,
+  reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
   outputDir: "test-results",
   expect: {
     timeout: 15_000,

@@ -14,9 +14,7 @@ export type ListingFormValues = Omit<
 > & {
   images: ListingImage[];
 };
-export type ListingFormFieldErrors = Partial<
-  Record<keyof ListingFormValues, string>
->;
+export type ListingFormFieldErrors = Partial<Record<keyof ListingFormValues, string>>;
 export type ListingFormData = CreateListingInput | UpdateListingInput;
 
 interface ValidationResult<T extends ListingFormData> {
@@ -82,16 +80,13 @@ export function ListingForm<T extends ListingFormData>({
           helperText={fieldErrors.title ?? "Give your listing a clear name."}
           required
           fullWidth
-          autoFocus
         />
         <TextField
           label="Description"
           value={values.description}
           onChange={(event) => updateField("description", event.target.value)}
           error={Boolean(fieldErrors.description)}
-          helperText={
-            fieldErrors.description ?? "Describe the item and its condition."
-          }
+          helperText={fieldErrors.description ?? "Describe the item and its condition."}
           required
           fullWidth
           multiline
@@ -119,9 +114,7 @@ export function ListingForm<T extends ListingFormData>({
           <TextField
             label="Reference number"
             value={values.referenceNumber}
-            onChange={(event) =>
-              updateField("referenceNumber", event.target.value)
-            }
+            onChange={(event) => updateField("referenceNumber", event.target.value)}
             error={Boolean(fieldErrors.referenceNumber)}
             helperText={fieldErrors.referenceNumber}
             fullWidth

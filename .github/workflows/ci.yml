@@ -28,17 +28,42 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       - name: Type-check workspaces
         run: npm run typecheck
 
       - name: Run test suite
         run: npm test -- --run
 
+      - name: Measure coverage
+        run: npm run coverage
+
       - name: Build project
         run: npm run build
+
+      - name: Run Playwright suite
+        run: npm run test:e2e
 
       - name: Validate workspace graph
         run: npm ls --workspaces --depth=0
 
       - name: Check patch formatting
         run: git diff --check
+
+  deployed-smoke:
+    name: Deployed smoke checks
+    if: ${{ github.event_name == 'push' && vars.RENDER_FRONTEND_URL != '' && vars.RENDER_API_URL != '' }}
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check deployed frontend
+        run: test "$(curl --silent --show-error --location --write-out '%{http_code}' --output /dev/null "$RENDER_FRONTEND_URL")" = "200"
+        env:
+          RENDER_FRONTEND_URL: ${{ vars.RENDER_FRONTEND_URL }}
+
+      - name: Check deployed API health
+        run: test "$(curl --silent --show-error --location --write-out '%{http_code}' --output /dev/null "$RENDER_API_URL/health")" = "200"
+        env:
+          RENDER_API_URL: ${{ vars.RENDER_API_URL }}

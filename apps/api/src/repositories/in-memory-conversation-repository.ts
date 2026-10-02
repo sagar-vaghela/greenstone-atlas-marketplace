@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Conversation, Message } from "@atlas/types";
+import type { Message } from "@atlas/types";
 import type {
   ConversationRecord,
   ConversationRepository,
@@ -33,9 +33,7 @@ export class InMemoryConversationRepository implements ConversationRepository {
       .map(copyConversation);
   }
 
-  async create(
-    input: CreateConversationRepositoryInput,
-  ): Promise<ConversationRecord> {
+  async create(input: CreateConversationRepositoryInput): Promise<ConversationRecord> {
     const timestamp = new Date().toISOString();
     const conversation: ConversationRecord = {
       ...input,
@@ -82,17 +80,26 @@ export class InMemoryConversationRepository implements ConversationRepository {
           message.conversationId === conversationId &&
           (!before || message.createdAt < before),
       )
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id));
+      .sort(
+        (left, right) =>
+          right.createdAt.localeCompare(left.createdAt) ||
+          right.id.localeCompare(left.id),
+      );
     const page = filtered.slice(0, limit);
     return {
       items: page.reverse().map((message) => ({ ...message })),
-      nextCursor: filtered.length > limit ? page[page.length - 1]?.createdAt : undefined,
+      nextCursor:
+        filtered.length > limit ? page[page.length - 1]?.createdAt : undefined,
     };
   }
 
   async countUnread(conversationId: string, userId: string): Promise<number> {
     const conversation = this.conversations.find((item) => item.id === conversationId);
-    if (!conversation || (conversation.buyerId !== userId && conversation.sellerId !== userId)) return 0;
+    if (
+      !conversation ||
+      (conversation.buyerId !== userId && conversation.sellerId !== userId)
+    )
+      return 0;
     return this.messages.filter(
       (message) =>
         message.conversationId === conversationId &&
@@ -107,7 +114,11 @@ export class InMemoryConversationRepository implements ConversationRepository {
     readAt: string,
   ): Promise<ConversationRecord | undefined> {
     const conversation = this.conversations.find((item) => item.id === conversationId);
-    if (!conversation || (conversation.buyerId !== userId && conversation.sellerId !== userId)) return undefined;
+    if (
+      !conversation ||
+      (conversation.buyerId !== userId && conversation.sellerId !== userId)
+    )
+      return undefined;
     if (conversation.buyerId === userId) conversation.buyerLastReadAt = readAt;
     if (conversation.sellerId === userId) conversation.sellerLastReadAt = readAt;
     for (const message of this.messages) {
@@ -126,4 +137,3 @@ export class InMemoryConversationRepository implements ConversationRepository {
 const copyConversation = (conversation: ConversationRecord): ConversationRecord => ({
   ...conversation,
 });
-

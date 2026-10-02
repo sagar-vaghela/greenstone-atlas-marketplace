@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
-  CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
@@ -15,7 +13,7 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import TuneIcon from "@mui/icons-material/Tune";
-import type { Listing, ListingQuery, ListingSort } from "@atlas/types";
+import type { ListingQuery, ListingSort } from "@atlas/types";
 import { useSearchParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { useDebouncedValue } from "../app/useDebouncedValue";
@@ -35,9 +33,7 @@ export function MarketplacePage() {
   const dispatch = useAppDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryString = searchParams.toString();
-  const [searchInput, setSearchInput] = useState(
-    searchParams.get("search") ?? "",
-  );
+  const [searchInput, setSearchInput] = useState(searchParams.get("search") ?? "");
   const debouncedSearch = useDebouncedValue(searchInput, 350);
   const listings = useAppSelector(selectListings);
   const listStatus = useAppSelector(selectListStatus);
@@ -55,13 +51,9 @@ export function MarketplacePage() {
       search: searchParams.get("search") || undefined,
       category: searchParams.get("category") || undefined,
       minPrice:
-        minPriceValue !== null && Number.isFinite(minPrice)
-          ? minPrice
-          : undefined,
+        minPriceValue !== null && Number.isFinite(minPrice) ? minPrice : undefined,
       maxPrice:
-        maxPriceValue !== null && Number.isFinite(maxPrice)
-          ? maxPrice
-          : undefined,
+        maxPriceValue !== null && Number.isFinite(maxPrice) ? maxPrice : undefined,
       sort:
         sort === "newest" ||
         sort === "oldest" ||
@@ -75,10 +67,7 @@ export function MarketplacePage() {
   useEffect(() => {
     setAvailableCategories((currentCategories) =>
       Array.from(
-        new Set([
-          ...currentCategories,
-          ...listings.map((listing) => listing.category),
-        ]),
+        new Set([...currentCategories, ...listings.map((listing) => listing.category)]),
       ).sort(),
     );
   }, [listings]);
@@ -118,9 +107,7 @@ export function MarketplacePage() {
 
   return (
     <Stack spacing={4}>
-      <Box
-        sx={{ borderBottom: 1, borderColor: "divider", pb: { xs: 4, md: 6 } }}
-      >
+      <Box sx={{ borderBottom: 1, borderColor: "divider", pb: { xs: 4, md: 6 } }}>
         <PageHeader
           eyebrow="The considered collection"
           title="Find the watch that stays with you."
@@ -216,10 +203,7 @@ export function MarketplacePage() {
       </Stack>
 
       {listStatus === "loading" && (
-        <LoadingState
-          label="Loading listings"
-          skeleton={listings.length === 0}
-        />
+        <LoadingState label="Loading listings" skeleton={listings.length === 0} />
       )}
 
       {listStatus === "failed" && (

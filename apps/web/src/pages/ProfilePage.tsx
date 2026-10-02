@@ -9,10 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
-import {
-  selectCurrentUser,
-  updateDisplayName,
-} from "../features/auth/authSlice";
+import { selectCurrentUser, updateDisplayName } from "../features/auth/authSlice";
 import {
   fetchCurrentSellerProfile,
   selectSellerState,
@@ -87,9 +84,7 @@ export function ProfilePage() {
             slotProps={{ htmlInput: { maxLength: 120 } }}
             helperText="Use a broad location such as city and country."
           />
-          {state.updateError && (
-            <Alert severity="error">{state.updateError}</Alert>
-          )}
+          {state.updateError && <Alert severity="error">{state.updateError}</Alert>}
           {state.updateStatus === "succeeded" && (
             <Alert severity="success">Profile saved.</Alert>
           )}

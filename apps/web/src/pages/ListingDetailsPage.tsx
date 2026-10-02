@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import type { ListingStatus } from "@atlas/types";
-import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { OfferPanel } from "../components/listings/OfferPanel";
@@ -45,7 +45,6 @@ const statusLabels: Record<ListingStatus, string> = {
 export function ListingDetailsPage() {
   const { id } = useParams();
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const listing = useAppSelector(selectSelectedListing);
   const currentUser = useAppSelector(selectCurrentUser);
   const detailStatus = useAppSelector(selectDetailStatus);
@@ -77,11 +76,7 @@ export function ListingDetailsPage() {
     return () => document.removeEventListener("keydown", handleKeyDown, true);
   }, [isLightboxOpen]);
 
-  if (
-    detailStatus === "idle" ||
-    detailStatus === "loading" ||
-    listing?.id !== id
-  ) {
+  if (detailStatus === "idle" || detailStatus === "loading" || listing?.id !== id) {
     return (
       <Box
         sx={{
@@ -109,17 +104,14 @@ export function ListingDetailsPage() {
   if (detailStatus === "failed" || !listing) {
     return (
       <Stack spacing={2}>
-        <Alert severity="error">
-          Unable to load this listing. Please try again.
-        </Alert>
+        <Alert severity="error">Unable to load this listing. Please try again.</Alert>
         <BackToMarketplaceButton />
       </Stack>
     );
   }
 
   const nextStatus = listing.status === "draft" ? "active" : "sold";
-  const actionLabel =
-    listing.status === "draft" ? "Activate listing" : "Mark as sold";
+  const actionLabel = listing.status === "draft" ? "Activate listing" : "Mark as sold";
   const handleStatusUpdate = () => {
     void dispatch(updateListingStatus({ id: listing.id, status: nextStatus }));
   };
@@ -192,8 +184,7 @@ export function ListingDetailsPage() {
                 width: 88,
                 p: 0.5,
                 border: 2,
-                borderColor:
-                  index === selectedImageIndex ? "primary.main" : "divider",
+                borderColor: index === selectedImageIndex ? "primary.main" : "divider",
                 bgcolor: "background.paper",
               }}
             >
@@ -238,10 +229,7 @@ export function ListingDetailsPage() {
       >
         <Stack spacing={3} sx={{ minWidth: 0 }}>
           {gallery}
-          <Box
-            component="section"
-            aria-labelledby="listing-description-heading"
-          >
+          <Box component="section" aria-labelledby="listing-description-heading">
             <Typography
               id="listing-description-heading"
               variant="h5"
@@ -250,9 +238,7 @@ export function ListingDetailsPage() {
             >
               Details
             </Typography>
-            <Typography
-              sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
-            >
+            <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
               {listing.description}
             </Typography>
           </Box>
@@ -265,11 +251,7 @@ export function ListingDetailsPage() {
             <Typography variant="body2" color="text.secondary">
               {listing.category}
             </Typography>
-            <Typography
-              variant="h1"
-              component="h1"
-              sx={{ overflowWrap: "anywhere" }}
-            >
+            <Typography variant="h1" component="h1" sx={{ overflowWrap: "anywhere" }}>
               {listing.title}
             </Typography>
             <PriceDisplay
@@ -308,10 +290,7 @@ export function ListingDetailsPage() {
             </Stack>
           </Stack>
           <SellerCard sellerId={listing.sellerId} />
-          <MessageSellerButton
-            listingId={listing.id}
-            sellerId={listing.sellerId}
-          />
+          <MessageSellerButton listingId={listing.id} sellerId={listing.sellerId} />
           {currentUser ? (
             <OfferPanel
               listing={listing}
@@ -347,32 +326,29 @@ export function ListingDetailsPage() {
                     Edit listing
                   </Button>
                 )}
-                {currentUser?.id === listing.sellerId &&
-                  listing.status !== "sold" && (
-                    <Button
-                      variant="outlined"
-                      onClick={() =>
-                        listing.status === "active"
-                          ? setIsSoldDialogOpen(true)
-                          : handleStatusUpdate()
-                      }
-                      disabled={statusUpdateStatus === "loading"}
-                      startIcon={
-                        statusUpdateStatus === "loading" ? (
-                          <CircularProgress size={18} />
-                        ) : undefined
-                      }
-                    >
-                      {statusUpdateStatus === "loading"
-                        ? "Updating..."
-                        : actionLabel}
-                    </Button>
-                  )}
+                {currentUser?.id === listing.sellerId && listing.status !== "sold" && (
+                  <Button
+                    variant="outlined"
+                    onClick={() =>
+                      listing.status === "active"
+                        ? setIsSoldDialogOpen(true)
+                        : handleStatusUpdate()
+                    }
+                    disabled={statusUpdateStatus === "loading"}
+                    startIcon={
+                      statusUpdateStatus === "loading" ? (
+                        <CircularProgress size={18} />
+                      ) : undefined
+                    }
+                  >
+                    {statusUpdateStatus === "loading" ? "Updating..." : actionLabel}
+                  </Button>
+                )}
               </Stack>
               {statusUpdateStatus === "succeeded" && (
                 <Alert severity="success">
-                  Listing status updated to{" "}
-                  {statusLabels[listing.status].toLowerCase()}.
+                  Listing status updated to {statusLabels[listing.status].toLowerCase()}
+                  .
                 </Alert>
               )}
               {statusUpdateStatus === "failed" && statusUpdateError && (

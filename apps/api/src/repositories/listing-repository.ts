@@ -1,5 +1,4 @@
 import type {
-  CreateListingInput,
   CreateListingRepositoryInput,
   Listing,
   ListingQuery,
