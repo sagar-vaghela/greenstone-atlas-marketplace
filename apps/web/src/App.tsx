@@ -1,11 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
-} from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
 import { fetchCurrentUser, selectAuth } from "./features/auth/authSlice";
@@ -141,10 +135,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return auth.user ? (
     children
   ) : (
-    <Navigate
-      to={`/login?returnTo=${encodeURIComponent(location.pathname)}`}
-      replace
-    />
+    <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname)}`} replace />
   );
 }
 
@@ -166,22 +157,17 @@ export function App() {
         dispatch(eventReceived({ event, userId: user.id }));
         if (event.type === "notification.created")
           dispatch(notificationEventReceived({ event }));
-        if (
-          event.type.startsWith("transaction.") &&
-          "transaction" in event.payload
-        ) {
+        if (event.type.startsWith("transaction.") && "transaction" in event.payload) {
           dispatch(
             transactionEventReceived({
               transaction: event.payload.transaction,
             }),
           );
         }
-        if (
-          event.type === "message.created" ||
-          event.type === "conversation.read"
-        ) {
-          const activeConversationId =
-            window.location.pathname.match(/^\/messages\/([^/]+)\/?$/)?.[1];
+        if (event.type === "message.created" || event.type === "conversation.read") {
+          const activeConversationId = window.location.pathname.match(
+            /^\/messages\/([^/]+)\/?$/,
+          )?.[1];
           dispatch(
             messageEventReceived({
               event,
@@ -189,6 +175,9 @@ export function App() {
               activeConversationId,
             }),
           );
+          if (event.type === "message.created" && event.recipientUserId === user.id) {
+            void dispatch(fetchConversations());
+          }
           if (
             event.type === "message.created" &&
             "message" in event.payload &&
@@ -224,8 +213,7 @@ export function App() {
     void dispatch(fetchUnreadCount());
   }, [dispatch, user]);
   useEffect(() => {
-    if (user && connectionStatus === "connected")
-      void dispatch(fetchUnreadCount());
+    if (user && connectionStatus === "connected") void dispatch(fetchUnreadCount());
   }, [connectionStatus, dispatch, user]);
   return (
     <BrowserRouter>

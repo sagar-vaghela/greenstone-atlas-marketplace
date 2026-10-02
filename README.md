@@ -29,6 +29,77 @@ The current concept is a pre-owned luxury-watch marketplace. The demo API includ
 
 ## High-level architecture
 
+```mermaid
+flowchart LR
+  Browser["React + TypeScript + MUI<br/>Redux Toolkit"] -->|REST commands| API["Fastify API"]
+  Browser <-->|Authenticated WebSocket events| API
+  API --> Repositories["Repository interfaces"]
+  Repositories --> Mongo["MongoDB Atlas"]
+  API --> Payments["PaymentProvider"]
+  Payments --> Stripe["Stripe Test Mode"]
+  API --> Events["In-process event bus"]
+  Events --> API
+```
+
+The deployment keeps the frontend and API separate while preserving one
+server-side authorization boundary. REST remains authoritative after a
+WebSocket reconnect; the in-process event bus is intentionally limited to one
+API instance for this interview deployment.
+
+## Marketplace user flow
+
+```mermaid
+stateDiagram-v2
+  [*] --> ActiveListing
+  ActiveListing --> OfferPending: Buyer submits offer
+  OfferPending --> Countered: Seller counters
+  Countered --> OfferPending: Buyer responds
+  OfferPending --> PendingPayment: Seller or buyer accepts
+  PendingPayment --> Paid: Verified payment webhook
+  Paid --> Shipped: Seller ships
+  Shipped --> Delivered: Buyer confirms delivery
+  Delivered --> Completed: Buyer completes
+  PendingPayment --> Cancelled: Participant cancels
+  Paid --> Disputed: Participant opens dispute
+```
+
+## AI and tools disclosure
+
+GitHub Copilot, accessed through the Copilot SDK in VS Code, was used as an
+engineering assistant for repository exploration, implementation support,
+test analysis, and documentation review. The application design, scope
+decisions, security boundaries, test results, and final changes were reviewed
+and verified by the candidate. No credentials or private third-party data were
+provided to the tool.
+
+## Final demo runbook
+
+1. Open the deployed frontend as a guest and demonstrate search, filters,
+   sorting, listing details, the gallery, and the seller profile.
+2. Sign in as `seller@example.com` and create or edit a watch listing.
+3. Sign in as `buyer@example.com` in a second browser, open the listing, and
+   submit an offer.
+4. Return to the seller browser, counter or accept the offer, and show the
+   recipient-scoped real-time update.
+5. In the buyer browser, open the transaction, prepare Stripe Test Mode
+   payment, and explain that the verified webhook—not the browser alone—moves
+   the transaction to paid.
+6. Demonstrate seller shipment, buyer delivery confirmation, and completion.
+7. Show the responsive navigation and one loading, empty, or error state.
+
+If Stripe or MongoDB is not configured for the interview environment, use the
+documented in-memory demo API and explain the provider/repository boundaries
+instead of presenting the fallback as production persistence.
+
+## Security limitation
+
+The interview deployment uses HTTP-only cookies and validates request origins
+for CORS and WebSocket upgrades. A full production CSRF token/origin policy for
+cookie-authenticated state-changing HTTP requests is not implemented in this
+prototype. This limitation is intentional and should be disclosed during the
+interview; a production deployment must add CSRF protection or an equivalent
+same-origin mutation policy before handling real user accounts or money.
+
 ## Technology direction
 
 The project uses npm workspaces, TypeScript with strict checking, React with Vite, and Node.js with Fastify. Additional application and domain dependencies will be introduced only as later features require them.
