@@ -67,7 +67,7 @@ export const registerSellerRoutes = async (
             reply,
             404,
             "SELLER_NOT_FOUND",
-            "This seller profile is no longer available.",
+            "Seller information is currently unavailable.",
           );
     },
   );
@@ -80,7 +80,7 @@ export const registerSellerRoutes = async (
           reply,
           404,
           "SELLER_NOT_FOUND",
-          "This seller profile is no longer available.",
+          "Seller information is currently unavailable.",
         );
       }
       return {

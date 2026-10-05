@@ -36,7 +36,7 @@ const initialState: SellerState = {
 
 const message = (error: unknown, fallback: string) =>
   error instanceof ApiError && error.status === 404
-    ? "This seller profile is no longer available."
+    ? "Seller information is currently unavailable."
     : fallback;
 
 export const fetchSellerProfile = createAsyncThunk<
