@@ -27,10 +27,12 @@ const error = (
 const publicProfile = async (
   sellerId: string,
   options: Options,
+  allowNonSeller = false,
 ): Promise<SellerProfileResponse | undefined> => {
   const user = await options.users.findById(sellerId);
   const profile = await options.profiles.findByUserId(sellerId);
-  if (!user || !profile) return undefined;
+  if (!user || (!allowNonSeller && user.role !== "seller") || !profile)
+    return undefined;
   const listings = await options.listings.list();
   return {
     user: { id: user.id, displayName: user.displayName },
@@ -96,15 +98,17 @@ export const registerSellerRoutes = async (
   app.get("/me/seller-profile", async (request, reply) => {
     const user = requireAuthenticatedUser(request, reply);
     if (!user) return;
-    const result = await publicProfile(user.id, options);
+    let profile = await options.profiles.findByUserId(user.id);
+    if (!profile) {
+      await options.profiles.create({ userId: user.id });
+      profile = await options.profiles.findByUserId(user.id);
+    }
+    const result = profile
+      ? await publicProfile(user.id, options, true)
+      : undefined;
     return result
       ? result
-      : error(
-          reply,
-          404,
-          "SELLER_PROFILE_NOT_FOUND",
-          "Create your seller profile before editing it.",
-        );
+      : error(reply, 500, "PROFILE_NOT_FOUND", "Unable to load your profile.");
   });
 
   app.patch<{ Body: unknown }>(

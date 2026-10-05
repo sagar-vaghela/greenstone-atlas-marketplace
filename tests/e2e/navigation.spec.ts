@@ -7,7 +7,7 @@ const authenticatedDestinations = [
   { label: "Notifications", path: "/notifications" },
   { label: "Transactions", path: "/transactions" },
   { label: "List a watch", path: "/listings/new" },
-  { label: "Seller profile", path: "/profile" },
+  { label: "Buyer profile", path: "/profile" },
 ];
 
 test("guest navigation keeps public browsing separate from account actions", async ({
@@ -280,9 +280,9 @@ test("desktop navigation keeps primary links and account actions available", asy
 
   await page.getByRole("button", { name: "Open account menu" }).click();
   await expect(
-    page.getByRole("menuitem", { name: "Seller profile" }),
+    page.getByRole("menuitem", { name: "Buyer profile" }),
   ).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Log out" })).toBeVisible();
-  await page.getByRole("menuitem", { name: "Seller profile" }).click();
+  await page.getByRole("menuitem", { name: "Buyer profile" }).click();
   await expect(page).toHaveURL(/\/profile$/);
 });

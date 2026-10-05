@@ -21,7 +21,6 @@ export function ProfilePage() {
   const user = useAppSelector(selectCurrentUser);
   const state = useAppSelector(selectSellerState);
   const profileRole = user?.role === "buyer" ? "buyer" : "seller";
-  const isSeller = profileRole === "seller";
   const profileLabel = profileRole === "buyer" ? "Buyer profile" : "Seller profile";
   const profileDescription =
     profileRole === "buyer"
@@ -31,8 +30,8 @@ export function ProfilePage() {
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
   useEffect(() => {
-    if (isSeller) void dispatch(fetchCurrentSellerProfile());
-  }, [dispatch, isSeller]);
+    void dispatch(fetchCurrentSellerProfile());
+  }, [dispatch]);
   useEffect(() => {
     if (state.currentSellerProfile) {
       setDisplayName(state.currentSellerProfile.user.displayName);
@@ -51,27 +50,8 @@ export function ProfilePage() {
       /* state displays the safe API error */
     }
   };
-  if (
-    isSeller &&
-    state.currentProfileStatus === "loading" &&
-    !state.currentSellerProfile
-  )
+  if (state.currentProfileStatus === "loading" && !state.currentSellerProfile)
     return <CircularProgress aria-label="Loading your profile" />;
-  if (!isSeller) {
-    return (
-      <Stack spacing={3} sx={{ maxWidth: 640, mx: "auto" }}>
-        <Stack spacing={1}>
-          <Typography variant="h1">{profileLabel}</Typography>
-          <Typography color="text.secondary">
-            Manage the name sellers see when you contact them.
-          </Typography>
-        </Stack>
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
-          <TextField label="Display name" value={user?.displayName ?? ""} fullWidth disabled />
-        </Paper>
-      </Stack>
-    );
-  }
   return (
     <Stack spacing={3} sx={{ maxWidth: 640, mx: "auto" }}>
       <Stack spacing={1}>
