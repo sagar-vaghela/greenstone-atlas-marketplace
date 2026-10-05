@@ -122,7 +122,7 @@ export function AppLayout() {
   const visibleNavigationGroups = navigationGroups.filter(
     (group) => group.label === "Browse" || Boolean(user),
   );
-  const profileLabel = user?.role === "buyer" ? "Buyer profile" : "Seller profile";
+  const profileLabel = "Seller profile";
 
   const renderDrawerItems = () => (
     <Box
