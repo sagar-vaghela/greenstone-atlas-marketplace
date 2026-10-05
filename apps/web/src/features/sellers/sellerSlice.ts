@@ -74,7 +74,9 @@ export const fetchCurrentSellerProfile = createAsyncThunk<
     return await sellerApi.getCurrentSellerProfile();
   } catch (error) {
     return rejectWithValue(
-      message(error, "Unable to load your seller profile."),
+      error instanceof ApiError && error.status === 404
+        ? "This profile is no longer available."
+        : "Unable to load your profile.",
     );
   }
 });
@@ -145,7 +147,7 @@ const sellerSlice = createSlice({
       .addCase(fetchCurrentSellerProfile.rejected, (state, action) => {
         state.currentProfileStatus = "failed";
         state.updateError =
-          action.payload ?? "Unable to load your seller profile.";
+          action.payload ?? "Unable to load your profile.";
       })
       .addCase(updateSellerProfile.pending, (state) => {
         state.updateStatus = "loading";

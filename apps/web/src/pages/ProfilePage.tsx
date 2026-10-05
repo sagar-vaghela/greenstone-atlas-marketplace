@@ -20,6 +20,12 @@ export function ProfilePage() {
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectCurrentUser);
   const state = useAppSelector(selectSellerState);
+  const profileRole = user?.role === "buyer" ? "buyer" : "seller";
+  const profileLabel = profileRole === "buyer" ? "Buyer profile" : "Seller profile";
+  const profileDescription =
+    profileRole === "buyer"
+      ? "Keep the information sellers use to understand who is buying."
+      : "Keep the information buyers use to understand who is selling.";
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
@@ -49,10 +55,8 @@ export function ProfilePage() {
   return (
     <Stack spacing={3} sx={{ maxWidth: 640, mx: "auto" }}>
       <Stack spacing={1}>
-        <Typography variant="h1">Seller profile</Typography>
-        <Typography color="text.secondary">
-          Keep the information buyers use to understand who is selling.
-        </Typography>
+        <Typography variant="h1">{profileLabel}</Typography>
+        <Typography color="text.secondary">{profileDescription}</Typography>
       </Stack>
       <Paper
         component="form"

@@ -122,6 +122,7 @@ export function AppLayout() {
   const visibleNavigationGroups = navigationGroups.filter(
     (group) => group.label === "Browse" || Boolean(user),
   );
+  const profileLabel = user?.role === "buyer" ? "Buyer profile" : "Seller profile";
 
   const renderDrawerItems = () => (
     <Box
@@ -225,7 +226,7 @@ export function AppLayout() {
                   <AccountCircleOutlinedIcon />
                 </ListItemIcon>
                 <ListItemText
-                  primary="Seller profile"
+                  primary={profileLabel}
                   slotProps={{ primary: { sx: { whiteSpace: "normal" } } }}
                 />
               </ListItemButton>
@@ -459,7 +460,7 @@ export function AppLayout() {
                         selected={isActive("/profile")}
                         onClick={() => setProfileAnchor(null)}
                       >
-                        Seller profile
+                        {profileLabel}
                       </MenuItem>
                       <MenuItem
                         onClick={() => {
